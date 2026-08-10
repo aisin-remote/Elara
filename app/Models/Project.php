@@ -27,6 +27,8 @@ class Project extends Model
         'owner_id',
         'name',
         'type',
+        'organization_department_id',
+        'organization_department_code',
         'description',
         'color',
         'status',

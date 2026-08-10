@@ -18,7 +18,9 @@ class AuthenticationTest extends TestCase
             ->assertSee('Sign in')
             // The form itself, not just the heading: the split layout moved everything around it.
             ->assertSee('Keep me signed in')
-            ->assertSee('Forgot password?');
+            // The route, not the label: a formatter that wraps the link text across two lines
+            // breaks a string match while the page itself is perfectly fine.
+            ->assertSee(route('password.request'));
     }
 
     public function test_user_can_login_and_session_is_regenerated(): void

@@ -21,6 +21,7 @@ use App\Models\TaskStatusTemplate;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceHoliday;
+use App\Services\OrganizationDirectory;
 use App\Services\WorkspaceSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -217,6 +218,7 @@ class MasterDataController extends Controller
 
         $system = $action->handle($workspace, $request->user(), [
             ...$request->safe()->only(['name', 'description', 'color']),
+            ...$this->departmentAttributes($request),
             'pic_id' => $pic->id,
         ]);
 
@@ -229,7 +231,10 @@ class MasterDataController extends Controller
         $pic = User::where('public_id', $request->string('pic_public_id'))->firstOrFail();
 
         DB::transaction(function () use ($request, $system, $pic): void {
-            $system->update($request->safe()->only(['name', 'description', 'color']));
+            $system->update([
+                ...$request->safe()->only(['name', 'description', 'color']),
+                ...$this->departmentAttributes($request),
+            ]);
 
             // The PIC is "first manager by id", so promoting someone demotes the previous
             // holder rather than adding a second manager beside them.
@@ -244,6 +249,24 @@ class MasterDataController extends Controller
         });
 
         return $this->success($request, ['public_id' => $system->public_id], 'System updated.', back()->getTargetUrl());
+    }
+
+    /**
+     * The id the form sent, plus the code looked up beside it. Storing only the id would make
+     * every screen depend on the external directory being up just to print a label.
+     *
+     * @return array<string, int|string|null>
+     */
+    private function departmentAttributes(StoreSystemRequest $request): array
+    {
+        $id = $request->integer('organization_department_id') ?: null;
+
+        return [
+            'organization_department_id' => $id,
+            'organization_department_code' => $id
+                ? app(OrganizationDirectory::class)->departments()->firstWhere('id', $id)?->code
+                : null,
+        ];
     }
 
     public function archiveSystem(MasterActionRequest $request, Project $system): JsonResponse|RedirectResponse

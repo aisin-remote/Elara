@@ -30,6 +30,9 @@
                             <p class="truncate font-semibold">{{ $system->name }}</p>
                             <p class="mt-0.5 truncate text-xs text-slate-500">
                                 PIC {{ $pic?->name ?? 'not set' }}
+                                @if ($system->organization_department_code)
+                                    · {{ $system->organization_department_code }}
+                                @endif
                                 · {{ $system->active_features_count }} active {{ \Illuminate\Support\Str::plural('feature', $system->active_features_count) }}
                                 @if ($system->archived_at)
                                     · <span class="font-semibold text-amber-600 dark:text-amber-400">Archived</span>
@@ -49,8 +52,28 @@
 
                     <form x-cloak x-show="editing" method="POST" action="{{ route('internal.master.systems.update', $system) }}" class="space-y-3">
                         @csrf @method('PATCH')
-                        <div class="grid gap-3 sm:grid-cols-[1fr_1fr_120px]">
+                        {{-- Department before PIC, matching the add form: you pick the owning
+                             department first, then the person inside it. --}}
+                        <div class="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_120px]">
                             <div><x-label for="name-{{ $system->public_id }}">Name</x-label><x-input id="name-{{ $system->public_id }}" name="name" value="{{ $system->name }}" required /></div>
+                            @if ($departments->isNotEmpty())
+                                <div>
+                                    <x-label for="department-{{ $system->public_id }}">Department</x-label>
+                                    <x-select id="department-{{ $system->public_id }}" name="organization_department_id">
+                                        <option value="">No department</option>
+                                        @foreach ($departments as $department)
+                                            <option value="{{ $department->id }}" @selected($system->organization_department_id === $department->id)>
+                                                {{ $department->name }}{{ $department->code ? ' ('.$department->code.')' : '' }}
+                                            </option>
+                                        @endforeach
+                                    </x-select>
+                                </div>
+                            @else
+                                {{-- Preserve what is stored rather than blanking it: with the picker
+                                     unavailable, submitting the form must not silently clear the
+                                     department someone set while it was up. --}}
+                                <input type="hidden" name="organization_department_id" value="{{ $system->organization_department_id }}">
+                            @endif
                             <div>
                                 <x-label for="pic-{{ $system->public_id }}">PIC</x-label>
                                 <x-select id="pic-{{ $system->public_id }}" name="pic_public_id">
@@ -76,6 +99,28 @@
             <form method="POST" action="{{ route('internal.master.systems.store', $workspace) }}" class="mt-4 space-y-4">
                 @csrf
                 <div><x-label for="new-name">Name</x-label><x-input id="new-name" name="name" required /><x-field-error name="name" /></div>
+                <div>
+                    <x-label for="new-department">Department</x-label>
+                    @if ($departments->isEmpty())
+                        {{-- Not an empty picker: an empty list here means the directory could
+                             not be reached, which is a different thing from having none. --}}
+                        <p class="mt-1 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                            The organisation directory is unreachable, so departments cannot be listed.
+                            You can still add the system and set its department later.
+                        </p>
+                    @else
+                        <x-select id="new-department" name="organization_department_id">
+                            <option value="">No department</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department->id }}" @selected(old('organization_department_id') == $department->id)>
+                                    {{ $department->name }}{{ $department->code ? ' ('.$department->code.')' : '' }}
+                                </option>
+                            @endforeach
+                        </x-select>
+                        <p class="mt-1 text-xs text-slate-500">Which department owns this system. Read from the organisation directory.</p>
+                    @endif
+                    <x-field-error name="organization_department_id" />
+                </div>
                 <div>
                     <x-label for="new-pic">PIC</x-label>
                     <x-select id="new-pic" name="pic_public_id" required>

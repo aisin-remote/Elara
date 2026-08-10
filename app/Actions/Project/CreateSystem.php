@@ -25,6 +25,10 @@ class CreateSystem
                 'owner_id' => $actor->id,
                 'name' => $data['name'],
                 'type' => ProjectType::SYSTEM,
+                // The code is copied alongside the id so the system still reads sensibly when
+                // the directory is unreachable — an id alone is unreadable to a human.
+                'organization_department_id' => $data['organization_department_id'] ?? null,
+                'organization_department_code' => $data['organization_department_code'] ?? null,
                 'description' => $data['description'] ?? null,
                 'color' => $data['color'],
                 'status' => ProjectStatus::ACTIVE,

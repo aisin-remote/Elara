@@ -217,6 +217,28 @@ class OrganizationDirectory
             ->values();
     }
 
+    /**
+     * Every department in the organisation directory, for pickers.
+     *
+     * Returns an empty collection when the directory is unreachable, the same as the other
+     * readers here. The caller must treat "no departments" as "cannot ask right now", never
+     * as "this organisation has none".
+     *
+     * @return Collection<int, object{id: int, code: string|null, name: string}>
+     */
+    public function departments(): Collection
+    {
+        try {
+            return DB::connection(config('organization.connection'))
+                ->table('departments')
+                ->select('id', 'code', 'name')
+                ->orderBy('name')
+                ->get();
+        } catch (QueryException) {
+            return collect();
+        }
+    }
+
     public function departmentWorkspace(?int $departmentId): ?Workspace
     {
         if (! $departmentId) {

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Master;
 
 use App\Enums\WorkspaceMemberStatus;
 use App\Models\Workspace;
+use App\Services\OrganizationDirectory;
 use Illuminate\Validation\Rule;
 
 class StoreSystemRequest extends MasterDataRequest
@@ -29,6 +30,21 @@ class StoreSystemRequest extends MasterDataRequest
                     fn ($query) => $query->whereIn('id', $this->eligiblePicIds($workspace))
                 ),
             ],
+            // Optional on purpose. Departments come from a PostgreSQL database owned by
+            // another application; if it is unreachable the picker is empty, and a required
+            // field would make the whole master screen unusable because someone else's
+            // database is down.
+            'organization_department_id' => [
+                'nullable', 'integer',
+                Rule::in(app(OrganizationDirectory::class)->departments()->pluck('id')->all()),
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'organization_department_id.in' => 'Choose a department from the organisation directory.',
         ];
     }
 

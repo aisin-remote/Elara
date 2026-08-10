@@ -12,6 +12,7 @@ use App\Models\TaskCategory;
 use App\Models\TaskStatusTemplate;
 use App\Models\Workspace;
 use App\Models\WorkspaceHoliday;
+use App\Services\OrganizationDirectory;
 use App\Services\WorkspaceSettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -91,6 +92,9 @@ class MasterDataController extends Controller
                 ->get()
                 ->filter(fn ($membership) => $membership->role->canContribute())
                 ->sortBy('user.first_name'),
+            // Empty when the organisation directory is unreachable. The view says so rather
+            // than showing an empty picker that looks like the company has no departments.
+            'departments' => app(OrganizationDirectory::class)->departments(),
             'search' => $search,
         ]);
     }
