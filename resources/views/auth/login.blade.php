@@ -11,14 +11,18 @@
                         class="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-orbit-400 to-indigo-600 text-base font-extrabold text-white shadow-lg shadow-indigo-950/30"
                         aria-hidden="true">E</span>
                     <span class="leading-tight">
-                        <span class="block text-xl font-extrabold tracking-tight text-slate-950 dark:text-white">Elara</span>
-                        <span class="block text-[10px] text-slate-500 dark:text-slate-400">Request-to-delivery workspace</span>
+                        <span
+                            class="block text-xl font-extrabold tracking-tight text-slate-950 dark:text-white">Elara</span>
+                        <span class="block text-[10px] text-slate-500 dark:text-slate-400">Request-to-delivery
+                            workspace</span>
                     </span>
                 </a>
 
                 <div class="mt-12">
-                    <h1 id="login-heading" class="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">Sign in</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Continue to your projects, requests, and team
+                    <h1 id="login-heading" class="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+                        Sign in</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Continue to your projects,
+                        requests, and team
                         workspace.</p>
                 </div>
 
@@ -52,7 +56,8 @@
                             Keep me signed in
                         </label>
                         <a href="{{ route('password.request') }}"
-                            class="text-xs text-slate-600 dark:text-slate-300 underline decoration-slate-300 dark:decoration-slate-600 underline-offset-4 transition hover:text-orbit-600">Forgot password?</a>
+                            class="text-xs text-slate-600 dark:text-slate-300 underline decoration-slate-300 dark:decoration-slate-600 underline-offset-4 transition hover:text-orbit-600">Forgot
+                            password?</a>
                     </div>
 
                     <x-button class="w-full" x-bind:disabled="submitting">
@@ -61,11 +66,11 @@
                     </x-button>
 
 
-                    <p class="text-center text-sm text-slate-600 dark:text-slate-300">
+                    {{-- <p class="text-center text-sm text-slate-600 dark:text-slate-300">
                         Don’t have an account?
                         <a href="{{ route('register') }}"
                             class="font-semibold text-orbit-600 transition hover:text-orbit-700">Create account</a>
-                    </p>
+                    </p> --}}
                 </form>
 
                 <ul class="mt-10 space-y-3 text-xs text-slate-600 dark:text-slate-300" aria-label="Orbitra benefits">
