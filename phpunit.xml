@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!-- <server>, not <env>: Laravel reads $_SERVER/$_ENV, and putenv() values are
+             invisible to it unless php.ini variables_order includes "E". With <env> only,
+             the suite silently falls back to the .env database. -->
+        <server name="APP_ENV" value="testing"/>
+        <server name="BCRYPT_ROUNDS" value="4"/>
+        <server name="CACHE_DRIVER" value="array"/>
+        <server name="DB_CONNECTION" value="sqlite"/>
+        <server name="DB_DATABASE" value=":memory:"/>
+        <server name="ORG_DB_REQUIRED" value="false"/>
+        <server name="ORG_JIT_AUTH" value="false"/>
+        <server name="MAIL_MAILER" value="array"/>
+        <!-- Blank, so no test can reach a paid third party by accident. Without this the key
+             from .env leaks in and any code that branches on "is AI configured" takes the
+             live path — which is how the weekly-insight test came to bill a real request.
+             Tests that exercise the AI path set the key themselves and fake the HTTP. -->
+        <server name="OPENAI_API_KEY" value=""/>
+        <server name="PULSE_ENABLED" value="false"/>
+        <server name="QUEUE_CONNECTION" value="sync"/>
+        <server name="SESSION_DRIVER" value="array"/>
+        <server name="TELESCOPE_ENABLED" value="false"/>
+    </php>
+</phpunit>

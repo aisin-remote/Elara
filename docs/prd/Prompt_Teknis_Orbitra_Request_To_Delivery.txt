@@ -1,0 +1,309 @@
+PROMPT TEKNIS — ORBITRA REQUEST-TO-DELIVERY LAYER
+Laravel 10 + MySQL 8 + Blade + Tailwind CSS + Alpine.js + OpenAI
+
+==================================================
+0. SOURCE OF TRUTH DAN PERAN
+==================================================
+
+Kamu adalah Senior Laravel Engineer, Software Architect, Database Designer, Security
+Engineer, dan QA Engineer.
+
+Baca `docs/prd/README.md` lalu seluruh PRD-01 sampai PRD-08 di `docs/prd/` sebelum
+merencanakan atau mengubah code. PRD adalah source of truth fitur. Prompt ini adalah source
+of truth teknis. Bila ada konflik, instruksi user terbaru menang, lalu perbarui dokumen yang
+relevan.
+
+Ini BUKAN project baru. Orbitra sudah berjalan sampai Phase 7 (lihat `README.md` di root).
+Kamu menambahkan satu lapisan di atasnya: alur permintaan kerja dari user non-IT sampai
+menjadi task yang dikerjakan tim IT. Jangan scaffold ulang, jangan mengganti stack, jangan
+merombak modul yang sudah jalan kecuali PRD memintanya secara eksplisit.
+
+Prompt teknis lama (`../isma/docs/flowza-project/Prompt_Teknis_Orbitra_Laravel10_Blade.txt`)
+tetap berlaku untuk seluruh aturan stack, larangan library, dan konvensi dasar. Prompt ini
+hanya menambah dan mempertegas untuk lapisan baru.
+
+==================================================
+A. ATURAN LINGKUNGAN — BACA SEBELUM COMMAND PERTAMA
+==================================================
+
+Lingkungan ini punya beberapa jebakan yang sudah memakan waktu. Patuhi tanpa menawar.
+
+A1. PHP di PATH adalah 7.4 dan TIDAK BISA menjalankan artisan.
+    Gunakan binary ini untuk semua artisan/phpunit/composer:
+    /c/laragon/bin/php/php-8.2.24-Win32-vs16-x64/php.exe
+
+A2. Repo ini TIDAK memakai git. Tidak ada undo.
+    Sebelum menghapus atau menimpa file, salin dulu ke folder scratch. Jangan pernah
+    menghapus file yang tidak kamu buat sendiri tanpa menyalinnya lebih dulu.
+
+A3. `php artisan config:cache` TIDAK BOLEH dijalankan di environment development.
+    Config yang ter-cache membuat seluruh `env()` diabaikan, termasuk milik PHPUnit. Akibat
+    nyatanya: test suite pernah menghantam database MySQL `orbitra` yang asli dan
+    `RefreshDatabase` menjalankan `migrate:fresh` di sana.
+    Sebelum menjalankan test, pastikan `bootstrap/cache/config.php` tidak ada.
+    Verifikasi sekali di awal sesi bahwa test benar-benar memakai sqlite:
+      php artisan config:clear
+      lalu cek `phpunit.xml` memakai <server>, bukan <env>.
+
+A4. Aplikasi disajikan dari build statis, bukan `npm run dev`.
+    Setiap kali menambah/mengubah class Tailwind, WAJIB jalankan:
+      npx vite build
+    Kalau tidak, class baru tidak ada di bundle dan layout terlihat "tidak berubah"
+    padahal markup sudah benar.
+
+A5. `php artisan view:cache` BERBOHONG. Dia hanya menulis file PHP hasil kompilasi tanpa
+    memeriksanya, jadi tetap melapor sukses meski Blade menghasilkan PHP invalid.
+    Setelah mengubah Blade, verifikasi begini:
+      php artisan view:clear && php artisan view:cache
+      lalu jalankan `php -l` untuk setiap file di storage/framework/views/
+      lalu php artisan view:clear
+
+A6. Dua jebakan Blade yang sudah pernah membuat halaman 500 dengan pesan menyesatkan:
+    - JANGAN mencampur `@php(...)` inline dengan blok `@php ... @endphp` di satu file.
+      Regex blok Blade jalan duluan dan menelan semuanya sampai `@endphp` berikutnya.
+      Pesan errornya "unexpected endif" dan menunjuk baris yang salah.
+    - JANGAN menempelkan direktif langsung di belakang karakter kata, misal `today@if(...)`.
+      Blade sengaja melewatkannya (supaya alamat email tidak terparse), tapi `@endif`-nya
+      tetap dikompilasi. Selalu beri spasi/baris baru sebelum direktif.
+    - Komentar Blade yang menyebut `@endphp` juga ikut terkompilasi. Jangan tulis nama
+      direktif di dalam komentar.
+
+A7. Shell yang dipakai user adalah PowerShell, dan PowerShell MEMAKAN backslash tunggal di
+    argumen. `--class=Database\Seeders\FooSeeder` sampai ke Laravel sebagai
+    `DatabaseSeedersFooSeeder`. Untuk `db:seed` pakai nama kelas polos (`--class=FooSeeder`),
+    karena command-nya menambahkan namespace sendiri. Untuk argumen lain yang memang butuh
+    backslash, bungkus dengan kutip tunggal. Berlaku untuk SETIAP command yang kamu serahkan
+    ke user, bukan hanya command yang kamu jalankan sendiri lewat Bash tool.
+
+A8. Kolom bertipe DATE butuh cast `date:Y-m-d`, bukan `date`.
+    Cast `'date'` polos menulis `2026-08-12 00:00:00`. MySQL memangkasnya diam-diam, SQLite
+    (dipakai test) tidak — akibatnya `updateOrCreate` tidak menemukan baris yang baru saja
+    ditulisnya dan menabrak unique index. Bug ini lolos di dev dan baru meledak di test.
+
+A9. Payload di antrean bisa lebih tua daripada kodenya.
+    Menambah parameter constructor ke job yang sudah pernah di-dispatch akan MEMATIKAN job
+    yang masih mengantre: payload lama tidak punya key itu, dan promoted property tidak
+    membawa default saat objek dibangun lewat newInstanceWithoutConstructor. Deklarasikan
+    properti baru dengan default (`private ?string $note = null;`) dan isi di dalam
+    constructor, jangan dipromosikan. Sudah pernah terjadi pada GenerateTaskBreakdown.
+    Ingat juga `queue:work` menahan kode di memori — restart worker setelah mengubah kode,
+    atau pakai `queue:listen` saat development.
+
+A10. Test suite saat ini: 111 test, 2 gagal.
+    Keduanya di `tests/Feature/Performance/PerformanceFlowTest.php` dan SUDAH ADA sebelum
+    pekerjaan ini (assertion teks "Member task heatmap" dan key JSON `unit` yang tidak lagi
+    dikembalikan service). Jangan kejar keduanya sebagai bagian dari phase ini, dan jangan
+    laporkan suite "hijau" bila hanya dua itu yang merah — sebut apa adanya.
+
+==================================================
+B. KONVENSI YANG SUDAH ADA DAN WAJIB DIIKUTI
+==================================================
+
+Semua ini sudah dipakai konsisten di codebase. Ikuti, jangan buat pola tandingan.
+
+B1. Identifier publik memakai ULID `public_id` (trait `App\Support\GeneratesPublicId`).
+    Jangan pernah expose bigint id di URL atau response.
+B2. Setiap mutation lewat Form Request + Policy. Controller tipis; logic di `app/Actions/`
+    atau `app/Services/`.
+B3. Setiap query di-scope ke workspace aktif. Model yang bisa dilihat sebagian user memakai
+    scope `visibleTo(User $user)` — ikuti pola di `Project::scopeVisibleTo`.
+B4. Entity yang bisa diedit bersamaan punya kolom `version` untuk optimistic locking.
+    Lihat `ProjectController::update` sebagai contoh konflik 409.
+B5. Perubahan penting menulis `ActivityLog::record($workspace, $subject, 'domain.action',
+    $actor)`. Format action selalu `subject.verb`.
+B6. Notifikasi lewat notification center yang sudah ada (database + mail + broadcast + web
+    push, dengan preferensi per channel). Jangan bikin kanal baru.
+B7. Pekerjaan panjang lewat queue database yang sudah aktif. Scheduled command mengikuti pola
+    `app/Console/Commands/SendDeadlineReminders.php` dan didaftarkan di `Console/Kernel.php`
+    dengan `->withoutOverlapping()`.
+B8. Soft delete + `archived_at` untuk data yang punya sejarah. Jangan hard delete.
+B9. Komponen UI yang sudah ada dan WAJIB dipakai ulang, bukan ditulis ulang:
+    x-alert (4 varian), x-toast (antrean, event window `orbitra-toast`), x-avatar (warna
+    per orang otomatis), x-empty-state, x-modal, x-badge, x-button, x-input, x-select,
+    x-textarea, x-label, x-field-error, x-table, x-tabs, x-icon.
+    Ikon baru ditambahkan ke `resources/views/components/icon.blade.php`.
+B10. Flash message TIDAK dirender inline. `session('status')` otomatis menjadi toast lewat
+    `<x-status />`. Error validasi form TETAP inline (x-alert), jangan dijadikan toast —
+    pesan yang menjelaskan kegagalan input tidak boleh hilang sendiri.
+B11. Utility `.scrollbar-none` tersedia untuk area yang perlu scroll tanpa batang scrollbar.
+
+==================================================
+C. CARA KERJA WAJIB
+==================================================
+
+C1.  Kerjakan phase berurutan. Satu phase = satu patch yang bisa dinilai. Jangan menggabung
+     beberapa phase dalam satu patch besar.
+C2.  Sebelum menulis code, trace dulu route, controller, model, policy, action, Blade, dan JS
+     yang akan tersentuh. Sebutkan hasil trace-nya sebelum mengubah.
+C3.  Migration harus reversible. Operasi multi-tabel di dalam transaction.
+C4.  Backend adalah sumber kebenaran untuk validasi, permission, transisi status, batas plan,
+     dan akses file. UI hanya cermin.
+C5.  Tambah test sebelum menyatakan phase selesai. Minimal: satu test per aturan bisnis yang
+     bisa salah diam-diam (transisi status, permission, perhitungan kapasitas, expiry).
+C6.  Jalankan command sungguhan setelah patch. Dilarang mengklaim sukses tanpa menjalankan.
+     Urutan verifikasi standar tiap phase:
+       php artisan view:clear && php artisan view:cache
+       php -l untuk seluruh storage/framework/views/*.php
+       php artisan view:clear
+       npx vite build            (bila ada perubahan class Tailwind)
+       php vendor/bin/phpunit
+C7.  Bila ada yang gagal, laporkan apa adanya beserta outputnya. Jangan membungkus error
+     dengan try/catch kosong dan jangan melewati test yang merah.
+C8.  Pilih implementasi paling sederhana yang memenuhi seluruh acceptance criteria di PRD.
+     Jangan menambah abstraksi, config, atau tabel yang tidak diminta.
+C9.  Jangan menimpa perubahan user yang tidak berkaitan dengan phase yang dikerjakan.
+C10. Setelah phase selesai, perbarui `README.md` di root (bagian "Current checkpoint") dan
+     tandai PRD terkait sebagai implemented.
+
+==================================================
+D. URUTAN PHASE
+==================================================
+
+Phase 8  — Role model + requester desk           (PRD-01)
+Phase 9  — Master data                            (PRD-08)
+Phase 10 — System catalog + menu Feature          (PRD-02)
+Phase 11 — Feature request intake + approval      (PRD-03)
+Phase 12 — Project request intake + approval      (PRD-04)
+Phase 13 — Capacity planner + assignment + antrean (PRD-05)
+Phase 14 — AI task breakdown (OpenAI)             (PRD-06)
+Phase 15 — Validation checkpoint + takedown       (PRD-07)
+
+Phase 8 dan 9 adalah fondasi dan tidak boleh dilewati. Phase 11 dan 12 boleh paralel setelah
+10 selesai. Phase 14 tidak boleh dimulai sebelum 13 selesai, karena estimasi tanpa slot tidak
+bisa dijadwalkan.
+
+Potongan pertama yang berguna bila user ingin hasil cepat: Phase 8 + 9 (Systems dan Task
+category saja) + 10 + 11, dengan assignment manual dan task manual.
+
+==================================================
+E. CATATAN TEKNIS PER PHASE
+==================================================
+
+E1. PHASE 8 — ROLE MODEL + REQUESTER DESK
+    - Tambah `manager`, `supervisor`, `requester` ke `App\Enums\WorkspaceRole`.
+    - Audit SELURUH policy di `app/Policies/` terhadap tiga role baru. Ini riak terbesar
+      dari phase ini; jangan anggap selesai sebelum semua policy ditinjau satu per satu.
+      Aturan umum: manager/supervisor = seperti member untuk objek delivery; requester
+      DITOLAK oleh semua policy lama.
+    - Route group `/desk/*` dengan layout `layouts/requester.blade.php`.
+    - Route group `/app/*` mendapat gate yang MENOLAK `requester` (deny-list, bukan
+      allow-list, supaya route IT baru aman secara default).
+    - Redirect setelah login bercabang berdasarkan role.
+    - Seeder demo harus menghasilkan minimal satu user per role baru.
+    - Test wajib: requester menerima 403 di setiap route `/app/*` termasuk deep link ke task
+      dan project yang ia namanya tercantum.
+
+E2. PHASE 9 — MASTER DATA
+    - Satu pola CRUD dipakai ulang untuk semua master (lihat PRD-08 untuk daftarnya).
+      Bikin satu komponen tabel Blade yang diparameterisasi kolom + aksi, bukan sembilan
+      layar berbeda.
+    - Semua master ARSIP, bukan hapus. Baris yang masih dipakai pekerjaan aktif tidak boleh
+      diarsipkan tanpa memilih pengganti (ikuti pola arsip task status di board).
+    - Selesaikan Task category yang setengah jadi: sekarang hanya ada endpoint `store` di
+      `routes/internal.php`, tanpa list/edit/archive.
+    - `request rules` (validation window, PIC grace, horizon, toggle AI) pindah dari
+      `config()` ke setting workspace, dengan default tetap di config.
+    - Role, priority, dan status enum TIDAK dijadikan master. Jangan tergoda.
+
+E3. PHASE 10 — SYSTEM CATALOG + MENU FEATURE
+    - `projects.type` string default 'project', diindeks bersama `workspace_id`.
+    - Migration harus mengisi `type='project'` untuk seluruh baris lama.
+    - WAJIB: audit setiap tempat yang menampilkan daftar project dan tambahkan scope tipe.
+      Minimal: projects index, sidebar quick access, dashboard gantt, global search, filter
+      project di task list, dan picker project di form manapun.
+      Kalau satu saja terlewat, sistem akan muncul sebagai "project" di UI dan itu bug yang
+      membingungkan user.
+    - Tabel `features` + `tasks.feature_id` nullable.
+    - Menu Feature: index berisi kartu per sistem, show berisi feature dan task di dalamnya.
+      Board/kalender/timeline untuk sistem adalah view project yang sudah ada, di-scope.
+
+E4. PHASE 11 & 12 — INTAKE + APPROVAL
+    - Status transisi ditegakkan di Action, bukan di controller, dan setiap transisi menulis
+      ActivityLog dengan alasannya.
+    - Reject tanpa note ditolak oleh Form Request, bukan hanya disembunyikan di UI.
+    - Phase 12: kontrol approve tidak boleh sekadar disembunyikan sebelum rapat digelar —
+      harus ditolak server-side. Approver pertama dan kedua wajib orang berbeda, ditegakkan
+      di server meski satu orang punya dua role.
+    - Rapat scoping memakai `schedule_events` yang sudah ada, bukan kalender baru.
+    - Lampiran memakai mekanisme private file yang sudah ada.
+
+E5. PHASE 13 — CAPACITY PLANNER
+    - Ini komponen yang paling mungkin salah diam-diam. Beban test paling berat ada di sini.
+    - `App\Services\CapacityPlanner` dengan dua method publik: `availableFrom()` dan
+      `assign()`. Deterministik: input sama, output sama.
+    - Ketersediaan dihitung dari komitmen `estimate_minutes` per hari, bukan free/busy
+      kalender. Rapat dikurangi sebagai overhead.
+    - Test wajib dengan jam dibekukan (`travelTo`): hari penuh, hari sebagian, akhir pekan,
+      hari libur, cuti, horizon habis, dan batas grace PIC tepat di nilai konfigurasi.
+    - Command `orbitra:drain-request-queue` hourly + `withoutOverlapping()`.
+    - Penjadwalan harus idempoten: menjalankan drain dua kali tidak boleh double-book.
+
+E6. PHASE 14 — AI TASK BREAKDOWN (OPENAI)
+    - Provider OpenAI. Panggil lewat HTTP client bawaan Laravel
+      (`Http::withToken()->post()`), JANGAN menambah package SDK komunitas.
+    - Kredensial di `config/services.php` key `openai`, dibaca dari env. Dokumentasikan
+      `OPENAI_API_KEY` dan `OPENAI_MODEL` di `.env.example`. Key tidak boleh masuk log,
+      ActivityLog, atau kolom payload.
+    - Responses API dengan `text.format` bertipe `json_schema` dan `strict: true`. Skema
+      persis seperti di PRD-06.
+    - Model default `gpt-4o` (terverifikasi jalan 2026-08-03), dapat diganti per workspace
+      dari master data. Jangan menuliskan model id atau harga yang tidak bisa diverifikasi.
+    - WAJIB menangani `refusal`: saat model menolak, response membawa field `refusal` dan
+      BUKAN output sesuai skema. Perlakukan seperti kegagalan API.
+    - Dibungkus interface `TaskBreakdownGenerator` dengan satu implementasi OpenAI, supaya
+      ganti provider berarti satu kelas baru. Tabel `task_breakdowns` menyimpan `provider`
+      dan `model` apa adanya.
+    - Job `GenerateTaskBreakdown` di queue. Gagal/refusal/timeout meninggalkan status
+      `failed` yang terlihat, bisa di-retry, dan tidak memblokir entri manual.
+    - Task TIDAK PERNAH ditulis ke database tanpa penerimaan eksplisit oleh manusia.
+    - Test memakai HTTP fake (`Http::fake()`), bukan memanggil OpenAI sungguhan.
+
+E7. PHASE 15 — VALIDATION CHECKPOINT + TAKEDOWN
+    - `expires_at` DISIMPAN, bukan dihitung saat baca, supaya mengubah window tidak
+      mengubah checkpoint yang sudah berjalan.
+    - Command `orbitra:sweep-validations` hourly + `withoutOverlapping()`, satu transaction
+      per checkpoint, idempoten (dua run dalam satu jam = satu reminder, satu warning, satu
+      expiry).
+    - Takedown TIDAK memilih pengganti secara langsung. Takedown melepas kapasitas; antrean
+      di Phase 13 yang menyerapnya. Jangan membuat jalur serah-terima kedua.
+    - `changes_requested` MENGHENTIKAN hitung mundur. Requester sudah merespons.
+    - Peringatan terakhir H-1 juga dikirim ke PIC dan SPV.
+    - Test dengan jam dibekukan: buka checkpoint, maju 6 hari (reminder + warning), lewati
+      expiry (takedown + arsip + kapasitas lepas + antrean terisi).
+
+==================================================
+F. CARA MEMAKAI PROMPT INI
+==================================================
+
+Setiap sesi baru dimulai dingin. Tempel blok pembuka berikut lebih dulu, lalu tempel satu
+kalimat phase yang mau dikerjakan.
+
+--- BLOK PEMBUKA (tempel setiap sesi baru) ---
+Baca `docs/prd/Prompt_Teknis_Orbitra_Request_To_Delivery.txt` seluruhnya, lalu
+`docs/prd/README.md`, lalu PRD phase yang akan dikerjakan. Patuhi bagian A (aturan
+lingkungan) tanpa menawar, khususnya larangan config:cache dan keharusan lint compiled view.
+Sebelum menulis code, trace dulu file yang akan tersentuh dan tunjukkan hasilnya. Kerjakan
+satu phase saja.
+--- AKHIR BLOK PEMBUKA ---
+
+Kalimat phase:
+
+  Phase 8  : "Kerjakan Phase 8 sesuai PRD-01. Fokus: enum role, audit seluruh policy,
+              route group /desk, deny-gate di /app, redirect login, seeder."
+  Phase 9  : "Kerjakan Phase 9 sesuai PRD-08. Mulai dari pola CRUD yang dipakai ulang, lalu
+              master Systems dan Task category dulu, sisanya menyusul."
+  Phase 10 : "Kerjakan Phase 10 sesuai PRD-02. Jangan lupa audit SEMUA tempat yang
+              menampilkan daftar project dan tambahkan scope type."
+  Phase 11 : "Kerjakan Phase 11 sesuai PRD-03."
+  Phase 12 : "Kerjakan Phase 12 sesuai PRD-04. Tegakkan gerbang rapat dan dua tanda tangan
+              berbeda di server."
+  Phase 13 : "Kerjakan Phase 13 sesuai PRD-05. Tulis test CapacityPlanner dengan jam
+              dibekukan sebelum menulis UI apa pun."
+  Phase 14 : "Kerjakan Phase 14 sesuai PRD-06. Provider OpenAI lewat Http client Laravel,
+              Responses API json_schema strict, tangani refusal, test pakai Http::fake."
+  Phase 15 : "Kerjakan Phase 15 sesuai PRD-07. Takedown melepas kapasitas; antrean Phase 13
+              yang menyerap. Jangan buat jalur serah-terima kedua."
+
+Bila sebuah phase terlalu besar untuk satu patch, pecah sendiri menjadi langkah yang bisa
+diverifikasi, umumkan pembagiannya lebih dulu, dan tetap jalankan verifikasi bagian C6 di
+setiap langkah.

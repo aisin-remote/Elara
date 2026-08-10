@@ -1,0 +1,1 @@
+@include('errors.layout', ['status' => 404, 'title' => 'We could not find that page', 'description' => 'The link may be outdated, the resource may have moved, or it may belong to a workspace you cannot access.'])

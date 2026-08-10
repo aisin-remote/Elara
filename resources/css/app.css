@@ -1,0 +1,283 @@
+@import url('https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        color-scheme: light;
+    }
+
+    html.dark {
+        color-scheme: dark;
+    }
+
+    body {
+        @apply bg-slate-50 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    :focus-visible {
+        @apply outline-none ring-2 ring-orbit-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-950;
+    }
+
+    /* Firefox and Chrome 121+ */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: theme('colors.slate.300') transparent;
+    }
+
+    html.dark * {
+        scrollbar-color: theme('colors.slate.700') transparent;
+    }
+
+    /* WebKit: transparent track, pill thumb inset by its own border. */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: theme('colors.slate.300');
+        background-clip: content-box;
+        border: 2px solid transparent;
+        border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: theme('colors.slate.400');
+    }
+
+    html.dark::-webkit-scrollbar-thumb,
+    html.dark ::-webkit-scrollbar-thumb {
+        background-color: theme('colors.slate.700');
+    }
+
+    html.dark::-webkit-scrollbar-thumb:hover,
+    html.dark ::-webkit-scrollbar-thumb:hover {
+        background-color: theme('colors.slate.600');
+    }
+}
+
+@layer components {
+    .auth-split {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: minmax(360px, 40%) minmax(0, 60%);
+        background: #f8fafc;
+    }
+
+    .auth-split-register {
+        grid-template-columns: minmax(430px, 42%) minmax(0, 58%);
+    }
+
+    .auth-form-side {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem clamp(1.75rem, 5vw, 4.5rem);
+        border-right: 1px solid #e2e8f0;
+        background:
+            radial-gradient(circle at top left, rgba(46, 176, 251, 0.1), transparent 24rem),
+            #ffffff;
+    }
+
+    .auth-form-wrap {
+        width: 100%;
+        max-width: 23.75rem;
+    }
+
+    .auth-form-wrap-wide {
+        max-width: 29.375rem;
+    }
+
+    .auth-form label {
+        color: #334155;
+    }
+
+    .auth-form input:not([type='checkbox']):not([type='radio']):not([type='hidden']) {
+        min-height: 3rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.625rem;
+        background: #ffffff;
+        color: #0f172a;
+        caret-color: #38bdf8;
+        box-shadow: none;
+    }
+
+    .auth-form input:not([type='checkbox']):not([type='radio']):not([type='hidden']):focus {
+        border-color: #2eb0fb;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(46, 176, 251, 0.14);
+    }
+
+    .auth-form button[type='submit'] {
+        border-radius: 0.625rem;
+        background: #178fdf;
+        color: #fff;
+        box-shadow: 0 12px 26px rgba(23, 143, 223, 0.24);
+    }
+
+    .auth-form button[type='submit']:hover {
+        background: #1672b4;
+    }
+
+    /* The sign-in surfaces are hand-written CSS rather than utilities, so the `dark` class on
+       <html> does nothing for them unless it is answered here.
+
+       Not a flat inversion: a near-black navy base, a gradient across the form panel, and one
+       accent glow in the corner. Two flat greys read as an unfinished page rather than a dark
+       theme. The accent is Orbitra's own blue. */
+    .dark .auth-split {
+        background: #070b16;
+    }
+
+    .dark .auth-form-side {
+        border-right: 1px solid rgba(148, 163, 184, 0.1);
+        background:
+            radial-gradient(circle at top left, rgba(46, 176, 251, 0.14), transparent 24rem),
+            linear-gradient(145deg, #070b16, #0b1220);
+    }
+
+    .dark .auth-form label {
+        color: #cbd5e1;
+    }
+
+    /* Translucent rather than a solid block, so the panel gradient still reads behind it. */
+    .dark .auth-form input:not([type='checkbox']):not([type='radio']):not([type='hidden']) {
+        border-color: rgba(148, 163, 184, 0.22);
+        background: rgba(15, 23, 42, 0.82);
+        color: #f8fafc;
+        caret-color: #52cbff;
+    }
+
+    .dark .auth-form input:not([type='checkbox']):not([type='radio']):not([type='hidden'])::placeholder {
+        color: #64748b;
+    }
+
+    .dark .auth-form input:not([type='checkbox']):not([type='radio']):not([type='hidden']):focus {
+        border-color: #2eb0fb;
+        background: #111827;
+        box-shadow: 0 0 0 4px rgba(46, 176, 251, 0.14);
+    }
+
+    /* Brighter than the light-theme blue: #178fdf sinks into a near-black background. */
+    .dark .auth-form button[type='submit'] {
+        background: #2eb0fb;
+        color: #04121f;
+        box-shadow: 0 12px 26px rgba(46, 176, 251, 0.24);
+    }
+
+    .dark .auth-form button[type='submit']:hover {
+        background: #52cbff;
+    }
+
+    .auth-visual {
+        position: relative;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        padding: clamp(3rem, 8vw, 7.5rem);
+        color: #fff;
+        background:
+            radial-gradient(circle at 88% 12%, rgba(34, 211, 238, 0.24), transparent 18rem),
+            linear-gradient(145deg, #1e3a8a 0%, #4338ca 48%, #581c87 100%);
+    }
+
+    .auth-visual-copy {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 36.875rem;
+    }
+
+    .auth-shape {
+        position: absolute;
+        pointer-events: none;
+    }
+
+    .auth-shape-plus {
+        width: 3rem;
+        height: 3rem;
+        filter: drop-shadow(6px 7px 0 rgba(30, 41, 120, 0.28)) drop-shadow(0 12px 18px rgba(15, 23, 42, 0.24));
+    }
+
+    .auth-shape-plus::before,
+    .auth-shape-plus::after {
+        position: absolute;
+        content: '';
+        border-radius: 0.3125rem;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), currentColor 32%, currentColor 68%, rgba(30, 64, 175, 0.55));
+        box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.34), inset -3px -3px 0 rgba(15, 23, 42, 0.18);
+    }
+
+    .auth-shape-plus::before {
+        top: 1.125rem;
+        left: 0;
+        width: 3rem;
+        height: 0.75rem;
+    }
+
+    .auth-shape-plus::after {
+        top: 0;
+        left: 1.125rem;
+        width: 0.75rem;
+        height: 3rem;
+    }
+
+    /* Scrollable, but the bar itself stays out of sight. */
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Duration is set per toast from JS, so the bar always matches its own lifetime. */
+    .toast-progress {
+        transform-origin: left;
+        animation: toast-progress linear forwards;
+    }
+}
+
+@media (max-width: 980px) {
+    .auth-split,
+    .auth-split-register {
+        display: block;
+    }
+
+    .auth-form-side {
+        min-height: 100vh;
+        padding: 2rem 1.5rem;
+    }
+
+    .auth-visual {
+        display: none;
+    }
+}
+
+@keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

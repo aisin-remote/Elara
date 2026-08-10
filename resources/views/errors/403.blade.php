@@ -1,0 +1,1 @@
+@include('errors.layout', ['status' => 403, 'title' => 'This area is not available to you', 'description' => 'Your account does not have permission to view or change this resource. Return to your workspace or ask its owner for access.'])

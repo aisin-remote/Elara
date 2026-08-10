@@ -1,0 +1,2 @@
+@props(['icon' => 'search', 'title', 'description'])
+<div {{ $attributes->class(['rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900']) }}><span class="mx-auto grid size-14 place-items-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-slate-800"><x-icon :name="$icon" /></span><h3 class="mt-4 font-bold">{{ $title }}</h3><p class="mt-2 text-sm text-slate-500">{{ $description }}</p>{{ $slot }}</div>

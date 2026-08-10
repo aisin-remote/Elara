@@ -1,0 +1,2 @@
+@props(['label'])
+<details {{ $attributes->class(['group relative']) }}><summary class="flex min-h-11 cursor-pointer list-none items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold dark:border-slate-700">{{ $label }}</summary><div class="absolute right-0 z-40 mt-2 min-w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">{{ $slot }}</div></details>

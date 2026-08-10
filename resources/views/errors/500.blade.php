@@ -1,0 +1,1 @@
+@include('errors.layout', ['status' => 500, 'title' => 'Something went wrong', 'description' => 'The request could not be completed. Your existing data is unchanged; try again or contact the deployment operator if this continues.'])

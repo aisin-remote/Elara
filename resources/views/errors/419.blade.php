@@ -1,0 +1,1 @@
+@include('errors.layout', ['status' => 419, 'title' => 'Your session needs a refresh', 'description' => 'For your security, the form token has expired. Reload the page, review your changes, and submit again.'])
