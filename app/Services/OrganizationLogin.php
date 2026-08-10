@@ -86,10 +86,8 @@ class OrganizationLogin
                     $this->directory->workspaceRole($profile),
                 );
             }
-        }catch (QueryException|RuntimeException $e) {
-            report($e);
-
-            throw $e;
+        } catch (QueryException|RuntimeException) {
+            return null;
         }
 
         if (! $user) {
