@@ -26,7 +26,8 @@
                     <button x-ref="sidebarClose" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800" x-on:click="closeSidebar()" aria-label="Close navigation">✕</button>
                 </div>
 
-                <div class="mt-7">
+                {{-- Temporarily hidden because workspace controls are already available in the header. --}}
+                <div class="mt-7" hidden>
                     <label for="workspace-switcher" class="px-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace</label>
                     @if ($workspaceOptions->isNotEmpty())
                         <select id="workspace-switcher" class="mt-2 block min-h-11 w-full rounded-xl border-slate-300 bg-white text-sm dark:border-slate-700 dark:bg-slate-900" x-on:change="if ($event.target.value) window.location = $event.target.value">
