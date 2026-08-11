@@ -4,6 +4,11 @@
 @section('page-title', 'Team')
 
 @section('content')
+    {{-- Refusals from member and account actions arrive as validation errors bound to keys no
+         field on this page owns. Without an outlet they land nowhere and the page simply
+         reloads, which reads as "the button did nothing". --}}
+    <x-form-errors class="mb-4" />
+
     <div class="grid gap-4 sm:grid-cols-3">
         @foreach([['Team members', $summary['members'], 'team'], ['Online now', $summary['online'], 'performance'], ['Active tasks', $summary['tasks'], 'tasks']] as [$label, $value, $icon])
             <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><div class="flex items-center justify-between"><div><p class="text-sm text-slate-500">{{ $label }}</p><p class="mt-2 text-3xl font-bold">{{ $value }}</p></div><span class="grid size-11 place-items-center rounded-xl bg-orbit-50 text-orbit-700 dark:bg-orbit-950 dark:text-orbit-300"><x-icon :name="$icon" /></span></div></section>

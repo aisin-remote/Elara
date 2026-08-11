@@ -57,9 +57,16 @@ class WorkspaceMember extends Model
         $query = parent::resolveRouteBindingQuery($query, $value, $field);
 
         if (Auth::check()) {
-            $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-                ->where('user_id', Auth::id())
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+            // Owning the workspace counts as belonging to it. Not every workspace gives its
+            // owner a membership row, and without this the owner gets a 404 on their own
+            // members — which reads as "this person does not exist" rather than a permission
+            // answer anyone intended.
+            $query->where(fn (Builder $scope) => $scope
+                ->whereHas('workspace.memberships', fn (Builder $membership) => $membership
+                    ->where('user_id', Auth::id())
+                    ->where('status', WorkspaceMemberStatus::ACTIVE->value))
+                ->orWhereHas('workspace', fn (Builder $workspace) => $workspace
+                    ->where('owner_id', Auth::id())));
         }
 
         return $query;

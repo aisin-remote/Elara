@@ -42,12 +42,16 @@ class WorkspaceMemberPolicy
             return false;
         }
 
-        $actor = $member->workspace->memberships()
-            ->where('user_id', $user->id)
-            ->where('status', WorkspaceMemberStatus::ACTIVE->value)
-            ->first();
-
-        $rank = $this->rank($actor?->role);
+        // Ownership is read from the workspace, not from a membership row. Not every workspace
+        // gives its owner one — the ones created outside the invite flow have none — and an
+        // owner locked out of their own workspace by a missing row is not a permission decision
+        // anyone made.
+        $rank = $member->workspace->owner_id === $user->id
+            ? $this->rank(WorkspaceRole::OWNER)
+            : $this->rank($member->workspace->memberships()
+                ->where('user_id', $user->id)
+                ->where('status', WorkspaceMemberStatus::ACTIVE->value)
+                ->first()?->role);
 
         return $rank > 0 && $rank > $this->rank($member->role);
     }

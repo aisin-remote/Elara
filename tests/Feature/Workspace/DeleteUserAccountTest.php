@@ -234,6 +234,49 @@ class DeleteUserAccountTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $target->id]);
     }
 
+    public function test_an_owner_without_a_membership_row_still_rules_their_own_workspace(): void
+    {
+        [$workspace, $owner] = $this->workspace();
+        $target = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $membership = $workspace->memberships()->where('user_id', $target->id)->firstOrFail();
+
+        // Workspaces created outside the invite flow have no membership row for their owner.
+        // Reading authority from that row alone locked the owner out of their own workspace.
+        $workspace->memberships()->where('user_id', $owner->id)->delete();
+
+        $this->actingAs($owner)
+            ->delete(route('internal.user-accounts.destroy', $membership))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+    }
+
+    public function test_a_refusal_is_shown_on_the_team_page_not_swallowed(): void
+    {
+        [$workspaceA] = $this->workspace();
+        [$workspaceB] = $this->workspace();
+
+        $admin = $this->member($workspaceA, WorkspaceRole::ADMIN);
+        $target = $this->member($workspaceA, WorkspaceRole::REQUESTER);
+        $workspaceB->memberships()->create([
+            'user_id' => $target->id, 'role' => WorkspaceRole::MEMBER,
+            'status' => WorkspaceMemberStatus::ACTIVE, 'joined_at' => now(),
+        ]);
+        $membership = $workspaceA->memberships()->where('user_id', $target->id)->firstOrFail();
+
+        // The Action throws on a key no field owns. Without an outlet on the page the button
+        // looks broken instead of refused, which is how "I deleted them and they are still
+        // there" happens.
+        $this->actingAs($admin)
+            ->from(route('app.workspaces.team', $workspaceA))
+            ->delete(route('internal.user-accounts.destroy', $membership));
+
+        $this->actingAs($admin)
+            ->get(route('app.workspaces.team', $workspaceA))
+            ->assertOk()
+            ->assertSee('which you do not administer', false);
+    }
+
     /** @return array{0: Workspace, 1: User, 2: Project} */
     private function workspace(): array
     {
