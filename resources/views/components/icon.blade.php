@@ -11,6 +11,8 @@
         @case('search') <circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/> @break
         @case('plus') <path d="M12 5v14M5 12h14"/> @break
         @case('chevron-right') <path d="m9 5 7 7-7 7"/> @break
+        @case('sidebar-collapse') <path d="m12 6-6 6 6 6"/><path d="m18 6-6 6 6 6"/> @break
+        @case('sidebar-expand') <path d="m6 6 6 6-6 6"/><path d="m12 6 6 6-6 6"/> @break
         @case('sun') <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/> @break
         @case('moon') <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/> @break
         @case('trash') <path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/> @break

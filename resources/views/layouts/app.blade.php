@@ -14,16 +14,28 @@
     <body data-user-name="{{ auth()->user()->name }}" x-data="appShell">
         <a href="#main-content" class="sr-only z-[100] rounded-lg bg-white px-4 py-2 font-semibold text-slate-950 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
         <x-connectivity-status />
-        <div class="min-h-screen bg-[#f7f8fb] lg:grid lg:grid-cols-[248px_1fr] dark:bg-slate-950">
+        <div
+            x-bind:style="! mobile ? { gridTemplateColumns: sidebarCollapsed ? '0px minmax(0, 1fr)' : '248px minmax(0, 1fr)' } : {}"
+            class="min-h-screen bg-[#f7f8fb] dark:bg-slate-950 lg:grid lg:grid-cols-[248px_1fr] lg:transition-[grid-template-columns] lg:duration-200">
             <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" x-on:click="closeSidebar()" aria-hidden="true"></div>
 
             <aside x-ref="sidebar"
-                x-bind:inert="mobile && ! sidebarOpen ? true : null"
+                x-bind:inert="(mobile && ! sidebarOpen) || (! mobile && sidebarCollapsed) ? true : null"
                 x-on:keydown.tab="trapTab($event)"
                 x-on:keydown.escape.window="closeSidebar()"
-                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-                class="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col overflow-hidden border-r border-slate-200 bg-white p-2 transition-transform dark:border-slate-800 dark:bg-slate-900 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
+                :class="mobile
+                    ? (sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0')
+                    : (sidebarCollapsed ? '-translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100')"
+                class="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col overflow-visible border-r border-slate-200 bg-white p-2 transition-[transform,opacity] duration-200 dark:border-slate-800 dark:bg-slate-900 lg:sticky lg:top-0 lg:h-screen"
                 aria-label="Workspace navigation">
+                <button x-ref="sidebarCollapse" type="button"
+                    class="absolute -right-4 top-3 z-20 hidden size-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 lg:grid dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                    x-on:click="collapseDesktopSidebar()"
+                    aria-label="Hide sidebar"
+                    title="Hide sidebar">
+                    <x-icon name="sidebar-collapse" class="size-4" />
+                </button>
+
                 <div class="scrollbar-none min-h-0 flex-1 overflow-y-auto">
                     <div class="flex min-h-14 items-start gap-1 px-1 py-1">
                         <x-logo size="sidebar" :href="$activeWorkspace ? route('app.workspaces.show', $activeWorkspace) : route('home')" class="min-w-0 flex-1 px-1.5 py-1.5" />
@@ -124,6 +136,13 @@
                 <header class="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-7 dark:border-slate-800 dark:bg-slate-950/95">
                     <div class="flex items-center gap-3">
                         <button x-ref="sidebarTrigger" type="button" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-800" x-on:click="openSidebar()" aria-label="Open navigation" x-bind:aria-expanded="sidebarOpen">☰</button>
+                        <button x-ref="sidebarExpand" x-cloak x-show="! mobile && sidebarCollapsed" type="button"
+                            class="hidden size-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 lg:grid dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                            x-on:click="expandDesktopSidebar()"
+                            aria-label="Show sidebar"
+                            title="Show sidebar">
+                            <x-icon name="sidebar-expand" class="size-4" />
+                        </button>
                         <div>
                             <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $activeWorkspace?->name ?? 'Orbitra' }}</p>
                             <h1 class="text-lg font-bold">@yield('page-title', 'Dashboard')</h1>

@@ -11,7 +11,9 @@
             class="flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-1 text-left text-[11px] font-medium text-slate-500 hover:text-orbit-700 dark:text-slate-400 dark:hover:text-orbit-300"
             x-on:click="toggleSidebarSection(@js($id))"
             x-bind:aria-expanded="sidebarSectionOpen(@js($id))">
-            <x-icon name="chevron-right" class="size-3 transition-transform duration-150" x-bind:class="sidebarSectionOpen(@js($id)) ? 'rotate-90' : ''" />
+            <svg class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path x-bind:d="sidebarSectionOpen(@js($id)) ? 'm5 9 7 7 7-7' : 'm9 5 7 7-7 7'"></path>
+            </svg>
             <span class="truncate">{{ $title }}</span>
         </button>
 
