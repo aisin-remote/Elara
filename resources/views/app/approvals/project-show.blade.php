@@ -19,22 +19,16 @@
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px] xl:items-start">
-        <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-            @foreach ([['Benefit', $request->benefit], ['Concept', $request->concept], ['Business process', $request->business_process], ['Flow', $request->flow]] as $index => [$label, $value])
-                <div @class(['border-t border-slate-100 pt-5 dark:border-slate-800' => $index > 0])>
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">{{ $label }}</h3>
-                    <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $value }}</p>
-                </div>
-            @endforeach
-
+        <div class="space-y-5">
+            @include('desk.project-requests._brief')
             @if ($request->meeting_note)
-                <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">What came out of the scoping meeting</h3>
                     <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->meeting_note }}</p>
                     <p class="mt-2 text-xs text-slate-500">Recorded {{ $request->meeting_held_at->format('M j, Y') }}. The manager was probably not in the room — this is what they read.</p>
                 </div>
             @endif
-        </section>
+        </div>
 
         <div class="space-y-6">
             @if (! $request->meetingHeld())

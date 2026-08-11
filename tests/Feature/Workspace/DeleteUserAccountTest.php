@@ -19,6 +19,7 @@ use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -164,7 +165,7 @@ class DeleteUserAccountTest extends TestCase
             'created_at' => now(), 'updated_at' => now(),
         ]);
         DB::table('notifications')->insert([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'id' => (string) Str::uuid(),
             'type' => 'test', 'notifiable_type' => $leaver->getMorphClass(), 'notifiable_id' => $leaver->id,
             'data' => '{}', 'created_at' => now(), 'updated_at' => now(),
         ]);

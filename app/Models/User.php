@@ -190,6 +190,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(SupportTicket::class, 'requester_id');
     }
 
+    public function createdSupportingTasks(): HasMany
+    {
+        return $this->hasMany(SupportingTask::class, 'creator_id');
+    }
+
+    public function assignedSupportingTasks(): HasMany
+    {
+        return $this->hasMany(SupportingTask::class, 'assignee_id');
+    }
+
     public function receivesBroadcastNotificationsOn(): string
     {
         return 'users.'.$this->public_id;

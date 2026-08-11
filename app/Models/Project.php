@@ -10,6 +10,7 @@ use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Support\GeneratesPublicId;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,8 +28,6 @@ class Project extends Model
         'owner_id',
         'name',
         'type',
-        'organization_department_id',
-        'organization_department_code',
         'description',
         'color',
         'status',
@@ -64,7 +63,7 @@ class Project extends Model
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'project_members')
-            ->withPivot('role')
+            ->withPivot('role', 'organization_department_id', 'organization_department_code')
             ->withTimestamps();
     }
 
@@ -182,13 +181,51 @@ class Project extends Model
         return $this->type === ProjectType::SYSTEM;
     }
 
-    /** The person accountable for a system: its first project manager, by id. */
+    /**
+     * The person accountable for a system in one department.
+     *
+     * Falls back to the first manager when the department is unknown or has no PIC of its own,
+     * so a system that serves a single department needs no department passed at all and a
+     * request from a department nobody was named for still reaches someone.
+     */
+    public function picFor(?int $departmentId = null): ?User
+    {
+        $managers = $this->picAssignments();
+
+        if ($departmentId !== null) {
+            $match = $managers->first(
+                fn (User $manager) => (int) $manager->pivot->organization_department_id === $departmentId
+            );
+
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return $managers->first();
+    }
+
+    /** @deprecated Pass the department: a system can have one PIC per department. */
     public function pic(): ?User
+    {
+        return $this->picFor();
+    }
+
+    /**
+     * Every PIC of this system, in the order they were named. Managers carrying a department
+     * come first so the screens that list them read department by department, with any
+     * department-less manager — the creator, added beside the PIC — trailing behind.
+     *
+     * @return Collection<int, User>
+     */
+    public function picAssignments(): Collection
     {
         return $this->members()
             ->wherePivot('role', ProjectMemberRole::MANAGER->value)
             ->orderBy('project_members.id')
-            ->first();
+            ->get()
+            ->sortBy(fn (User $manager) => $manager->pivot->organization_department_id === null)
+            ->values();
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

@@ -176,9 +176,8 @@ class CheckpointFlowTest extends TestCase
             ->get(route('desk.validations.index'))
             ->assertOk()
             ->assertSee('7 days left')
-            ->assertSee('10 August 2026')
-            // The desk speaks Indonesian; the countdown and the date come from Carbon and do not.
-            ->assertSee('dibatalkan dan tim melanjutkan');
+            ->assertSee('August 10, 2026')
+            ->assertSee('is cancelled and ITD moves to the next request');
     }
 
     /** @return array{0: Workspace, 1: User, 2: Project, 3: Task, 4: User} */

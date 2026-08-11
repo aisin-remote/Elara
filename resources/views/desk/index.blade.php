@@ -16,9 +16,9 @@
     <div class="flex flex-wrap items-end justify-between gap-4 pb-5">
         <div>
             <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ now(auth()->user()->timezone ?: config('app.timezone'))->format('l, F j') }}</p>
-            <h2 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Halo {{ auth()->user()->first_name }}</h2>
+            <h2 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Hello {{ auth()->user()->first_name }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Permintaan Anda dan fitur dari department yang sama, beserta posisinya sekarang.
+                Your requests and the feature requests shared within your department, with their current status.
             </p>
         </div>
         @if ($workspace)
@@ -46,7 +46,7 @@
     @if ($statuses->count() > 1)
         <div class="mt-5 flex flex-wrap items-center gap-2">
             <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</span>
-            <a href="{{ $link(['tab' => $tab]) }}" class="rounded-full border px-3 py-1 text-xs font-semibold {{ $status === '' ? 'border-orbit-500 bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800' }}">Semua</a>
+            <a href="{{ $link(['tab' => $tab]) }}" class="rounded-full border px-3 py-1 text-xs font-semibold {{ $status === '' ? 'border-orbit-500 bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800' }}">All</a>
             @foreach ($statuses as $option)
                 <a href="{{ $link(['tab' => $tab, 'status' => $option->value]) }}" class="rounded-full border px-3 py-1 text-xs font-semibold {{ $status === $option->value ? 'border-orbit-500 bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800' }}">{{ $option->label() }}</a>
             @endforeach
@@ -57,28 +57,28 @@
         <div class="mt-6">
             <x-empty-state
                 icon="list"
-                :title="$status !== '' ? 'Tidak ada yang berstatus itu' : match ($tab) {
-                    'project' => 'Belum ada usulan proyek',
-                    'history' => 'Belum ada yang selesai',
-                    default => 'Belum ada permintaan fitur',
+                :title="$status !== '' ? 'No requests with that status' : match ($tab) {
+                    'project' => 'No project proposals yet',
+                    'history' => 'No completed requests yet',
+                    default => 'No feature requests yet',
                 }"
                 :description="$status !== ''
-                    ? 'Hapus filternya untuk melihat sisanya.'
+                    ? 'Clear the filter to see the remaining requests.'
                     : match ($tab) {
-                        'project' => 'Ajukan sesuatu yang baru, dan usulannya muncul di sini beserta tahapan dan kedua tanda tangannya.',
-                        'history' => 'Permintaan yang sudah selesai, ditolak, atau dibatalkan tersimpan di sini.',
-                        default => 'Ajukan perubahan pada sistem yang Anda pakai, dan permintaannya muncul di sini beserta tahapannya.',
+                        'project' => 'Propose something new and track every stage and signature here.',
+                        'history' => 'Completed, rejected, and withdrawn requests are kept here.',
+                        default => 'Request a change to a system you use and track its progress here.',
                     }" />
         </div>
     @else
         <x-table class="mt-6 bg-white dark:bg-slate-900">
             <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
                 <tr>
-                    <th scope="col" class="px-4 py-3 font-semibold">Permintaan</th>
-                    <th scope="col" class="px-4 py-3 font-semibold">{{ $tab === 'project' ? 'Jenis' : 'Sistem' }}</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">Request</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">{{ $tab === 'project' ? 'Type' : 'System' }}</th>
                     <th scope="col" class="px-4 py-3 font-semibold">Status</th>
-                    <th scope="col" class="px-4 py-3 font-semibold whitespace-nowrap">Diajukan</th>
-                    <th scope="col" class="px-4 py-3"><span class="sr-only">Buka</span></th>
+                    <th scope="col" class="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
+                    <th scope="col" class="px-4 py-3"><span class="sr-only">Open</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -90,17 +90,17 @@
                             <a href="{{ $isProject ? route('desk.project-requests.show', $row) : route('desk.requests.show', $row) }}"
                                 class="block font-semibold hover:underline">{{ $row->title }}</a>
                             @if (! $isProject && $row->requester_id !== auth()->id())
-                                <p class="mt-1 text-xs text-slate-500">Diajukan oleh {{ $row->requester->name }} · {{ $row->requester_department_code }}</p>
+                                <p class="mt-1 text-xs text-slate-500">Submitted by {{ $row->requester->name }} · {{ $row->requester_department_code }}</p>
                             @endif
                             {{-- Only the line that asks something of the reader survives into the
                                  table; the rest of the description is one click away. --}}
                             @if ($needsYou)
-                                <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">Mereka butuh penjelasan tambahan dari Anda.</p>
+                                <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">The reviewer needs more information from you.</p>
                             @elseif ($isProject && $row->status === App\Enums\ProjectRequestStatus::PENDING_MEETING)
-                                <p class="mt-1 text-xs text-slate-500">Menunggu supervisor mengatur rapat pembahasan.</p>
+                                <p class="mt-1 text-xs text-slate-500">Waiting for ITD to arrange the scoping meeting.</p>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-slate-500">{{ $isProject ? 'Proyek' : $row->system->name }}</td>
+                        <td class="px-4 py-3 text-slate-500">{{ $isProject ? 'Project' : $row->system->name }}</td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <x-badge :tone="$row->status->tone()">{{ $row->status->label() }}</x-badge>

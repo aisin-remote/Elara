@@ -19,7 +19,9 @@ class ProjectRequest extends Model
     use GeneratesPublicId, HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'workspace_id', 'requester_id', 'title', 'benefit', 'concept', 'business_process', 'flow',
+        'workspace_id', 'requester_id', 'title', 'background', 'why_needed', 'objectives',
+        'illustration', 'before_state', 'after_state', 'benefits', 'cost_items', 'roi',
+        'benefit', 'concept', 'business_process', 'flow',
         'target_date', 'status', 'schedule_event_id', 'meeting_held_at', 'meeting_note',
         'spv_id', 'spv_at', 'spv_note', 'manager_id', 'manager_at', 'manager_note',
         'project_id', 'estimated_minutes', 'version',
@@ -33,6 +35,9 @@ class ProjectRequest extends Model
     // assignee_id and the scheduled dates are deliberately not fillable: the planner owns them.
     protected $casts = [
         'status' => ProjectRequestStatus::class,
+        'objectives' => 'array',
+        'benefits' => 'array',
+        'cost_items' => 'array',
         'target_date' => 'date',
         'meeting_held_at' => 'datetime',
         'spv_at' => 'datetime',

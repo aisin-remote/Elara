@@ -102,7 +102,7 @@ class SystemCatalogTest extends TestCase
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
             'name' => 'Payroll', 'color' => '#2eb0fb', 'description' => 'Monthly payroll runs.',
-            'pic_public_id' => $pic->public_id,
+            'pics' => [['pic_public_id' => $pic->public_id]],
         ])->assertCreated();
 
         $system = Project::where('name', 'Payroll')->firstOrFail();
@@ -111,33 +111,106 @@ class SystemCatalogTest extends TestCase
         $this->assertSame(4, $system->taskStatuses()->count(), 'A system gets the same starting statuses as a project.');
     }
 
+    public function test_several_departments_can_be_named_while_the_system_is_created(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $ppic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $produksi = $this->member($workspace, WorkspaceRole::MEMBER);
+
+        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
+            'name' => 'Avicenna', 'color' => '#2eb0fb',
+            'pics' => [
+                ['organization_department_id' => 7, 'pic_public_id' => $ppic->public_id],
+                ['organization_department_id' => 9, 'pic_public_id' => $produksi->public_id],
+            ],
+        ])->assertCreated();
+
+        // Creating with three departments and adding them one at a time afterwards have to
+        // land in the same place, or the two paths will drift.
+        $system = Project::where('name', 'Avicenna')->firstOrFail();
+        $this->assertSame($ppic->id, $system->picFor(7)->id);
+        $this->assertSame($produksi->id, $system->picFor(9)->id);
+    }
+
+    public function test_naming_two_pics_for_the_same_department_is_refused(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $first = $this->member($workspace, WorkspaceRole::MEMBER);
+        $second = $this->member($workspace, WorkspaceRole::MEMBER);
+
+        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
+            'name' => 'Avicenna', 'color' => '#2eb0fb',
+            'pics' => [
+                ['organization_department_id' => 7, 'pic_public_id' => $first->public_id],
+                ['organization_department_id' => 7, 'pic_public_id' => $second->public_id],
+            ],
+        ])->assertUnprocessable()->assertJsonValidationErrors('pics.0.organization_department_id');
+
+        $this->assertSame(0, Project::where('name', 'Avicenna')->count());
+    }
+
     public function test_a_requester_cannot_be_made_pic(): void
     {
         [$owner, $workspace] = $this->workspace();
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
-            'name' => 'Payroll', 'color' => '#2eb0fb', 'pic_public_id' => $requester->public_id,
-        ])->assertUnprocessable()->assertJsonValidationErrors('pic_public_id');
+            'name' => 'Payroll', 'color' => '#2eb0fb',
+            'pics' => [['pic_public_id' => $requester->public_id]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('pics.0.pic_public_id');
     }
 
-    public function test_changing_the_pic_demotes_the_previous_holder(): void
+    public function test_changing_the_pic_of_a_department_demotes_the_previous_holder(): void
     {
         [$owner, $workspace] = $this->workspace();
         $first = $this->member($workspace, WorkspaceRole::MEMBER);
         $second = $this->member($workspace, WorkspaceRole::MEMBER);
         $system = $this->system($workspace, $owner, 'Payroll', $first);
+        $system->memberships()->where('user_id', $first->id)
+            ->update(['organization_department_id' => 7, 'organization_department_code' => 'PPIC']);
 
-        $this->actingAs($owner)->patchJson(route('internal.master.systems.update', $system), [
-            'name' => 'Payroll', 'color' => '#2eb0fb', 'pic_public_id' => $second->public_id,
+        $this->actingAs($owner)->postJson(route('internal.master.systems.pics.assign', $system), [
+            'organization_department_id' => 7, 'pic_public_id' => $second->public_id,
         ])->assertOk();
 
-        $this->assertSame($second->id, $system->fresh()->pic()->id);
+        $this->assertSame($second->id, $system->fresh()->picFor(7)->id);
         $this->assertSame(
             ProjectMemberRole::MEMBER,
             $system->memberships()->where('user_id', $first->id)->first()->role,
             'The old PIC stays on the system, but no longer as its manager.'
         );
+    }
+
+    public function test_one_system_carries_a_different_pic_for_each_department(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $ppic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $produksi = $this->member($workspace, WorkspaceRole::MEMBER);
+        $system = $this->system($workspace, $owner, 'Avicenna', $ppic);
+        $system->memberships()->where('user_id', $ppic->id)
+            ->update(['organization_department_id' => 7, 'organization_department_code' => 'PPIC']);
+
+        $this->actingAs($owner)->postJson(route('internal.master.systems.pics.assign', $system), [
+            'organization_department_id' => 9, 'pic_public_id' => $produksi->public_id,
+        ])->assertOk();
+
+        // One system, one board, two people accountable — the arrangement that previously
+        // forced a second Avicenna to be registered.
+        $system = $system->fresh();
+        $this->assertSame($ppic->id, $system->picFor(7)->id);
+        $this->assertSame($produksi->id, $system->picFor(9)->id);
+        $this->assertSame(1, Project::where('name', 'Avicenna')->count());
+    }
+
+    public function test_a_department_nobody_was_named_for_still_reaches_someone(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $system = $this->system($workspace, $owner, 'Avicenna', $pic);
+
+        // Falling back beats going nowhere: a request from an unlisted department would
+        // otherwise have no one to land on.
+        $this->assertNotNull($system->picFor(999));
     }
 
     public function test_a_system_with_live_features_cannot_be_archived(): void

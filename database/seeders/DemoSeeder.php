@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Enums\ConversationType;
 use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
+use App\Enums\SupportingTaskCategory;
+use App\Enums\SupportingTaskStatus;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
@@ -15,6 +17,7 @@ use App\Models\Message;
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\ScheduleEvent;
+use App\Models\SupportingTask;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
@@ -195,6 +198,21 @@ class DemoSeeder extends Seeder
                 'subject_id' => $project->id,
                 'action' => 'demo.project_ready',
             ], ['actor_id' => $owner->id, 'metadata_json' => ['project' => $project->name], 'created_at' => now()->subDays(2)]);
+        }
+
+        foreach ([
+            ['Prepare quarterly review PowerPoint', SupportingTaskCategory::PRESENTATION, TaskPriority::MEDIUM, SupportingTaskStatus::IN_PROGRESS, $users['member@example.com'], now()->addDays(2)],
+            ['Repair finance department printer', SupportingTaskCategory::HARDWARE, TaskPriority::HIGH, SupportingTaskStatus::TODO, $users['lead@example.com'], now()->addDay()],
+        ] as [$title, $category, $priority, $status, $assignee, $dueDate]) {
+            SupportingTask::updateOrCreate(['workspace_id' => $workspace->id, 'title' => $title], [
+                'creator_id' => $owner->id,
+                'assignee_id' => $assignee->id,
+                'description' => 'Demo operational work that is not attached to a project, system, or feature.',
+                'category' => $category,
+                'priority' => $priority,
+                'status' => $status,
+                'due_date' => $dueDate,
+            ]);
         }
 
         DB::table('notifications')->updateOrInsert(['id' => '019facbd-f34f-73d0-859f-73432793efbf'], [

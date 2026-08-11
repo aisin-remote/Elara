@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Master;
 
+use App\Enums\WorkspaceMemberStatus;
 use App\Models\CapacityException;
 use App\Models\Project;
 use App\Models\TaskCategory;
@@ -46,6 +47,24 @@ abstract class MasterDataRequest extends FormRequest
         }
 
         return $this->administeredWorkspace();
+    }
+
+    /**
+     * People who may be named PIC of a system: active members who can actually work on it.
+     * Shared so the rule cannot drift between naming a PIC and adding one for a department.
+     *
+     * @return array<int>
+     */
+    protected function eligiblePicIds(?Workspace $workspace): array
+    {
+        return $workspace
+            ? $workspace->memberships()
+                ->where('status', WorkspaceMemberStatus::ACTIVE->value)
+                ->get()
+                ->filter(fn ($membership) => $membership->role->canContribute())
+                ->pluck('user_id')
+                ->all()
+            : [];
     }
 
     private function administeredWorkspace(): ?Workspace

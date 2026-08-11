@@ -4,9 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        {{-- Navigation, buttons and other chrome stay English so the two desks read as one
-             product; the page content is Indonesian, because that is what a requester has to
-             understand rather than recognise. --}}
+        {{-- The requester and delivery desks use the same English product language. --}}
         <title>@yield('title', 'Requests') · Orbitra</title>
         <script>
             const orbitraTheme = localStorage.getItem('orbitra-theme') ?? @json(auth()->user()->theme);
@@ -86,8 +84,8 @@
                             {{-- The labels are now the two nouns, so the sentence carries the part
                                  the nouns no longer say: which approval path each one takes. --}}
                             <p class="mt-3 px-3 text-xs leading-5 text-slate-400">
-                                Fitur mengubah sistem yang sudah Anda pakai, dan butuh satu persetujuan.
-                                Proyek berarti sesuatu yang baru: ada rapat pembahasan dan dua tanda tangan.
+                                A feature changes a system you already use and needs one ITD approval.
+                                A project creates something new and requires scoping plus two ITD signatures.
                             </p>
                         </div>
                     @endif

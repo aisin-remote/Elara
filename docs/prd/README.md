@@ -45,6 +45,7 @@ Infrastructure capacity and provider-side limits still apply outside the applica
 | 09 | [Ask AI Phase A](PRD-09-ask-ai-phase-a.md) | Read-only workspace copilot, privacy boundary, and phased AI scope |
 | 10 | [Delivery Intelligence Phase 16A](PRD-10-delivery-intelligence-phase-16a.md) | Finish-to-start dependencies, blocked work, milestones, and timeline planning |
 | 11 | [Delivery Intelligence Phase 16B](PRD-11-delivery-intelligence-phase-16b.md) | Critical path, auto date shift, forecast, portfolio, richer deps, time tracking, weekly insights |
+| 12 | [Supporting Tasks](PRD-12-supporting-tasks.md) | Operational IT work outside projects, systems, and features |
 
 Read 01 and 02 first regardless of what you build. They define the vocabulary every other
 document uses, and they carry the two structural decisions that are expensive to reverse.

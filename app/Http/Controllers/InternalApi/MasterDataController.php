@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\InternalApi;
 
+use App\Actions\Project\AssignSystemPic;
 use App\Actions\Project\CreateSystem;
-use App\Enums\ProjectMemberRole;
 use App\Http\Requests\Master\ArchiveTaskCategoryRequest;
+use App\Http\Requests\Master\AssignSystemPicRequest;
 use App\Http\Requests\Master\MasterActionRequest;
 use App\Http\Requests\Master\StoreSupportArticleRequest;
 use App\Http\Requests\Master\StoreSystemRequest;
@@ -212,38 +213,54 @@ class MasterDataController extends Controller
         return $this->success($request, $data, 'Request rules saved.', back()->getTargetUrl());
     }
 
-    public function storeSystem(StoreSystemRequest $request, Workspace $workspace, CreateSystem $action): JsonResponse|RedirectResponse
+    public function storeSystem(StoreSystemRequest $request, Workspace $workspace, CreateSystem $action, AssignSystemPic $assign): JsonResponse|RedirectResponse
     {
-        $pic = User::where('public_id', $request->string('pic_public_id'))->firstOrFail();
+        $rows = collect($request->validated('pics'));
 
-        $system = $action->handle($workspace, $request->user(), [
-            ...$request->safe()->only(['name', 'description', 'color']),
-            ...$this->departmentAttributes($request),
-            'pic_id' => $pic->id,
-        ]);
+        // The first row creates the system with its PIC; the rest are assigned onto it. Both
+        // paths end in the same place, so naming three departments here and naming them one at
+        // a time afterwards produce the same system.
+        $first = $rows->shift();
+        $firstDepartmentId = $first['organization_department_id'] ?? null;
+
+        $system = DB::transaction(function () use ($request, $workspace, $action, $assign, $rows, $first, $firstDepartmentId): Project {
+            $system = $action->handle($workspace, $request->user(), [
+                ...$request->safe()->only(['name', 'description', 'color']),
+                'organization_department_id' => $firstDepartmentId,
+                'organization_department_code' => $this->departmentCode($firstDepartmentId),
+                'pic_id' => $this->picByPublicId($first)->id,
+            ]);
+
+            foreach ($rows as $row) {
+                $departmentId = (int) $row['organization_department_id'];
+
+                $assign->assign(
+                    $system,
+                    $this->picByPublicId($row),
+                    $departmentId,
+                    $this->departmentCode($departmentId),
+                    $request->user(),
+                );
+            }
+
+            return $system;
+        });
 
         return $this->success($request, ['public_id' => $system->public_id], 'System created.', back()->getTargetUrl(), 201);
+    }
+
+    /** @param array<string, mixed> $row */
+    private function picByPublicId(array $row): User
+    {
+        return User::where('public_id', $row['pic_public_id'])->firstOrFail();
     }
 
     public function updateSystem(StoreSystemRequest $request, Project $system): JsonResponse|RedirectResponse
     {
         abort_unless($system->isSystem(), 404);
-        $pic = User::where('public_id', $request->string('pic_public_id'))->firstOrFail();
 
-        DB::transaction(function () use ($request, $system, $pic): void {
-            $system->update([
-                ...$request->safe()->only(['name', 'description', 'color']),
-                ...$this->departmentAttributes($request),
-            ]);
-
-            // The PIC is "first manager by id", so promoting someone demotes the previous
-            // holder rather than adding a second manager beside them.
-            $system->memberships()->where('role', ProjectMemberRole::MANAGER->value)
-                ->update(['role' => ProjectMemberRole::MEMBER->value]);
-            $system->memberships()->updateOrCreate(
-                ['user_id' => $pic->id],
-                ['role' => ProjectMemberRole::MANAGER->value]
-            );
+        DB::transaction(function () use ($request, $system): void {
+            $system->update($request->safe()->only(['name', 'description', 'color']));
 
             ActivityLog::record($system->workspace, $system, 'system.updated', $request->user());
         });
@@ -252,21 +269,43 @@ class MasterDataController extends Controller
     }
 
     /**
-     * The id the form sent, plus the code looked up beside it. Storing only the id would make
-     * every screen depend on the external directory being up just to print a label.
-     *
-     * @return array<string, int|string|null>
+     * Names the PIC for one department of a system. Assigning again replaces whoever held that
+     * department, so the screen never has to ask which of two people is really responsible.
      */
-    private function departmentAttributes(StoreSystemRequest $request): array
+    public function assignSystemPic(AssignSystemPicRequest $request, Project $system, AssignSystemPic $action): JsonResponse|RedirectResponse
     {
-        $id = $request->integer('organization_department_id') ?: null;
+        abort_unless($system->isSystem(), 404);
 
-        return [
-            'organization_department_id' => $id,
-            'organization_department_code' => $id
-                ? app(OrganizationDirectory::class)->departments()->firstWhere('id', $id)?->code
-                : null,
-        ];
+        $pic = User::where('public_id', $request->string('pic_public_id'))->firstOrFail();
+        $departmentId = $request->integer('organization_department_id');
+
+        $action->assign($system, $pic, $departmentId, $this->departmentCode($departmentId), $request->user());
+
+        return $this->success($request, ['public_id' => $system->public_id], 'PIC assigned.', back()->getTargetUrl());
+    }
+
+    /**
+     * Removal names only the department, so it authorises like the other master actions and
+     * validates nothing further: an id no PIC holds is refused by the Action itself.
+     */
+    public function removeSystemPic(MasterActionRequest $request, Project $system, AssignSystemPic $action): JsonResponse|RedirectResponse
+    {
+        abort_unless($system->isSystem(), 404);
+
+        $action->remove($system, $request->integer('organization_department_id'), $request->user());
+
+        return $this->success($request, ['public_id' => $system->public_id], 'PIC removed.', back()->getTargetUrl());
+    }
+
+    /**
+     * The code looked up beside the id. Storing only the id would make every screen depend on
+     * the external directory being up just to print a label.
+     */
+    private function departmentCode(?int $id): ?string
+    {
+        return $id
+            ? app(OrganizationDirectory::class)->departments()->firstWhere('id', $id)?->code
+            : null;
     }
 
     public function archiveSystem(MasterActionRequest $request, Project $system): JsonResponse|RedirectResponse

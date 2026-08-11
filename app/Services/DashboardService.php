@@ -8,6 +8,7 @@ use App\Enums\WorkspaceRole;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\ScheduleEvent;
+use App\Models\SupportingTask;
 use App\Models\Task;
 use App\Models\TaskStatus;
 use App\Models\User;
@@ -333,10 +334,12 @@ class DashboardService
         if (! $isWorkspaceManager) {
             $projectIds = Project::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
             $taskIds = $this->taskQuery($workspace, $user, $filters)->select('tasks.id');
+            $supportingTaskIds = SupportingTask::query()->where('workspace_id', $workspace->id)->select('id');
             $eventIds = ScheduleEvent::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
             $query->where(fn (Builder $visible) => $visible
                 ->where(fn (Builder $projects) => $projects->where('subject_type', (new Project)->getMorphClass())->whereIn('subject_id', $projectIds))
                 ->orWhere(fn (Builder $tasks) => $tasks->where('subject_type', (new Task)->getMorphClass())->whereIn('subject_id', $taskIds))
+                ->orWhere(fn (Builder $supporting) => $supporting->where('subject_type', (new SupportingTask)->getMorphClass())->whereIn('subject_id', $supportingTaskIds))
                 ->orWhere(fn (Builder $events) => $events->where('subject_type', (new ScheduleEvent)->getMorphClass())->whereIn('subject_id', $eventIds)));
         }
 
@@ -359,6 +362,7 @@ class DashboardService
 
         return match (true) {
             $subject instanceof Task => ['label' => $subject->title, 'url' => route('app.tasks.show', $subject)],
+            $subject instanceof SupportingTask => ['label' => $subject->title, 'url' => route('app.supporting.index', [$workspace, 'search' => $subject->title])],
             $subject instanceof Project => ['label' => $subject->name, 'url' => route('app.projects.show', $subject)],
             $subject instanceof ScheduleEvent => ['label' => $subject->title, 'url' => route('app.schedule.index', $workspace)],
             default => null,

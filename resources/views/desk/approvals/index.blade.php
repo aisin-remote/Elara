@@ -7,16 +7,16 @@
     <div class="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-6 dark:border-slate-800">
         <div>
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-orbit-600">{{ $profile['department_code'] }}</p>
-            <h2 class="mt-1 text-2xl font-bold tracking-tight">Approval department</h2>
+            <h2 class="mt-1 text-2xl font-bold tracking-tight">Department approvals</h2>
             <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-                Permintaan dari {{ $profile['department_name'] }} yang perlu disetujui sebelum masuk ke ITD.
+                Requests from {{ $profile['department_name'] }} that require department approval before going to ITD.
             </p>
         </div>
         <x-badge tone="slate">{{ $profile['rank_code'] }} · {{ $profile['rank_name'] }}</x-badge>
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
-        @foreach ([['Permintaan fitur', $features, false], ['Usulan proyek', $projects, true]] as [$title, $rows, $isProject])
+        @foreach ([['Feature requests', $features, false], ['Project proposals', $projects, true]] as [$title, $rows, $isProject])
             <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex items-center justify-between gap-3">
                     <h3 class="text-lg font-bold">{{ $title }}</h3>
@@ -25,7 +25,7 @@
 
                 @if ($rows->isEmpty())
                     <div class="mt-4">
-                        <x-empty-state icon="check" title="Tidak ada yang menunggu" description="Permintaan baru dari department Anda akan muncul di sini." />
+                        <x-empty-state icon="check" title="Nothing waiting" description="New requests from your department will appear here." />
                     </div>
                 @else
                     <div class="mt-4 space-y-3">

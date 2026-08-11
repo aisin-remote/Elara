@@ -11,7 +11,10 @@ class ProjectMember extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['project_id', 'user_id', 'role'];
+    protected $fillable = [
+        'project_id', 'user_id', 'role',
+        'organization_department_id', 'organization_department_code',
+    ];
 
     protected $casts = ['role' => ProjectMemberRole::class];
 

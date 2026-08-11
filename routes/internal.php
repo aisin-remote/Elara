@@ -28,6 +28,7 @@ use App\Http\Controllers\InternalApi\RequestAttachmentController;
 use App\Http\Controllers\InternalApi\RequestMonitoringController;
 use App\Http\Controllers\InternalApi\ScheduleEventController;
 use App\Http\Controllers\InternalApi\SessionController;
+use App\Http\Controllers\InternalApi\SupportingTaskController;
 use App\Http\Controllers\InternalApi\SupportTicketController;
 use App\Http\Controllers\InternalApi\TaskAttachmentController;
 use App\Http\Controllers\InternalApi\TaskBreakdownController;
@@ -94,6 +95,9 @@ Route::get('/integrations/{provider}/callback', [IntegrationController::class, '
 Route::post('/integrations/{connection}/action', [IntegrationController::class, 'action'])->name('internal.integrations.action');
 Route::delete('/integrations/{connection}', [IntegrationController::class, 'destroy'])->name('internal.integrations.destroy');
 Route::post('/workspaces/{workspace}/support-tickets', [SupportTicketController::class, 'store'])->middleware('throttle:6,1')->name('internal.support-tickets.store');
+Route::post('/workspaces/{workspace}/supporting-tasks', [SupportingTaskController::class, 'store'])->name('internal.supporting-tasks.store');
+Route::patch('/supporting-tasks/{supportingTask}', [SupportingTaskController::class, 'update'])->name('internal.supporting-tasks.update');
+Route::delete('/supporting-tasks/{supportingTask}', [SupportingTaskController::class, 'destroy'])->name('internal.supporting-tasks.destroy');
 
 Route::post('/workspaces/{workspace}/projects', [ProjectController::class, 'store'])->name('internal.projects.store');
 Route::patch('/projects/{project}', [ProjectController::class, 'update'])->name('internal.projects.update');
@@ -145,6 +149,9 @@ Route::post('/workspaces/{workspace}/request-rules', [MasterDataController::clas
 Route::post('/workspaces/{workspace}/systems', [MasterDataController::class, 'storeSystem'])->name('internal.master.systems.store');
 Route::patch('/systems/{system}', [MasterDataController::class, 'updateSystem'])->name('internal.master.systems.update');
 Route::post('/systems/{system}/archive', [MasterDataController::class, 'archiveSystem'])->name('internal.master.systems.archive');
+// One PIC per department, keyed by the department: a system serves several, each with its own.
+Route::post('/systems/{system}/pics', [MasterDataController::class, 'assignSystemPic'])->name('internal.master.systems.pics.assign');
+Route::delete('/systems/{system}/pics', [MasterDataController::class, 'removeSystemPic'])->name('internal.master.systems.pics.remove');
 Route::post('/support-articles', [MasterDataController::class, 'storeArticle'])->name('internal.master.articles.store');
 Route::patch('/support-articles/{article}', [MasterDataController::class, 'updateArticle'])->name('internal.master.articles.update');
 Route::post('/support-articles/{article}/archive', [MasterDataController::class, 'archiveArticle'])->name('internal.master.articles.archive');

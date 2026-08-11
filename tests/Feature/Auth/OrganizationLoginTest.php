@@ -151,10 +151,17 @@ class OrganizationLoginTest extends TestCase
 
         $this->actingAs($requester)->post(route('desk.project-requests.store', $financeWorkspace), [
             'title' => 'Supplier self-service portal',
-            'benefit' => 'Suppliers phone us for delivery dates, which costs the team about fifteen hours a week.',
-            'concept' => 'A website suppliers sign into to see open purchase orders and confirm delivery dates.',
-            'business_process' => 'Today a supplier calls procurement, procurement checks the ERP, then emails a confirmation.',
-            'flow' => 'Supplier signs in, sees open orders, confirms or proposes a date, procurement is notified.',
+            'background' => 'Procurement staff answer supplier delivery questions by phone and email throughout the day.',
+            'why_needed' => 'The manual process consumes about fifteen hours each week and gives suppliers inconsistent answers.',
+            'objectives' => [
+                ['title' => 'Reduce routine calls', 'description' => 'Cut delivery-status calls by at least seventy percent.'],
+            ],
+            'illustration' => 'A secure supplier portal reads open purchase orders and records delivery-date confirmations.',
+            'before_state' => 'A supplier calls procurement, procurement checks the ERP, and then sends an email confirmation.',
+            'after_state' => 'A supplier signs in, sees open orders, and confirms or proposes a delivery date online.',
+            'benefits' => ['Save approximately fifteen staff hours each week.'],
+            'cost_items' => ['Portal design, development, and supplier onboarding.'],
+            'roi' => 'The saved staff time should recover the implementation cost within the first year of operation.',
         ])->assertSessionHasNoErrors()->assertRedirect();
 
         $project = ProjectRequest::firstOrFail();

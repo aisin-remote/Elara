@@ -50,7 +50,7 @@ class RequesterAccessTest extends TestCase
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
 
         // The desk is split by type now, so the empty state names the tab it is speaking for.
-        $this->actingAs($requester)->get(route('desk.index'))->assertOk()->assertSee('Belum ada permintaan fitur');
+        $this->actingAs($requester)->get(route('desk.index'))->assertOk()->assertSee('No feature requests yet');
 
         foreach ([WorkspaceRole::SUPERVISOR, WorkspaceRole::MANAGER, WorkspaceRole::MEMBER, WorkspaceRole::VIEWER] as $role) {
             $this->actingAs($this->member($workspace, $role))

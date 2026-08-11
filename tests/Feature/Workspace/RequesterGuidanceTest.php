@@ -24,11 +24,10 @@ class RequesterGuidanceTest extends TestCase
             route('desk.project-requests.create', $workspace),
         ] as $url) {
             $this->actingAs($requester)->get($url)->assertOk()
-                ->assertSee('Cara kerjanya, dari sini sampai selesai')
-                ->assertSee('Satu tenggat yang jadi tanggung jawab Anda')
-                // The menu name stays English on purpose, so the guide points at what is on screen.
+                ->assertSee('How it works, from request to delivery')
+                ->assertSee('One deadline belongs to you')
                 ->assertSee('Waiting on me')
-                ->assertSee('Cara menulis permintaan yang cepat disetujui');
+                ->assertSee('How to write a request that is easy to assess');
         }
     }
 
@@ -39,10 +38,16 @@ class RequesterGuidanceTest extends TestCase
         $this->actingAs($requester)
             ->get(route('desk.project-requests.create', $workspace))
             ->assertOk()
-            ->assertSee('Rapat pembahasan')
-            ->assertSee('Tanda tangan pertama')
-            ->assertSee('Tanda tangan kedua')
-            ->assertSee('harus orang yang berbeda', false);
+            ->assertSee('Scoping meeting')
+            ->assertSee('First ITD signature')
+            ->assertSee('Second ITD signature')
+            ->assertSee('Add objective')
+            ->assertSee('Add benefit')
+            ->assertSee('Add cost item')
+            ->assertDontSee('objective-1')
+            ->assertDontSee('benefit-1')
+            ->assertDontSee('cost-item-1')
+            ->assertSee('same person cannot supply both signatures', false);
     }
 
     public function test_the_validation_window_shown_is_the_workspace_setting_not_a_hard_coded_seven(): void
@@ -53,8 +58,8 @@ class RequesterGuidanceTest extends TestCase
         $this->actingAs($requester)
             ->get(route('desk.requests.create', $workspace))
             ->assertOk()
-            ->assertSee('4 hari')
-            ->assertDontSee('7 hari');
+            ->assertSee('4 days')
+            ->assertDontSee('7 days');
     }
 
     /** @return array{0: Workspace, 1: User} */

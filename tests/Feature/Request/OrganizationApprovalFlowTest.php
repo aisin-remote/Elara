@@ -76,7 +76,7 @@ class OrganizationApprovalFlowTest extends TestCase
         $this->actingAs($outsider)->get(route('desk.requests.show', $feature))->assertForbidden();
 
         $this->actingAs($head)->get(route('desk.department-approvals.index', $workspace))
-            ->assertOk()->assertSee($feature->title)->assertSee('Approval department');
+            ->assertOk()->assertSee($feature->title)->assertSee('Department approvals');
         $this->actingAs($head)->post(route('desk.department-approvals.features.decide', [$workspace, $feature]), [
             'decision' => 'approve',
         ])->assertRedirect(route('desk.department-approvals.index', $workspace));
@@ -86,7 +86,7 @@ class OrganizationApprovalFlowTest extends TestCase
         $this->assertSame($head->id, $feature->department_reviewed_by);
         Notification::assertSentTo($supervisor, OrbitraNotification::class);
         $this->actingAs($requester)->get(route('desk.requests.show', $feature))
-            ->assertOk()->assertSee('Approval department');
+            ->assertOk()->assertSee('Department approval');
     }
 
     public function test_non_it_manager_is_mapped_to_requester_and_bypasses_department_approval(): void
@@ -137,7 +137,7 @@ class OrganizationApprovalFlowTest extends TestCase
         Notification::assertSentTo($supervisor, OrbitraNotification::class);
         $this->actingAs($head)->get(route('desk.project-requests.show', $project))->assertOk();
         $this->actingAs($requester)->get(route('desk.project-requests.show', $project))
-            ->assertOk()->assertSee('Approval department')->assertSee('Rapat scoping');
+            ->assertOk()->assertSee('Department approval')->assertSee('Scoping meeting');
     }
 
     public function test_information_requested_by_department_returns_to_the_same_stage(): void
@@ -356,10 +356,17 @@ class OrganizationApprovalFlowTest extends TestCase
     {
         return [
             'title' => 'Supplier self-service portal',
-            'benefit' => 'Suppliers phone us for delivery dates, which costs the team about fifteen hours a week.',
-            'concept' => 'A website suppliers sign into to see open purchase orders and confirm delivery dates.',
-            'business_process' => 'Today a supplier calls procurement, procurement checks the ERP, then emails a confirmation.',
-            'flow' => 'Supplier signs in, sees open orders, confirms or proposes a date, procurement is notified.',
+            'background' => 'Procurement staff answer supplier delivery questions by phone and email throughout the day.',
+            'why_needed' => 'The manual process consumes about fifteen hours each week and gives suppliers inconsistent answers.',
+            'objectives' => [
+                ['title' => 'Reduce routine calls', 'description' => 'Cut delivery-status calls by at least seventy percent.'],
+            ],
+            'illustration' => 'A secure supplier portal reads open purchase orders and records delivery-date confirmations.',
+            'before_state' => 'A supplier calls procurement, procurement checks the ERP, and then sends an email confirmation.',
+            'after_state' => 'A supplier signs in, sees open orders, and confirms or proposes a delivery date online.',
+            'benefits' => ['Save approximately fifteen staff hours each week.'],
+            'cost_items' => ['Portal design, development, and supplier onboarding.'],
+            'roi' => 'The saved staff time should recover the implementation cost within the first year of operation.',
         ];
     }
 }

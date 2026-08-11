@@ -14,27 +14,62 @@ class StoreProjectRequestRequest extends FormRequest
 
     public function rules(): array
     {
-        // All four narrative fields are required. A request that cannot articulate its own
-        // business process is not ready for an approver's time, and the form should say so
-        // before submission rather than the supervisor saying it a week later.
         return [
             'title' => ['required', 'string', 'max:200'],
-            'benefit' => ['required', 'string', 'min:40', 'max:4000'],
-            'concept' => ['required', 'string', 'min:40', 'max:4000'],
-            'business_process' => ['required', 'string', 'min:40', 'max:4000'],
-            'flow' => ['required', 'string', 'min:40', 'max:4000'],
+            'background' => ['required', 'string', 'min:20', 'max:5000'],
+            'why_needed' => ['required', 'string', 'min:20', 'max:4000'],
+            'objectives' => ['required', 'array', 'min:1', 'max:6'],
+            'objectives.*.title' => ['required', 'string', 'max:200'],
+            'objectives.*.description' => ['required', 'string', 'max:1000'],
+            'illustration' => ['required', 'string', 'min:20', 'max:4000'],
+            'before_state' => ['required', 'string', 'min:20', 'max:5000'],
+            'after_state' => ['required', 'string', 'min:20', 'max:5000'],
+            'benefits' => ['required', 'array', 'min:1', 'max:4'],
+            'benefits.*' => ['required', 'string', 'max:1000'],
+            'cost_items' => ['required', 'array', 'min:1', 'max:3'],
+            'cost_items.*' => ['required', 'string', 'max:1000'],
+            'roi' => ['required', 'string', 'min:20', 'max:4000'],
             'target_date' => ['nullable', 'date', 'after:today'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $objectives = collect($this->input('objectives', []))
+            ->map(fn ($objective) => [
+                'title' => trim((string) ($objective['title'] ?? '')),
+                'description' => trim((string) ($objective['description'] ?? '')),
+            ])
+            ->filter(fn (array $objective) => $objective['title'] !== '' || $objective['description'] !== '')
+            ->values()
+            ->all();
+
+        $this->merge([
+            'objectives' => $objectives,
+            'benefits' => $this->filledStrings('benefits'),
+            'cost_items' => $this->filledStrings('cost_items'),
+        ]);
     }
 
     public function messages(): array
     {
         return [
-            'benefit.min' => 'Say what the business gains — an approver cannot weigh "it would be nice".',
-            'concept.min' => 'Describe what the thing actually is, in a few sentences.',
-            'business_process.min' => 'Describe the process it supports or replaces.',
-            'flow.min' => 'Walk through how it runs end to end.',
+            'background.min' => 'Describe the activity or process that needs improvement.',
+            'why_needed.min' => 'Explain the pain point this project should solve.',
+            'objectives.min' => 'Add at least one complete objective.',
+            'benefits.min' => 'Add at least one tangible or intangible benefit.',
+            'cost_items.min' => 'Add at least one expected cost item.',
+            'roi.min' => 'Explain the expected return or how success will be measured.',
             'target_date.after' => 'A target date in the past cannot be planned for.',
         ];
+    }
+
+    private function filledStrings(string $key): array
+    {
+        return collect($this->input($key, []))
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->values()
+            ->all();
     }
 }

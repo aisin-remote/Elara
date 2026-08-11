@@ -18,6 +18,7 @@ use App\Http\Controllers\App\ProjectFileController;
 use App\Http\Controllers\App\ScheduleController;
 use App\Http\Controllers\App\SearchController;
 use App\Http\Controllers\App\SettingsController;
+use App\Http\Controllers\App\SupportingTaskController;
 use App\Http\Controllers\App\TaskController;
 use App\Http\Controllers\App\TeamController;
 use App\Http\Controllers\App\WorkspaceController;
@@ -115,6 +116,9 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::get('/app/workspaces/{workspace}/performance', [PerformanceController::class, 'index'])->name('app.performance.index');
     Route::get('/app/workspaces/{workspace}/portfolio', [PortfolioController::class, 'index'])->name('app.portfolio.index');
     Route::get('/app/workspaces/{workspace}/tasks', [TaskController::class, 'global'])->name('app.tasks.index');
+    Route::get('/app/workspaces/{workspace}/supporting', [SupportingTaskController::class, 'index'])->name('app.supporting.index');
+    Route::get('/app/workspaces/{workspace}/supporting/create', [SupportingTaskController::class, 'create'])->name('app.supporting.create');
+    Route::get('/app/workspaces/{workspace}/supporting/{supportingTask}/edit', [SupportingTaskController::class, 'edit'])->name('app.supporting.edit');
     Route::get('/app/workspaces/{workspace}/search', [SearchController::class, 'index'])->middleware('throttle:30,1')->name('app.search');
     Route::get('/app/projects/{project}', [ProjectController::class, 'show'])->name('app.projects.show');
     Route::get('/app/projects/{project}/edit', [ProjectController::class, 'edit'])->name('app.projects.edit');

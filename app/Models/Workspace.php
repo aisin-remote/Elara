@@ -110,6 +110,11 @@ class Workspace extends Model
         return $this->hasMany(SupportTicket::class);
     }
 
+    public function supportingTasks(): HasMany
+    {
+        return $this->hasMany(SupportingTask::class);
+    }
+
     public function resolveRouteBindingQuery($query, $value, $field = null): Builder
     {
         $query = parent::resolveRouteBindingQuery($query, $value, $field);

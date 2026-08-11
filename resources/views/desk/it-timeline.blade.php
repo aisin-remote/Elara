@@ -81,7 +81,7 @@
         </div>
 
         @if ($members->isEmpty())
-            <div class="p-5"><x-empty-state icon="team" title="Belum ada member IT aktif" description="Member akan tampil setelah terhubung ke workspace ITD." /></div>
+            <div class="p-5"><x-empty-state icon="team" title="No active ITD members" description="Members appear after they are connected to the ITD workspace." /></div>
         @else
             <div class="max-h-[760px] overflow-auto" tabindex="0" role="region" aria-label="Scrollable IT member task timeline">
                 <div class="relative grid grid-cols-[minmax(210px,270px)_minmax(0,1fr)]" style="min-width: {{ $timeline->minWidth() }}px">

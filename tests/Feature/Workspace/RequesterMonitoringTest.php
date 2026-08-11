@@ -54,14 +54,14 @@ class RequesterMonitoringTest extends TestCase
         $this->actingAs($requester)
             ->get(route('desk.requests.show', $request))
             ->assertOk()
-            ->assertSee('Perjalanan permintaan')
-            ->assertSee('Diperbarui otomatis setiap 10 detik')
+            ->assertSee('Request progress')
+            ->assertSee('Updates automatically every 10 seconds')
             ->assertDontSee('Secret backend implementation');
 
         $this->actingAs($requester)
             ->getJson(route('internal.requests.monitoring', $request))
             ->assertOk()
-            ->assertJsonPath('current_stage', 'Pengerjaan')
+            ->assertJsonPath('current_stage', 'Delivery')
             ->assertJsonPath('progress', 25)
             ->assertJsonPath('tasks.completed', 0)
             ->assertJsonPath('tasks.total', 2)
@@ -98,9 +98,9 @@ class RequesterMonitoringTest extends TestCase
         $this->actingAs($requester)
             ->getJson(route('internal.requests.monitoring', $request))
             ->assertOk()
-            ->assertJsonPath('current_stage', 'Validasi')
+            ->assertJsonPath('current_stage', 'Validation')
             ->assertJsonPath('validations.open', 1)
-            ->assertJsonPath('action.label', 'Buka validasi')
+            ->assertJsonPath('action.label', 'Open validation')
             ->assertJsonPath('stages.5.state', 'attention');
     }
 
@@ -134,13 +134,13 @@ class RequesterMonitoringTest extends TestCase
         $this->actingAs($requester)
             ->get(route('desk.project-requests.show', $request))
             ->assertOk()
-            ->assertSee('Approval supervisor')
-            ->assertSee('Approval manager');
+            ->assertSee('Supervisor approval')
+            ->assertSee('Manager approval');
 
         $this->actingAs($requester)
             ->getJson(route('internal.project-requests.monitoring', $request))
             ->assertOk()
-            ->assertJsonPath('current_stage', 'Approval manager')
+            ->assertJsonPath('current_stage', 'Manager approval')
             ->assertJsonPath('stages.2.state', 'completed')
             ->assertJsonPath('stages.3.state', 'current');
 

@@ -95,10 +95,10 @@ class DepartmentApprovalController extends Controller
     private function message(string $status): string
     {
         return match ($status) {
-            FeatureRequestStatus::PENDING_REVIEW->value => 'Disetujui. Permintaan fitur diteruskan ke supervisor ITD.',
-            ProjectRequestStatus::PENDING_MEETING->value => 'Disetujui. Usulan proyek diteruskan ke ITD untuk rapat scoping.',
-            'rejected' => 'Permintaan ditolak dan requester sudah diberi tahu.',
-            default => 'Permintaan dikembalikan untuk dilengkapi.',
+            FeatureRequestStatus::PENDING_REVIEW->value => 'Approved. The feature request was sent to an ITD supervisor.',
+            ProjectRequestStatus::PENDING_MEETING->value => 'Approved. The project proposal was sent to ITD for scoping.',
+            'rejected' => 'The request was rejected and the requester has been notified.',
+            default => 'The request was returned for more information.',
         };
     }
 }

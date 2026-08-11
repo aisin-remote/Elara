@@ -28,6 +28,16 @@
         <server name="DB_DATABASE" value=":memory:"/>
         <server name="ORG_DB_REQUIRED" value="false"/>
         <server name="ORG_JIT_AUTH" value="false"/>
+        <!-- Unreachable on purpose. The organisation directory is a live PostgreSQL database
+             owned by another application, and without this the suite queries it for real:
+             a system-catalog test was validating department ids against production data and
+             failing because the ids it invented were not in there. Tests that need the
+             directory point the connection at their own database, as OrganizationLoginTest
+             does; everything else takes the "directory unreachable" path, which is a state
+             the product has to handle anyway. -->
+        <server name="ORG_DB_HOST" value="127.0.0.1"/>
+        <server name="ORG_DB_PORT" value="1"/>
+        <server name="ORG_DB_DATABASE" value="orbitra-testing-no-directory"/>
         <server name="MAIL_MAILER" value="array"/>
         <!-- Blank, so no test can reach a paid third party by accident. Without this the key
              from .env leaks in and any code that branches on "is AI configured" takes the

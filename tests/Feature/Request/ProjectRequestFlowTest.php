@@ -30,12 +30,14 @@ class ProjectRequestFlowTest extends TestCase
         $this->actingAs($requester)
             ->post(route('desk.project-requests.store', $workspace), [
                 'title' => 'Supplier portal',
-                'benefit' => 'It would be nice',
-                'concept' => 'A portal',
-                'business_process' => 'Procurement',
-                'flow' => 'They log in',
+                'background' => 'Too short',
+                'why_needed' => 'Too short',
+                'illustration' => 'Too short',
+                'before_state' => 'Too short',
+                'after_state' => 'Too short',
+                'roi' => 'Too short',
             ])
-            ->assertSessionHasErrors(['benefit', 'concept', 'business_process', 'flow']);
+            ->assertSessionHasErrors(['background', 'why_needed', 'objectives', 'illustration', 'before_state', 'after_state', 'benefits', 'cost_items', 'roi']);
 
         $this->assertSame(0, ProjectRequest::count());
     }
@@ -54,6 +56,10 @@ class ProjectRequestFlowTest extends TestCase
 
         $request = ProjectRequest::firstOrFail();
         $this->assertSame(ProjectRequestStatus::PENDING_MEETING, $request->status);
+        $this->assertSame('Procurement staff answer supplier delivery questions by phone and email throughout the day.', $request->background);
+        $this->assertCount(2, $request->objectives);
+        $this->assertStringContainsString('Reduce routine calls', $request->concept);
+        $this->assertStringContainsString('Expected costs', $request->benefit);
 
         Notification::assertSentTo($supervisor, OrbitraNotification::class);
         // The manager is the second signature; they are not pulled in at intake.
@@ -202,6 +208,36 @@ class ProjectRequestFlowTest extends TestCase
         $this->assertSame(ProjectRequestStatus::PENDING_SPV, $request->fresh()->status);
     }
 
+    public function test_requester_can_resubmit_the_complete_structured_business_case(): void
+    {
+        [, $workspace] = $this->workspace();
+        $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $request = $this->submit($workspace, $requester);
+        $request->forceFill([
+            'status' => ProjectRequestStatus::NEEDS_INFO,
+            'needs_info_stage' => 'supervisor',
+            'meeting_held_at' => now(),
+        ])->save();
+
+        $this->actingAs($requester)
+            ->get(route('desk.project-requests.show', $request))
+            ->assertOk()
+            ->assertSee('objective-1')
+            ->assertSee('benefit-1')
+            ->assertSee('cost-item-1');
+
+        $payload = $this->payload();
+        $payload['why_needed'] = 'The revised pain point includes the weekly volume and the cost of inconsistent supplier answers.';
+
+        $this->actingAs($requester)
+            ->post(route('desk.project-requests.resubmit', $request), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertSame(ProjectRequestStatus::PENDING_SPV, $request->fresh()->status);
+        $this->assertSame($payload['why_needed'], $request->fresh()->why_needed);
+    }
+
     private function workspace(): array
     {
         $owner = User::factory()->create();
@@ -227,10 +263,18 @@ class ProjectRequestFlowTest extends TestCase
     {
         return [
             'title' => 'Supplier self-service portal',
-            'benefit' => 'Suppliers phone us for delivery dates, which costs the team about fifteen hours a week.',
-            'concept' => 'A website suppliers sign into to see open purchase orders and confirm delivery dates.',
-            'business_process' => 'Today a supplier calls procurement, procurement checks the ERP, then emails a confirmation.',
-            'flow' => 'Supplier signs in, sees open orders, confirms or proposes a date, procurement is notified.',
+            'background' => 'Procurement staff answer supplier delivery questions by phone and email throughout the day.',
+            'why_needed' => 'The manual process consumes about fifteen hours each week and gives suppliers inconsistent answers.',
+            'objectives' => [
+                ['title' => 'Reduce routine calls', 'description' => 'Cut delivery-status calls by at least seventy percent.'],
+                ['title' => 'Improve accuracy', 'description' => 'Show suppliers the same confirmed dates held in the source system.'],
+            ],
+            'illustration' => 'A secure supplier portal reads open purchase orders and records delivery-date confirmations.',
+            'before_state' => 'A supplier calls procurement, procurement checks the ERP, and then sends an email confirmation.',
+            'after_state' => 'A supplier signs in, sees open orders, and confirms or proposes a delivery date online.',
+            'benefits' => ['Save approximately fifteen staff hours each week.', 'Give suppliers faster and more consistent answers.'],
+            'cost_items' => ['Portal design and development.', 'Supplier onboarding and operating support.'],
+            'roi' => 'The saved staff time should recover the implementation cost within the first year of operation.',
         ];
     }
 

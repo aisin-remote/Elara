@@ -25,10 +25,6 @@ class CreateSystem
                 'owner_id' => $actor->id,
                 'name' => $data['name'],
                 'type' => ProjectType::SYSTEM,
-                // The code is copied alongside the id so the system still reads sensibly when
-                // the directory is unreachable — an id alone is unreadable to a human.
-                'organization_department_id' => $data['organization_department_id'] ?? null,
-                'organization_department_code' => $data['organization_department_code'] ?? null,
                 'description' => $data['description'] ?? null,
                 'color' => $data['color'],
                 'status' => ProjectStatus::ACTIVE,
@@ -36,11 +32,18 @@ class CreateSystem
 
             TaskStatus::createDefaultsFor($system);
 
+            // The department rides on the assignment rather than on the system: this is the PIC
+            // for that department, and more can be named beside it later. The code travels with
+            // the id so a screen can print a label without the directory being up.
             $system->memberships()->create([
                 'user_id' => $data['pic_id'],
                 'role' => ProjectMemberRole::MANAGER,
+                'organization_department_id' => $data['organization_department_id'] ?? null,
+                'organization_department_code' => $data['organization_department_code'] ?? null,
             ]);
 
+            // The creator is a manager too, but for no department in particular: they can run
+            // the system without being the person any department is routed to.
             if ($data['pic_id'] !== $actor->id) {
                 $system->memberships()->create([
                     'user_id' => $actor->id,

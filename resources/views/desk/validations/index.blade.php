@@ -5,10 +5,10 @@
 
 @section('content')
     <div class="pb-6">
-        <h2 class="text-2xl font-bold tracking-tight">{{ $open->count() }} menunggu jawaban Anda</h2>
+        <h2 class="text-2xl font-bold tracking-tight">{{ $open->count() }} waiting for your response</h2>
         <p class="mt-2 text-sm text-slate-500">
-            Tim berhenti di sini sampai Anda mengonfirmasi. Kalau tidak dijawab tepat waktu, permintaannya dibatalkan
-            dan jatahnya di antrean diberikan ke orang lain.
+            ITD pauses here until you confirm the result. If you do not respond in time, the request is cancelled
+            and the capacity slot moves to the next request.
         </p>
     </div>
 
@@ -35,8 +35,8 @@
             {{-- The consequence spelled out with a date. A deadline nobody knows about is not
                  a deadline, and "expires soon" is not a date. --}}
             <p class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:bg-slate-800/60">
-                Kalau tidak ada jawaban sampai <strong>{{ $checkpoint->expires_at->format('j F Y') }}</strong>,
-                “{{ $checkpoint->subject?->title }}” dibatalkan dan tim melanjutkan ke permintaan berikutnya.
+                If there is no response by <strong>{{ $checkpoint->expires_at->format('F j, Y') }}</strong>,
+                “{{ $checkpoint->subject?->title }}” is cancelled and ITD moves to the next request.
             </p>
 
             <form method="POST" action="{{ route('desk.validations.respond', $checkpoint) }}" class="mt-4 space-y-3"
@@ -45,7 +45,7 @@
                 <x-form-errors :except="['decision', 'response_note']" />
 
                 <div class="grid gap-2 sm:grid-cols-2">
-                    @foreach ([['approved', 'Sudah benar', 'Tim melanjutkan pekerjaan.'], ['changes_requested', 'Perlu diperbaiki', 'Dikembalikan ke tim beserta catatan Anda.']] as [$value, $label, $hint])
+                    @foreach ([['approved', 'Looks correct', 'ITD continues the work.'], ['changes_requested', 'Changes required', 'Returned to ITD with your notes.']] as [$value, $label, $hint])
                         <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
                             <input type="radio" name="decision" value="{{ $value }}" x-model="decision" @checked($value === 'approved') class="mt-1 border-slate-300 text-orbit-600 focus:ring-orbit-500">
                             <span class="min-w-0"><span class="block text-sm font-semibold">{{ $label }}</span><span class="mt-0.5 block text-xs text-slate-500">{{ $hint }}</span></span>
@@ -54,22 +54,22 @@
                 </div>
 
                 <div x-show="decision === 'changes_requested'" x-cloak>
-                    <x-label :for="'note_'.$checkpoint->public_id">Apa yang perlu diperbaiki?</x-label>
-                    <x-textarea :id="'note_'.$checkpoint->public_id" name="response_note" rows="3" placeholder="Jelaskan apa yang salah atau belum ada.">{{ old('response_note') }}</x-textarea>
+                    <x-label :for="'note_'.$checkpoint->public_id">What needs to change?</x-label>
+                    <x-textarea :id="'note_'.$checkpoint->public_id" name="response_note" rows="3" placeholder="Explain what is incorrect or missing.">{{ old('response_note') }}</x-textarea>
                     <x-field-error name="response_note" />
                 </div>
 
-                <x-button>Kirim jawaban saya</x-button>
+                <x-button>Submit my response</x-button>
             </form>
         </section>
     @empty
-        <x-empty-state icon="check" title="Tidak ada yang menunggu Anda"
-            description="Kalau tim menyelesaikan sesuatu yang perlu Anda konfirmasi, itu akan muncul di sini." />
+        <x-empty-state icon="check" title="Nothing is waiting on you"
+            description="When ITD finishes something that needs your confirmation, it will appear here." />
     @endforelse
 
     @if ($answered->isNotEmpty())
         <section class="mt-10" aria-labelledby="answered-title">
-            <h2 id="answered-title" class="text-lg font-bold">Sudah dijawab</h2>
+            <h2 id="answered-title" class="text-lg font-bold">Answered</h2>
             <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                 @foreach ($answered as $checkpoint)
                     <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 p-4 last:border-0 dark:border-slate-800">
@@ -78,7 +78,7 @@
                             <p class="mt-0.5 truncate text-xs text-slate-500">
                                 {{ $checkpoint->subject?->title }}
                                 @if ($checkpoint->responded_at)
-                                    · dijawab {{ $checkpoint->responded_at->diffForHumans() }}
+                                    · answered {{ $checkpoint->responded_at->diffForHumans() }}
                                 @endif
                             </p>
                         </div>

@@ -12,6 +12,11 @@ Organization approval enhancement, 2026-08-09: non-IT requesters below `MGR/COOR
 need a same-department MGR/COOR decision. Non-IT MGR/COOR bypass that gate. The existing ITD
 chain remains scoping meeting → SPV → MGR.
 
+Business-case form enhancement, 2026-08-11: the requester-facing Project form now captures
+Background, Why Needed, up to six Objectives, Project Illustration, Before/After, up to four
+Benefits, up to three Cost Items, and ROI. Feature Request intake remains unchanged. Requester
+pages use English throughout.
+
 Deferred to 12b: **attachments**, shared with PRD-03. `files.project_id` is already nullable so
 the column work is small; the upload flow, the download policy for a requester who is not a
 project member, and the desk UI are the actual cost, and they are the same work for both
@@ -56,6 +61,15 @@ project_requests
   requester_section_external_id/name
   department_reviewed_by/at, department_decision_note
   title               string(200)
+  background          nullable text
+  why_needed          nullable text
+  objectives          nullable json  -- [{title, description}], maximum six
+  illustration        nullable text
+  before_state        nullable text
+  after_state         nullable text
+  benefits            nullable json  -- maximum four
+  cost_items          nullable json  -- maximum three
+  roi                  nullable text
   benefit             text   -- required: what the business gains
   concept             text   -- required: what it is
   business_process    text   -- required: the process it supports or replaces
@@ -73,9 +87,9 @@ project_requests
   index (workspace_id, status), index (requester_id)
 ```
 
-The four narrative fields are separate columns rather than one blob because approvers read
-them independently and the AI breakdown in PRD-06 weights them differently — `flow` and
-`business_process` drive task decomposition, `benefit` does not.
+The structured business-case fields are what requesters edit and approvers read. The four
+legacy narrative columns remain populated as generated summaries so the existing approval,
+AI breakdown, and project-creation pipeline stays backward compatible with older requests.
 
 ### States
 
@@ -111,10 +125,11 @@ approvals queue with its age — visible, not silently rotting.
 
 ### The form
 
-Four required narrative fields, each with placeholder text that says what a good answer looks
-like. A request that cannot articulate its own business process is not ready for an
-approver's time, and the form should say so before submission rather than the SPV saying it
-a week later.
+The Project form mirrors the business-case worksheet: Project Name; Background; Why Needed;
+one to six titled Objectives; Project Illustration; Before and After; one to four tangible or
+intangible Benefits; one to three expected Cost Items; and ROI. The target date remains an
+optional planning preference. Each narrative section is validated server-side, and the same
+complete form is used when a proposal is returned for more information.
 
 Attachments reuse the private-file mechanism (process diagrams, spreadsheets, mockups).
 
@@ -137,8 +152,11 @@ like any project in Orbitra today — which is the point.
 
 ## Acceptance criteria
 
-- Submitting with any of benefit, concept, business process, or flow empty is refused by the
-  Form Request.
+- Submitting without Background, Why Needed, at least one complete Objective, Project
+  Illustration, Before, After, at least one Benefit, at least one Cost Item, or ROI is refused
+  by the Form Request.
+- ITD and department approvers see the same structured business case submitted by the
+  requester.
 - The approve control is unavailable — not merely hidden — until `meeting_held_at` is set.
 - The same user cannot occupy both signature slots, even with both roles.
 - Approval creates exactly one project, and re-submitting the approval (double click, retry)
@@ -152,7 +170,7 @@ like any project in Orbitra today — which is the point.
 
 ## Out of scope
 
-- Budget approval or cost modelling.
+- Formal budget authorization. The form records requester estimates and ROI context only.
 - Vendor or procurement flow.
 - Multi-round approvals beyond the two signatures.
 - Portfolio-level prioritisation across approved-but-unscheduled projects beyond the FIFO

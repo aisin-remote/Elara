@@ -58,6 +58,7 @@
                                 ['app.projects.index', 'Projects', 'projects'],
                                 ['app.features.index', 'Features', 'board'],
                                 ['app.tasks.index', 'Task List', 'tasks'],
+                                ['app.supporting.index', 'Supporting', 'supporting'],
                                 ['app.schedule.index', 'Schedule', 'calendar'],
                             ],
                             'Insight' => [
@@ -103,7 +104,8 @@
                                     @php($isCurrent = request()->routeIs($routeName)
                                         || ($routeName === 'app.projects.index' && request()->routeIs('app.projects.*') && ! $viewingSystem)
                                         || ($routeName === 'app.features.index' && ($viewingSystem || request()->routeIs('app.features.*')))
-                                        || ($routeName === 'app.tasks.index' && request()->routeIs('app.tasks.*')))
+                                        || ($routeName === 'app.tasks.index' && request()->routeIs('app.tasks.*'))
+                                        || ($routeName === 'app.supporting.index' && request()->routeIs('app.supporting.*')))
                                     <a href="{{ route($routeName, $activeWorkspace) }}" @if ($isCurrent) aria-current="page" @endif class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ $isCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
                                         <x-icon :name="$icon" />{{ $label }}
                                     </a>

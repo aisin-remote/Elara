@@ -76,7 +76,7 @@ class FeatureRequestController extends Controller
 
         if ($needsDepartmentApproval && $organization->departmentApprovers($workspace, $profile['department_id'])->isEmpty()) {
             throw ValidationException::withMessages([
-                'organization' => 'Manager atau coordinator department Anda belum memiliki akses aktif ke workspace Orbitra ini.',
+                'organization' => 'Your department manager or coordinator does not have active Orbitra access yet.',
             ]);
         }
 
@@ -113,7 +113,7 @@ class FeatureRequestController extends Controller
         return redirect()
             ->route('desk.requests.show', $featureRequest)
             ->with('status', $needsDepartmentApproval
-                ? 'Request submitted. Manager atau coordinator department Anda akan meninjaunya lebih dulu.'
+                ? 'Request submitted. Your department manager or coordinator will review it first.'
                 : 'Request submitted. A supervisor ITD will review it.');
     }
 

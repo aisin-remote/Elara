@@ -72,7 +72,7 @@ class RequestProgressService
             'assignee' => $request->assignee?->name,
             'schedule' => $this->scheduleLabel($request, $timezone),
             'action' => $openCheckpoints->isNotEmpty()
-                ? ['label' => 'Buka validasi', 'url' => route('desk.validations.index')]
+                ? ['label' => 'Open validation', 'url' => route('desk.validations.index')]
                 : null,
             'stages' => collect($definitions)->map(function (array $stage, int $index) use ($current, $stopped, $attention, $request, $timezone) {
                 $isCurrent = $index === $current;
@@ -196,19 +196,19 @@ class RequestProgressService
     private function featureStages(FeatureRequest $request, Collection $tasks, Collection $checkpoints, Collection $logs, ?TaskBreakdown $breakdown): array
     {
         $stages = [
-            ['key' => 'submitted', 'label' => 'Diajukan', 'at' => $request->created_at],
-            ['key' => 'review', 'label' => 'Review supervisor', 'at' => $this->actionTime($logs, ['feature_request.pending_review'])],
-            ['key' => 'scheduling', 'label' => 'Penjadwalan', 'at' => $this->actionTime($logs, ['feature_request.approved'])],
-            ['key' => 'planning', 'label' => 'Rencana kerja', 'at' => $this->actionTime($logs, ['feature_request.scheduled'])],
-            ['key' => 'delivery', 'label' => 'Pengerjaan', 'at' => $breakdown?->accepted_at ?? $tasks->min('created_at')],
-            ['key' => 'validation', 'label' => 'Validasi', 'at' => $checkpoints->min('opened_at')],
-            ['key' => 'delivered', 'label' => 'Selesai', 'at' => $this->actionTime($logs, ['feature_request.delivered']) ?? $tasks->max('completed_at')],
+            ['key' => 'submitted', 'label' => 'Submitted', 'at' => $request->created_at],
+            ['key' => 'review', 'label' => 'Supervisor review', 'at' => $this->actionTime($logs, ['feature_request.pending_review'])],
+            ['key' => 'scheduling', 'label' => 'Scheduling', 'at' => $this->actionTime($logs, ['feature_request.approved'])],
+            ['key' => 'planning', 'label' => 'Work planning', 'at' => $this->actionTime($logs, ['feature_request.scheduled'])],
+            ['key' => 'delivery', 'label' => 'Delivery', 'at' => $breakdown?->accepted_at ?? $tasks->min('created_at')],
+            ['key' => 'validation', 'label' => 'Validation', 'at' => $checkpoints->min('opened_at')],
+            ['key' => 'delivered', 'label' => 'Delivered', 'at' => $this->actionTime($logs, ['feature_request.delivered']) ?? $tasks->max('completed_at')],
         ];
 
         if ($this->requiresDepartmentApproval($request)) {
             array_splice($stages, 1, 0, [[
                 'key' => 'department',
-                'label' => 'Approval department',
+                'label' => 'Department approval',
                 'at' => $request->department_reviewed_at,
             ]]);
         }
@@ -219,21 +219,21 @@ class RequestProgressService
     private function projectStages(ProjectRequest $request, Collection $tasks, Collection $checkpoints, Collection $logs, ?TaskBreakdown $breakdown): array
     {
         $stages = [
-            ['key' => 'submitted', 'label' => 'Diajukan', 'at' => $request->created_at],
-            ['key' => 'scoping', 'label' => 'Rapat scoping', 'at' => $this->actionTime($logs, ['project_request.pending_meeting'])],
-            ['key' => 'supervisor', 'label' => 'Approval supervisor', 'at' => $request->meeting_held_at],
-            ['key' => 'manager', 'label' => 'Approval manager', 'at' => $request->spv_at],
-            ['key' => 'scheduling', 'label' => 'Penjadwalan', 'at' => $request->manager_at],
-            ['key' => 'planning', 'label' => 'Rencana kerja', 'at' => $this->actionTime($logs, ['project_request.scheduled'])],
-            ['key' => 'delivery', 'label' => 'Pengerjaan', 'at' => $breakdown?->accepted_at ?? $tasks->min('created_at')],
-            ['key' => 'validation', 'label' => 'Validasi', 'at' => $checkpoints->min('opened_at')],
-            ['key' => 'delivered', 'label' => 'Selesai', 'at' => $this->actionTime($logs, ['project_request.delivered']) ?? $tasks->max('completed_at')],
+            ['key' => 'submitted', 'label' => 'Submitted', 'at' => $request->created_at],
+            ['key' => 'scoping', 'label' => 'Scoping meeting', 'at' => $this->actionTime($logs, ['project_request.pending_meeting'])],
+            ['key' => 'supervisor', 'label' => 'Supervisor approval', 'at' => $request->meeting_held_at],
+            ['key' => 'manager', 'label' => 'Manager approval', 'at' => $request->spv_at],
+            ['key' => 'scheduling', 'label' => 'Scheduling', 'at' => $request->manager_at],
+            ['key' => 'planning', 'label' => 'Work planning', 'at' => $this->actionTime($logs, ['project_request.scheduled'])],
+            ['key' => 'delivery', 'label' => 'Delivery', 'at' => $breakdown?->accepted_at ?? $tasks->min('created_at')],
+            ['key' => 'validation', 'label' => 'Validation', 'at' => $checkpoints->min('opened_at')],
+            ['key' => 'delivered', 'label' => 'Delivered', 'at' => $this->actionTime($logs, ['project_request.delivered']) ?? $tasks->max('completed_at')],
         ];
 
         if ($this->requiresDepartmentApproval($request)) {
             array_splice($stages, 1, 0, [[
                 'key' => 'department',
-                'label' => 'Approval department',
+                'label' => 'Department approval',
                 'at' => $request->department_reviewed_at,
             ]]);
         }
@@ -244,57 +244,57 @@ class RequestProgressService
     private function description(FeatureRequest|ProjectRequest $request, Collection $tasks, Collection $open, ?TaskBreakdown $breakdown, int $blocked): string
     {
         if ($request->status->value === 'rejected') {
-            return 'Permintaan berhenti pada proses persetujuan. Alasan keputusan ditampilkan di bawah timeline.';
+            return 'The request stopped during approval. The decision reason is shown below the timeline.';
         }
 
         if ($request->status->value === 'taken_down') {
-            return 'Permintaan dihentikan setelah batas waktu validasi berakhir.';
+            return 'The request was stopped after its validation deadline expired.';
         }
 
         if ($request->status->value === 'needs_info') {
-            return 'Tim menunggu informasi tambahan dari Anda sebelum proses dilanjutkan.';
+            return 'The reviewer is waiting for more information from you.';
         }
 
         if ($open->isNotEmpty()) {
-            return $open->count().' hasil kerja menunggu validasi Anda. Buka validasi sebelum batas waktunya.';
+            return $open->count().' work result(s) are waiting for your validation. Respond before the deadline.';
         }
 
         if ($tasks->isNotEmpty()) {
             $completed = $tasks->whereNotNull('completed_at')->count();
 
-            return $completed.' dari '.$tasks->count().' task selesai'.($blocked ? '; '.$blocked.' task masih menunggu prerequisite.' : '.');
+            return $completed.' of '.$tasks->count().' tasks completed'.($blocked ? '; '.$blocked.' task(s) are still waiting on prerequisites.' : '.');
         }
 
         if ($breakdown?->status === BreakdownStatus::PENDING) {
-            return 'AI sedang menyusun rencana kerja untuk ditinjau oleh tim.';
+            return 'AI is preparing a work plan for ITD review.';
         }
 
         if ($breakdown?->status === BreakdownStatus::READY) {
-            return 'Rencana kerja sudah siap dan sedang ditinjau oleh tim sebelum masuk ke board.';
+            return 'The work plan is ready and being reviewed before it is added to the board.';
         }
 
         return match ($request->status->value) {
-            'pending_department' => 'Permintaan menunggu approval manager atau coordinator department Anda.',
-            'pending_review' => 'Permintaan sedang menunggu keputusan supervisor.',
+            'pending_department' => 'The request is waiting for your department manager or coordinator.',
+            'pending_review' => 'The request is waiting for a supervisor decision.',
             'pending_meeting' => $request instanceof ProjectRequest && $request->meeting
-                ? 'Rapat scoping sudah dijadwalkan dan menunggu untuk dilaksanakan.'
-                : 'Supervisor akan menjadwalkan rapat scoping.',
-            'pending_spv' => 'Rapat selesai dan permintaan menunggu persetujuan supervisor.',
-            'pending_manager' => 'Supervisor sudah menyetujui; sekarang menunggu persetujuan manager.',
-            'approved' => 'Permintaan disetujui dan sedang mencari slot kapasitas tim.',
-            'scheduled' => 'PIC dan jadwal sudah ditentukan; tim sedang menyiapkan rencana kerja.',
-            'delivered' => 'Seluruh pekerjaan dan validasi sudah selesai.',
-            default => 'Permintaan sudah tercatat dan akan bergerak ke tahap berikutnya.',
+                ? 'The scoping meeting is scheduled and waiting to take place.'
+                : 'ITD will schedule the scoping meeting.',
+            'pending_spv' => 'Scoping is complete and the proposal is waiting for supervisor approval.',
+            'pending_manager' => 'The supervisor approved it; the proposal is now waiting for manager approval.',
+            'approved' => 'The request is approved and waiting for an available capacity slot.',
+            'scheduled' => 'The assignee and schedule are set; ITD is preparing the work plan.',
+            'delivered' => 'All work and validations are complete.',
+            default => 'The request is recorded and will move to the next stage.',
         };
     }
 
     private function currentLabel(FeatureRequest|ProjectRequest $request, string $fallback): string
     {
         return match ($request->status->value) {
-            'rejected' => 'Tidak disetujui',
-            'taken_down' => 'Dihentikan',
-            'delivered' => 'Selesai',
-            'needs_info' => 'Menunggu informasi Anda',
+            'rejected' => 'Not approved',
+            'taken_down' => 'Stopped',
+            'delivered' => 'Delivered',
+            'needs_info' => 'Waiting for your information',
             default => $fallback,
         };
     }

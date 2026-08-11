@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Desk;
 use App\Actions\Request\TransitionProjectRequest;
 use App\Enums\ProjectRequestStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Request\ResubmitProjectRequestRequest;
 use App\Http\Requests\Request\StoreProjectRequestRequest;
 use App\Models\ActivityLog;
 use App\Models\ProjectRequest;
@@ -47,7 +48,7 @@ class ProjectRequestController extends Controller
 
         if ($needsDepartmentApproval && $organization->departmentApprovers($workspace, $profile['department_id'])->isEmpty()) {
             throw ValidationException::withMessages([
-                'organization' => 'Manager atau coordinator department Anda belum memiliki akses aktif ke workspace Orbitra ini.',
+                'organization' => 'Your department manager or coordinator does not have active Orbitra access yet.',
             ]);
         }
 
@@ -57,7 +58,7 @@ class ProjectRequestController extends Controller
                 'requester_id' => $request->user()->id,
                 'status' => ProjectRequestStatus::DRAFT,
                 ...$organization->snapshot($profile),
-                ...$request->safe()->only(['title', 'benefit', 'concept', 'business_process', 'flow', 'target_date']),
+                ...$this->payload($request->validated()),
             ]);
 
             ActivityLog::record($deliveryWorkspace, $created, 'project_request.created', $request->user());
@@ -74,7 +75,7 @@ class ProjectRequestController extends Controller
         return redirect()
             ->route('desk.project-requests.show', $projectRequest)
             ->with('status', $needsDepartmentApproval
-                ? 'Request submitted. Manager atau coordinator department Anda akan meninjaunya lebih dulu.'
+                ? 'Request submitted. Your department manager or coordinator will review it first.'
                 : 'Request submitted. ITD will arrange a scoping meeting with you.');
     }
 
@@ -93,16 +94,9 @@ class ProjectRequestController extends Controller
         ]);
     }
 
-    public function resubmit(Request $request, ProjectRequest $projectRequest, TransitionProjectRequest $transition): RedirectResponse
+    public function resubmit(ResubmitProjectRequestRequest $request, ProjectRequest $projectRequest, TransitionProjectRequest $transition): RedirectResponse
     {
-        $this->authorize('resubmit', $projectRequest);
-
-        $projectRequest->update($request->validate([
-            'benefit' => ['required', 'string', 'min:40', 'max:4000'],
-            'concept' => ['required', 'string', 'min:40', 'max:4000'],
-            'business_process' => ['required', 'string', 'min:40', 'max:4000'],
-            'flow' => ['required', 'string', 'min:40', 'max:4000'],
-        ]));
+        $projectRequest->update($this->payload($request->validated()));
 
         $transition->handle(
             $projectRequest,
@@ -122,5 +116,23 @@ class ProjectRequestController extends Controller
         $transition->handle($projectRequest, ProjectRequestStatus::REJECTED, $request->user(), 'Withdrawn by the requester.');
 
         return redirect()->route('desk.index')->with('status', 'Request withdrawn.');
+    }
+
+    private function payload(array $validated): array
+    {
+        $objectives = collect($validated['objectives'])
+            ->map(fn (array $objective) => $objective['title'].': '.$objective['description'])
+            ->implode("\n");
+        $benefits = collect($validated['benefits'])->implode("\n");
+        $costs = collect($validated['cost_items'])->implode("\n");
+
+        return [
+            ...$validated,
+            // Keep the existing AI breakdown and project creation pipeline compatible.
+            'business_process' => $validated['background'],
+            'concept' => $objectives."\n\nExpected future state:\n".$validated['after_state'],
+            'flow' => $validated['illustration']."\n\nBefore:\n".$validated['before_state']."\n\nAfter:\n".$validated['after_state'],
+            'benefit' => $benefits."\n\nExpected costs:\n".$costs."\n\nCost & ROI:\n".$validated['roi'],
+        ];
     }
 }
