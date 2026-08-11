@@ -28,4 +28,38 @@ class WorkspaceMemberPolicy
     {
         return $this->update($user, $member);
     }
+
+    /**
+     * Erasing the account, not merely closing the door on it. Kept separate from delete()
+     * because deactivating access is reversible and this is not.
+     *
+     * Owner, admin, and manager may do it, and only to someone below them: a manager must not
+     * be able to erase an admin, and nobody erases an owner while they still own something.
+     */
+    public function deleteAccount(User $user, WorkspaceMember $member): bool
+    {
+        if ($member->user_id === $user->id) {
+            return false;
+        }
+
+        $actor = $member->workspace->memberships()
+            ->where('user_id', $user->id)
+            ->where('status', WorkspaceMemberStatus::ACTIVE->value)
+            ->first();
+
+        $rank = $this->rank($actor?->role);
+
+        return $rank > 0 && $rank > $this->rank($member->role);
+    }
+
+    /** Higher outranks lower. Everything outside the three is zero and can neither act nor be protected. */
+    private function rank(?WorkspaceRole $role): int
+    {
+        return match ($role) {
+            WorkspaceRole::OWNER => 3,
+            WorkspaceRole::ADMIN => 2,
+            WorkspaceRole::MANAGER => 1,
+            default => 0,
+        };
+    }
 }

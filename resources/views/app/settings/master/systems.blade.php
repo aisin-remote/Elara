@@ -59,14 +59,16 @@
                             @if ($departments->isNotEmpty())
                                 <div>
                                     <x-label for="department-{{ $system->public_id }}">Department</x-label>
-                                    <x-select id="department-{{ $system->public_id }}" name="organization_department_id">
-                                        <option value="">No department</option>
-                                        @foreach ($departments as $department)
-                                            <option value="{{ $department->id }}" @selected($system->organization_department_id === $department->id)>
-                                                {{ $department->name }}{{ $department->code ? ' ('.$department->code.')' : '' }}
-                                            </option>
-                                        @endforeach
-                                    </x-select>
+                                    <x-searchable-select
+                                        id="department-{{ $system->public_id }}"
+                                        name="organization_department_id"
+                                        :selected="$system->organization_department_id"
+                                        empty-label="No department"
+                                        search-placeholder="Search departments…"
+                                        :options="$departments->map(fn ($d) => [
+                                            'value' => $d->id,
+                                            'label' => $d->name.($d->code ? ' ('.$d->code.')' : ''),
+                                        ])" />
                                 </div>
                             @else
                                 {{-- Preserve what is stored rather than blanking it: with the picker
@@ -76,11 +78,13 @@
                             @endif
                             <div>
                                 <x-label for="pic-{{ $system->public_id }}">PIC</x-label>
-                                <x-select id="pic-{{ $system->public_id }}" name="pic_public_id">
-                                    @foreach ($candidates as $candidate)
-                                        <option value="{{ $candidate->user->public_id }}" @selected($pic?->id === $candidate->user_id)>{{ $candidate->user->name }}</option>
-                                    @endforeach
-                                </x-select>
+                                <x-searchable-select
+                                    id="pic-{{ $system->public_id }}"
+                                    name="pic_public_id"
+                                    :selected="$pic?->public_id"
+                                    placeholder="Choose a PIC"
+                                    search-placeholder="Search people…"
+                                    :options="$candidates->map(fn ($c) => ['value' => $c->user->public_id, 'label' => $c->user->name])->values()" />
                             </div>
                             <div><x-label for="color-{{ $system->public_id }}">Colour</x-label><x-input id="color-{{ $system->public_id }}" type="color" name="color" value="{{ $system->color }}" /></div>
                         </div>
@@ -109,26 +113,29 @@
                             You can still add the system and set its department later.
                         </p>
                     @else
-                        <x-select id="new-department" name="organization_department_id">
-                            <option value="">No department</option>
-                            @foreach ($departments as $department)
-                                <option value="{{ $department->id }}" @selected(old('organization_department_id') == $department->id)>
-                                    {{ $department->name }}{{ $department->code ? ' ('.$department->code.')' : '' }}
-                                </option>
-                            @endforeach
-                        </x-select>
+                        <x-searchable-select
+                            id="new-department"
+                            name="organization_department_id"
+                            :selected="old('organization_department_id')"
+                            empty-label="No department"
+                            search-placeholder="Search departments…"
+                            :options="$departments->map(fn ($d) => [
+                                'value' => $d->id,
+                                'label' => $d->name.($d->code ? ' ('.$d->code.')' : ''),
+                            ])" />
                         <p class="mt-1 text-xs text-slate-500">Which department owns this system. Read from the organisation directory.</p>
                     @endif
                     <x-field-error name="organization_department_id" />
                 </div>
                 <div>
                     <x-label for="new-pic">PIC</x-label>
-                    <x-select id="new-pic" name="pic_public_id" required>
-                        <option value="">Choose the person who knows it best</option>
-                        @foreach ($candidates as $candidate)
-                            <option value="{{ $candidate->user->public_id }}">{{ $candidate->user->name }}</option>
-                        @endforeach
-                    </x-select>
+                    <x-searchable-select
+                        id="new-pic"
+                        name="pic_public_id"
+                        :selected="old('pic_public_id')"
+                        placeholder="Choose the person who knows it best"
+                        search-placeholder="Search people…"
+                        :options="$candidates->map(fn ($c) => ['value' => $c->user->public_id, 'label' => $c->user->name])->values()" />
                     <x-field-error name="pic_public_id" />
                 </div>
                 <div><x-label for="new-color">Colour</x-label><x-input id="new-color" type="color" name="color" value="#2eb0fb" /><x-field-error name="color" /></div>

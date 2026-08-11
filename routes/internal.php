@@ -40,6 +40,7 @@ use App\Http\Controllers\InternalApi\TaskMoveController;
 use App\Http\Controllers\InternalApi\TaskStatusController;
 use App\Http\Controllers\InternalApi\TaskTimeEntryController;
 use App\Http\Controllers\InternalApi\TwoFactorController;
+use App\Http\Controllers\InternalApi\UserAccountController;
 use App\Http\Controllers\InternalApi\WorkspaceController;
 use App\Http\Controllers\InternalApi\WorkspaceInvitationController;
 use App\Http\Controllers\InternalApi\WorkspaceMemberController;
@@ -53,6 +54,7 @@ Route::post('/invitations/{token}/accept', [WorkspaceInvitationController::class
 Route::post('/invitations/{token}/reject', [WorkspaceInvitationController::class, 'reject'])->name('internal.invitations.reject');
 Route::patch('/workspace-members/{member}', [WorkspaceMemberController::class, 'update'])->name('internal.workspace-members.update');
 Route::delete('/workspace-members/{member}', [WorkspaceMemberController::class, 'destroy'])->name('internal.workspace-members.destroy');
+Route::delete('/workspace-members/{member}/account', [UserAccountController::class, 'destroy'])->name('internal.user-accounts.destroy');
 Route::post('/workspaces/{workspace}/transfer-ownership', [WorkspaceOwnershipController::class, 'store'])->name('internal.workspaces.transfer');
 Route::get('/workspaces/{workspace}/dashboard', [DashboardController::class, 'index'])->name('internal.dashboard.index');
 Route::get('/workspaces/{workspace}/performance', [PerformanceController::class, 'index'])->name('internal.performance.index');
