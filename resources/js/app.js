@@ -58,12 +58,25 @@ Alpine.data('themePreference', () => ({
 Alpine.data('appShell', () => ({
     sidebarOpen: false,
     mobile: window.matchMedia('(max-width: 1023px)').matches,
+    sidebarSections: {
+        work: true,
+        projects: true,
+        team: true,
+        more: false,
+    },
     init() {
         const media = window.matchMedia('(max-width: 1023px)');
         media.addEventListener('change', (event) => {
             this.mobile = event.matches;
             if (! event.matches) this.sidebarOpen = false;
         });
+
+        try {
+            const savedSections = JSON.parse(localStorage.getItem('orbitra-sidebar-sections') ?? '{}');
+            this.sidebarSections = { ...this.sidebarSections, ...savedSections };
+        } catch {
+            localStorage.removeItem('orbitra-sidebar-sections');
+        }
     },
     openSidebar() {
         this.sidebarOpen = true;
@@ -73,6 +86,13 @@ Alpine.data('appShell', () => ({
         if (! this.sidebarOpen) return;
         this.sidebarOpen = false;
         this.$nextTick(() => this.$refs.sidebarTrigger?.focus());
+    },
+    sidebarSectionOpen(section) {
+        return this.sidebarSections[section] ?? true;
+    },
+    toggleSidebarSection(section) {
+        this.sidebarSections[section] = ! this.sidebarSectionOpen(section);
+        localStorage.setItem('orbitra-sidebar-sections', JSON.stringify(this.sidebarSections));
     },
     trapTab(event) {
         if (! this.mobile || ! this.sidebarOpen) return;

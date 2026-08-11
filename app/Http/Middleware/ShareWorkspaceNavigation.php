@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\BreakdownStatus;
 use App\Enums\OrganizationRankGroup;
 use App\Models\FeatureRequest;
 use App\Models\Project;
 use App\Models\ProjectRequest;
+use App\Models\TaskBreakdown;
 use App\Models\Workspace;
 use App\Services\OrganizationDirectory;
 use Closure;
@@ -42,15 +44,45 @@ class ShareWorkspaceNavigation
             $request->session()->put('active_workspace_id', $activeWorkspace->id);
         }
 
-        $sidebarProjects = $activeWorkspace
+        $deliverySidebar = $activeWorkspace && str_starts_with($request->path(), 'app');
+
+        $sidebarProjects = $deliverySidebar
             ? Project::query()
                 ->delivery()
                 ->visibleTo($request->user())
                 ->where('workspace_id', $activeWorkspace->id)
                 ->orderBy('name')
-                ->limit(6)
+                ->limit(10)
                 ->get()
             : collect();
+
+        $sidebarMembers = $deliverySidebar
+            ? $activeWorkspace->memberships()
+                ->active()
+                ->whereHas('user')
+                ->where('user_id', '!=', $request->user()->id)
+                ->with('user')
+                ->orderBy('id')
+                ->limit(8)
+                ->get()
+            : collect();
+
+        $pendingApprovals = 0;
+
+        if ($deliverySidebar && $request->user()->can('viewAny', [FeatureRequest::class, $activeWorkspace])) {
+            $pendingApprovals = FeatureRequest::query()
+                ->where('workspace_id', $activeWorkspace->id)
+                ->awaitingReview()
+                ->count()
+                + ProjectRequest::query()
+                    ->where('workspace_id', $activeWorkspace->id)
+                    ->awaitingDecision()
+                    ->count()
+                + TaskBreakdown::query()
+                    ->where('workspace_id', $activeWorkspace->id)
+                    ->where('status', BreakdownStatus::READY->value)
+                    ->count();
+        }
 
         $organizationProfile = null;
         $canApproveDepartmentRequests = false;
@@ -80,6 +112,8 @@ class ShareWorkspaceNavigation
             'activeWorkspace' => $activeWorkspace,
             'workspaceOptions' => $workspaces,
             'sidebarProjects' => $sidebarProjects,
+            'sidebarMembers' => $sidebarMembers,
+            'pendingApprovals' => $pendingApprovals,
             'organizationProfile' => $organizationProfile,
             'canApproveDepartmentRequests' => $canApproveDepartmentRequests,
             'departmentApprovalCount' => $departmentApprovalCount,

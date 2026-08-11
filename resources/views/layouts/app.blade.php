@@ -17,133 +17,106 @@
         <div class="min-h-screen bg-[#f7f8fb] lg:grid lg:grid-cols-[248px_1fr] dark:bg-slate-950">
             <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" x-on:click="closeSidebar()" aria-hidden="true"></div>
 
-            <aside x-ref="sidebar" x-bind:inert="mobile && ! sidebarOpen ? true : null" x-on:keydown.tab="trapTab($event)" x-on:keydown.escape.window="closeSidebar()" :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" {{-- lg:h-screen keeps the sidebar one viewport tall instead of stretching to match the page. --}}
-            class="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col overflow-hidden border-r border-slate-200 bg-white p-4 transition-transform dark:border-slate-800 dark:bg-slate-900 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0" aria-label="Workspace navigation">
-                {{-- Only this part scrolls; the account footer below stays pinned. --}}
+            <aside x-ref="sidebar"
+                x-bind:inert="mobile && ! sidebarOpen ? true : null"
+                x-on:keydown.tab="trapTab($event)"
+                x-on:keydown.escape.window="closeSidebar()"
+                :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+                class="fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col overflow-hidden border-r border-slate-200 bg-white p-2 transition-transform dark:border-slate-800 dark:bg-slate-900 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
+                aria-label="Workspace navigation">
                 <div class="scrollbar-none min-h-0 flex-1 overflow-y-auto">
-                <div class="flex items-center justify-between">
-                    <x-logo />
-                    <button x-ref="sidebarClose" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800" x-on:click="closeSidebar()" aria-label="Close navigation">✕</button>
-                </div>
+                    <div class="flex min-h-14 items-start gap-1 px-1 py-1">
+                        <x-logo size="sidebar" :href="$activeWorkspace ? route('app.workspaces.show', $activeWorkspace) : route('home')" class="min-w-0 flex-1 px-1.5 py-1.5" />
 
-                {{-- Temporarily hidden because workspace controls are already available in the header. --}}
-                <div class="mt-7" hidden>
-                    <label for="workspace-switcher" class="px-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace</label>
-                    @if ($workspaceOptions->isNotEmpty())
-                        <select id="workspace-switcher" class="mt-2 block min-h-11 w-full rounded-xl border-slate-300 bg-white text-sm dark:border-slate-700 dark:bg-slate-900" x-on:change="if ($event.target.value) window.location = $event.target.value">
-                            @foreach ($workspaceOptions as $workspaceOption)
-                                <option value="{{ route('app.workspaces.show', $workspaceOption) }}" @selected($activeWorkspace?->is($workspaceOption))>{{ $workspaceOption->name }}</option>
-                            @endforeach
-                        </select>
-                    @else
-                        <p class="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">No workspace yet.</p>
-                    @endif
-                    <a href="{{ route('app.workspaces.create') }}" class="mt-2 flex min-h-11 items-center justify-center rounded-xl border border-dashed border-slate-300 px-3 text-sm font-semibold text-slate-600 hover:border-orbit-400 hover:text-orbit-700 dark:border-slate-700 dark:text-slate-300">+ New workspace</a>
-                </div>
-
-                @if ($activeWorkspace)
-                    @php
-                        // Grouped by the question each screen answers, not by feature area.
-                        // Dashboard and Approvals sit ungrouped at the top because they are the
-                        // two "what needs me right now" screens — a heading above them would
-                        // only push the badge further from the eye.
-                        // Its own variable rather than a null key in the grouped array: PHP turns
-                        // a null array key into an empty string, so array_filter would keep it
-                        // and Dashboard would render twice.
-                        $primaryNavigation = [
-                            ['app.workspaces.show', 'Dashboard', 'dashboard'],
-                        ];
-
-                        $navigation = [
-                            'Delivery' => [
-                                ['app.projects.index', 'Projects', 'projects'],
-                                ['app.features.index', 'Features', 'board'],
-                                ['app.tasks.index', 'Task List', 'tasks'],
-                                ['app.supporting.index', 'Supporting', 'supporting'],
-                                ['app.schedule.index', 'Schedule', 'calendar'],
-                            ],
-                            'Insight' => [
-                                ['app.performance.index', 'Performance', 'performance'],
-                                ['app.ai.index', 'Ask AI', 'sparkles'],
-                            ],
-                            'People' => [
-                                ['app.workspaces.team', 'Team', 'team'],
-                                ['app.messages.index', 'Messages', 'messages'],
-                            ],
-                        ];
-                    @endphp
-                    @php
-                        // A system's board and task list ride the app.projects.* routes, so the
-                        // bound record decides which menu lights up, not the route name alone.
-                        $routeRecord = request()->route('system') ?? request()->route('project');
-                        $viewingSystem = $routeRecord instanceof App\Models\Project && $routeRecord->isSystem();
-                    @endphp
-                    <nav class="mt-7 space-y-1" aria-label="Main navigation">
-                        @foreach ($primaryNavigation as [$routeName, $label, $icon])
-                            <a href="{{ route($routeName, $activeWorkspace) }}" @if (request()->routeIs($routeName)) aria-current="page" @endif class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ request()->routeIs($routeName) ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
-                                <x-icon :name="$icon" />{{ $label }}
-                            </a>
-                        @endforeach
-                        @can('viewAny', [App\Models\FeatureRequest::class, $activeWorkspace])
-                            @php($pendingApprovals = App\Models\FeatureRequest::where('workspace_id', $activeWorkspace->id)->awaitingReview()->count()
-                                + App\Models\ProjectRequest::where('workspace_id', $activeWorkspace->id)->awaitingDecision()->count()
-                                + App\Models\TaskBreakdown::where('workspace_id', $activeWorkspace->id)->where('status', App\Enums\BreakdownStatus::READY->value)->count())
-                            <a href="{{ route('app.approvals.index', $activeWorkspace) }}" @if(request()->routeIs('app.approvals.*')) aria-current="page" @endif class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('app.approvals.*') ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
-                                <x-icon name="check" />Approvals
-                                @if ($pendingApprovals > 0)
-                                    <span class="ml-auto min-w-5 rounded-full bg-rose-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">{{ $pendingApprovals }}</span>
-                                @endif
-                            </a>
-                        @endcan
-                    </nav>
-
-                    @foreach ($navigation as $heading => $items)
-                        <div class="mt-6">
-                            <p class="px-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ $heading }}</p>
-                            <div class="mt-2 space-y-1">
-                                @foreach ($items as [$routeName, $label, $icon])
-                                    @php($isCurrent = request()->routeIs($routeName)
-                                        || ($routeName === 'app.projects.index' && request()->routeIs('app.projects.*') && ! $viewingSystem)
-                                        || ($routeName === 'app.features.index' && ($viewingSystem || request()->routeIs('app.features.*')))
-                                        || ($routeName === 'app.tasks.index' && request()->routeIs('app.tasks.*'))
-                                        || ($routeName === 'app.supporting.index' && request()->routeIs('app.supporting.*')))
-                                    <a href="{{ route($routeName, $activeWorkspace) }}" @if ($isCurrent) aria-current="page" @endif class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ $isCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
-                                        <x-icon :name="$icon" />{{ $label }}
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endforeach
-
-                    <div class="mt-6">
-                        <a href="{{ route('app.settings.profile', $activeWorkspace) }}" class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('app.settings.*', 'app.workspaces.settings') ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
-                            <x-icon name="settings" />Settings
-                        </a>
+                        <button x-ref="sidebarClose" type="button" class="mt-1 grid size-7 shrink-0 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden dark:hover:bg-slate-800 dark:hover:text-slate-200" x-on:click="closeSidebar()" aria-label="Close navigation">
+                            <x-icon name="close" class="size-4" />
+                        </button>
                     </div>
 
-                    @if ($sidebarProjects->isNotEmpty())
-                        <div class="mt-7">
-                            <p class="px-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Quick access</p>
-                            <div class="mt-2 space-y-1">
-                                @foreach ($sidebarProjects as $sidebarProject)
-                                    <a href="{{ route('app.projects.show', $sidebarProject) }}" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-                                        <span class="size-2 rounded-full" style="background-color: {{ $sidebarProject->color ?? '#64748b' }}"></span>
-                                        <span class="truncate">{{ $sidebarProject->name }}</span>
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
+                    @if ($activeWorkspace)
+                        @php
+                            $routeProject = request()->route('project');
+                            $routeSystem = request()->route('system');
+                            $routeMember = request()->route('member');
+                            $viewingSystem = $routeSystem instanceof App\Models\Project
+                                || ($routeProject instanceof App\Models\Project && $routeProject->isSystem());
+                            $projectCreateUrl = auth()->user()->can('create', [App\Models\Project::class, $activeWorkspace])
+                                ? route('app.projects.create', $activeWorkspace)
+                                : null;
+                        @endphp
+
+                        <nav class="mt-2 space-y-0.5" aria-label="Main navigation">
+                            <x-sidebar.item :href="route('app.search', $activeWorkspace)" icon="search" :active="request()->routeIs('app.search')">Search</x-sidebar.item>
+                            <x-sidebar.item :href="route('app.workspaces.show', $activeWorkspace)" icon="dashboard" :active="request()->routeIs('app.workspaces.show')">Home</x-sidebar.item>
+                            <x-sidebar.item :href="route('app.ai.index', $activeWorkspace)" icon="sparkles" :active="request()->routeIs('app.ai.*')">Ask AI</x-sidebar.item>
+
+                            @can('viewAny', [App\Models\FeatureRequest::class, $activeWorkspace])
+                                <x-sidebar.item :href="route('app.approvals.index', $activeWorkspace)" icon="check" :active="request()->routeIs('app.approvals.*')" :badge="$pendingApprovals">Approvals</x-sidebar.item>
+                            @endcan
+                        </nav>
+
+                        <x-sidebar.section id="work" title="Work">
+                            <x-sidebar.item :href="route('app.tasks.index', $activeWorkspace)" icon="tasks" :active="request()->routeIs('app.tasks.*')">Task List</x-sidebar.item>
+                            <x-sidebar.item :href="route('app.schedule.index', $activeWorkspace)" icon="calendar" :active="request()->routeIs('app.schedule.*')">Schedule</x-sidebar.item>
+                            <x-sidebar.item :href="route('app.features.index', $activeWorkspace)" icon="board" :active="request()->routeIs('app.features.*') || $viewingSystem">Features</x-sidebar.item>
+                            <x-sidebar.item :href="route('app.supporting.index', $activeWorkspace)" icon="supporting" :active="request()->routeIs('app.supporting.*')">Supporting</x-sidebar.item>
+                        </x-sidebar.section>
+
+                        <x-sidebar.section id="projects" title="Projects" :action-href="$projectCreateUrl" action-label="Create project">
+                            @foreach ($sidebarProjects as $sidebarProject)
+                                @php
+                                    $projectIsCurrent = $routeProject instanceof App\Models\Project
+                                        && $routeProject->is($sidebarProject);
+                                @endphp
+                                <a href="{{ route('app.projects.show', $sidebarProject) }}"
+                                    @if ($projectIsCurrent) aria-current="page" @endif
+                                    class="group flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $projectIsCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                    <span class="size-2.5 shrink-0 rounded-sm" style="background-color: {{ $sidebarProject->color ?? '#64748b' }}"></span>
+                                    <span class="min-w-0 flex-1 truncate">{{ $sidebarProject->name }}</span>
+                                </a>
+                            @endforeach
+                            <x-sidebar.item :href="route('app.projects.index', $activeWorkspace)" icon="projects" :active="request()->routeIs('app.projects.index', 'app.projects.create')">All projects</x-sidebar.item>
+                        </x-sidebar.section>
+
+                        <x-sidebar.section id="team" title="Team">
+                            @foreach ($sidebarMembers as $sidebarMember)
+                                @php
+                                    $memberIsCurrent = $routeMember instanceof App\Models\WorkspaceMember
+                                        && $routeMember->is($sidebarMember);
+                                @endphp
+                                <a href="{{ route('app.workspaces.team.show', [$activeWorkspace, $sidebarMember]) }}"
+                                    @if ($memberIsCurrent) aria-current="page" @endif
+                                    class="group flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $memberIsCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                    <x-avatar :src="filled($sidebarMember->user->avatar_path) ? route('internal.users.avatar', $sidebarMember->user) : null" :name="$sidebarMember->user->name" size="size-5" class="shrink-0 rounded-md" />
+                                    <span class="min-w-0 flex-1 truncate">{{ $sidebarMember->user->name }}</span>
+                                </a>
+                            @endforeach
+                            <x-sidebar.item :href="route('app.workspaces.team', $activeWorkspace)" icon="team" :active="request()->routeIs('app.workspaces.team')">All team</x-sidebar.item>
+                        </x-sidebar.section>
+
+                        <x-sidebar.section id="more" title="More">
+                            <x-sidebar.item :href="route('app.performance.index', $activeWorkspace)" icon="performance" :active="request()->routeIs('app.performance.*')">Performance</x-sidebar.item>
+                            <x-sidebar.item :href="route('app.messages.index', $activeWorkspace)" icon="messages" :active="request()->routeIs('app.messages.*')">Messages</x-sidebar.item>
+                        </x-sidebar.section>
                     @endif
-                @endif
                 </div>
 
-                <div class="mt-10 shrink-0 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
-                    <p class="text-sm font-semibold">{{ auth()->user()->name }}</p>
-                    <p class="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{{ auth()->user()->email }}</p>
-                    <form method="POST" action="{{ route('logout') }}" class="mt-4">
-                        @csrf
-                        <x-button type="submit" variant="secondary" class="w-full">Sign out</x-button>
-                    </form>
+                <div class="mt-2 shrink-0 border-t border-slate-200 pt-2 dark:border-slate-800">
+                    @if ($activeWorkspace)
+                        <x-sidebar.item :href="route('app.settings.profile', $activeWorkspace)" icon="settings" :active="request()->routeIs('app.settings.*', 'app.workspaces.settings')">Settings</x-sidebar.item>
+                    @endif
+
+                    <div class="mt-1 flex items-center gap-2 rounded-md px-2 py-1.5">
+                        <x-avatar :src="filled(auth()->user()->avatar_path) ? route('internal.users.avatar', auth()->user()) : null" :name="auth()->user()->name" size="size-6" class="shrink-0 rounded-md" />
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-[12px] font-medium text-slate-700 dark:text-slate-200">{{ auth()->user()->name }}</p>
+                            <p class="truncate text-[10px] text-slate-400 dark:text-slate-500">{{ auth()->user()->email }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('logout') }}" class="shrink-0">
+                            @csrf
+                            <button type="submit" class="rounded px-1.5 py-1 text-[10px] font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">Sign out</button>
+                        </form>
+                    </div>
                 </div>
             </aside>
 
