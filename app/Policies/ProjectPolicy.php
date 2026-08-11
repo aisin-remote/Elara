@@ -27,7 +27,7 @@ class ProjectPolicy
 
     public function create(User $user, Workspace $workspace): bool
     {
-        return in_array($this->workspaceMembership($user, $workspace)?->role, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true);
+        return $this->workspaceMembership($user, $workspace)?->role->canContribute() ?? false;
     }
 
     public function update(User $user, Project $project): bool

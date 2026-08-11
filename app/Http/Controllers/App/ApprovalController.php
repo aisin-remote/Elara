@@ -32,7 +32,7 @@ class ApprovalController extends Controller
 
         $awaitingAcceptance = TaskBreakdown::where('workspace_id', $workspace->id)
             ->where('status', BreakdownStatus::READY->value)
-            ->with('subject.assignee')
+            ->with('subject')
             ->oldest('generated_at')
             ->get();
 

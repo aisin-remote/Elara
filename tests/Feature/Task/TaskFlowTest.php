@@ -188,6 +188,16 @@ class TaskFlowTest extends TestCase
         $this->actingAs($owner)->get(route('app.tasks.show', $task))->assertOk()->assertSee($task->title);
     }
 
+    public function test_create_query_opens_task_form_as_a_modal(): void
+    {
+        [$owner, $workspace, $project] = $this->project();
+
+        $this->actingAs($owner)
+            ->get(route('app.projects.tasks', [$workspace, $project]).'?create=1')
+            ->assertOk()
+            ->assertSee('x-init="$nextTick(() => $el.showModal())"', false);
+    }
+
     private function task(): array
     {
         [$owner, $workspace, $project] = $this->project();

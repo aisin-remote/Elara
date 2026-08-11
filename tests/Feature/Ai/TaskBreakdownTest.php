@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Actions\Project\CreateProject;
 use App\Actions\Project\CreateSystem;
 use App\Actions\Request\TransitionFeatureRequest;
 use App\Actions\Workspace\CreateWorkspace;
 use App\Contracts\TaskBreakdownGenerator;
 use App\Enums\BreakdownStatus;
 use App\Enums\FeatureRequestStatus;
+use App\Enums\ProjectStatus;
 use App\Enums\RequestUrgency;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
@@ -212,9 +214,40 @@ class TaskBreakdownTest extends TestCase
             $taskSchema = $body['text']['format']['schema']['properties']['tasks']['items'];
             $this->assertContains('checklist', $taskSchema['required']);
             $this->assertSame(2, $taskSchema['properties']['checklist']['minItems']);
+            $this->assertArrayNotHasKey('depends_on', $taskSchema['properties']);
             $this->assertSame('system', $body['input'][0]['role']);
             $this->assertStringContainsString('Inventory Core', $body['input'][0]['content']);
             $this->assertStringContainsString('Export the monthly stock report', $body['input'][1]['content']);
+
+            return true;
+        });
+    }
+
+    public function test_a_direct_it_project_can_generate_a_reviewable_plan(): void
+    {
+        Http::fake([
+            '*/responses' => Http::response($this->openAiBody([
+                ['title' => 'Map the current workflow', 'estimate_minutes' => 90, 'requires_user_validation' => false],
+            ])),
+        ]);
+
+        [$workspace, $owner] = $this->system();
+        $project = app(CreateProject::class)->handle($workspace, $owner, [
+            'name' => 'Internal delivery automation',
+            'description' => 'Automate the internal IT delivery workflow.',
+            'color' => '#4f46e5',
+            'status' => ProjectStatus::ACTIVE->value,
+            'start_date' => null,
+            'due_date' => null,
+        ]);
+
+        (new GenerateTaskBreakdown($project))->handle(app(TaskBreakdownGenerator::class));
+
+        $this->assertSame(BreakdownStatus::READY, TaskBreakdown::forSubject($project)->firstOrFail()->status);
+        Http::assertSent(function ($sent) {
+            $body = $sent->data();
+            $this->assertStringContainsString('Internal delivery automation', $body['input'][1]['content']);
+            $this->assertStringContainsString('Set requires_user_validation to false', $body['input'][0]['content']);
 
             return true;
         });
@@ -278,7 +311,6 @@ class TaskBreakdownTest extends TestCase
             'description' => $task['description'] ?? 'Proposed by the model.',
             'estimate_minutes' => $task['estimate_minutes'],
             'checklist' => $task['checklist'] ?? ['Implement the change', 'Verify the result'],
-            'depends_on' => $task['depends_on'] ?? [],
             'requires_user_validation' => $task['requires_user_validation'],
             'validation_reason' => $task['validation_reason'] ?? null,
         ], $tasks);

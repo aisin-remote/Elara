@@ -9,6 +9,7 @@ use App\Http\Requests\Project\ProjectMutationRequest;
 use App\Http\Requests\Project\StoreProjectRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
+use App\Jobs\GenerateTaskBreakdown;
 use App\Models\Project;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +20,10 @@ class ProjectController extends Controller
     public function store(StoreProjectRequest $request, Workspace $workspace, CreateProject $createProject): JsonResponse|RedirectResponse
     {
         $project = $createProject->handle($workspace, $request->user(), $request->validated(), $request->ip());
+
+        if ($request->boolean('generate_with_ai')) {
+            GenerateTaskBreakdown::dispatch($project);
+        }
 
         return $this->success($request, new ProjectResource($project), 'Project created.', route('app.projects.show', $project), 201);
     }

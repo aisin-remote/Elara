@@ -7,6 +7,10 @@ use App\Enums\BreakdownStatus;
 use App\Http\Requests\Ai\AcceptTaskBreakdownRequest;
 use App\Jobs\GenerateTaskBreakdown;
 use App\Models\ActivityLog;
+use App\Models\Feature;
+use App\Models\FeatureRequest;
+use App\Models\Project;
+use App\Models\ProjectRequest;
 use App\Models\TaskBreakdown;
 use App\Services\CapacityPlanner;
 use Carbon\CarbonImmutable;
@@ -75,20 +79,39 @@ class TaskBreakdownController extends Controller
         ]);
 
         $subject = $breakdown->subject;
-        $assignee = $subject->assignee;
+        $project = match (true) {
+            $subject instanceof FeatureRequest => $subject->system,
+            $subject instanceof ProjectRequest => $subject->project,
+            $subject instanceof Feature => $subject->project,
+            $subject instanceof Project => $subject,
+            default => null,
+        };
+        $assignee = match (true) {
+            $subject instanceof FeatureRequest, $subject instanceof ProjectRequest => $subject->assignee,
+            $subject instanceof Feature => $project?->pic(),
+            $subject instanceof Project => $subject->owner,
+            default => null,
+        };
         $total = array_sum($data['minutes']);
 
         if (! $assignee) {
             return response()->json(['total_minutes' => $total, 'finish' => null, 'assignee' => null]);
         }
 
-        $start = $subject->scheduled_start
-            ? CarbonImmutable::parse($subject->scheduled_start)
+        $startValue = match (true) {
+            $subject instanceof FeatureRequest, $subject instanceof ProjectRequest => $subject->scheduled_start,
+            $subject instanceof Feature => $subject->starts_at,
+            $subject instanceof Project => $subject->start_date,
+            default => null,
+        };
+        $start = $startValue
+            ? CarbonImmutable::parse($startValue)
             : CarbonImmutable::now($breakdown->workspace->timezone ?: 'UTC');
 
         // Ignoring this request's own reservation: it is exactly what these tasks replace,
         // and counting it would push every preview a window later than reality.
-        $dates = $planner->layOut($breakdown->workspace, $assignee, $data['minutes'], $start, $subject);
+        $ignoring = $subject instanceof FeatureRequest || $subject instanceof ProjectRequest ? $subject : null;
+        $dates = $planner->layOut($breakdown->workspace, $assignee, $data['minutes'], $start, $ignoring);
         $finish = end($dates);
 
         return response()->json([

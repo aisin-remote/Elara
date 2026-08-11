@@ -4,6 +4,8 @@ namespace App\Policies;
 
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Models\Feature;
+use App\Models\Project;
 use App\Models\TaskBreakdown;
 use App\Models\User;
 
@@ -17,6 +19,10 @@ class TaskBreakdownPolicy
     public function accept(User $user, TaskBreakdown $breakdown): bool
     {
         $subject = $breakdown->subject;
+
+        if ($subject instanceof Feature || $subject instanceof Project) {
+            return $this->role($user, $breakdown)?->canContribute() ?? false;
+        }
 
         if ($subject?->assignee_id === $user->id) {
             return true;

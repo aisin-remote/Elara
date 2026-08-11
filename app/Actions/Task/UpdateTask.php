@@ -42,12 +42,16 @@ class UpdateTask
                 throw ValidationException::withMessages(['status_public_id' => 'Choose a status from this project.']);
             }
             $categoryId = $this->categoryId($task, $data['category_public_id'] ?? null);
+            $featureId = array_key_exists('feature_public_id', $data)
+                ? $this->createTask->featureId($task->project, $data['feature_public_id'])
+                : $task->feature_id;
             $milestoneId = $this->createTask->milestoneId($task->project, $data['milestone_public_id'] ?? null);
             $attributes = [
-                ...Arr::except($data, ['status_public_id', 'category_public_id', 'milestone_public_id', 'assignee_public_ids', 'attachments']),
+                ...Arr::except($data, ['status_public_id', 'category_public_id', 'feature_public_id', 'milestone_public_id', 'assignee_public_ids', 'attachments']),
                 'status_id' => $status->id,
                 'status_changed_at' => $task->status_id === $status->id ? $task->status_changed_at : now(),
                 'category_id' => $categoryId,
+                'feature_id' => $featureId,
                 'milestone_id' => $milestoneId,
                 'completed_at' => $status->category === TaskStatusCategory::COMPLETED
                     ? ($task->completed_at ?? now())

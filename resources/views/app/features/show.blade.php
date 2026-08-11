@@ -56,22 +56,32 @@
                             </span>
                         </span>
                     </button>
-                    <span class="shrink-0 text-sm font-semibold tabular-nums">{{ $featureProgress['completed'] }}/{{ $featureProgress['total'] }} · {{ $featureProgress['percentage'] }}%</span>
+                    <div class="flex shrink-0 items-center gap-3">
+                        <span class="text-sm font-semibold tabular-nums">{{ $featureProgress['completed'] }}/{{ $featureProgress['total'] }} · {{ $featureProgress['percentage'] }}%</span>
+                        @can('create', [App\Models\Task::class, $system])
+                            <a href="{{ route('app.projects.tasks', ['workspace' => $workspace, 'project' => $system, 'create' => 1, 'feature' => $feature->public_id]) }}" class="inline-flex min-h-9 items-center gap-1 rounded-lg bg-orbit-600 px-3 text-xs font-bold text-white transition hover:bg-orbit-700"><x-icon name="plus" class="size-3.5" />Add task</a>
+                        @endcan
+                    </div>
                 </header>
 
                 <div x-show="open" class="divide-y divide-slate-100 dark:divide-slate-800">
                     @forelse ($feature->tasks as $task)
                         @include('app.features._task-row', ['task' => $task])
                     @empty
-                        <p class="p-5 text-sm text-slate-500">No tasks yet. Tasks appear here once the request behind this feature is broken down.</p>
+                        <p class="p-5 text-sm text-slate-500">No tasks yet. Add them manually or accept this feature's AI plan.</p>
                     @endforelse
                 </div>
             </section>
+            @if ($breakdown = $feature->breakdowns->first())
+                <div class="ml-4">
+                    @include('app.approvals._breakdown', ['breakdown' => $breakdown])
+                </div>
+            @endif
         @empty
             <x-empty-state
                 icon="tasks"
                 title="No features yet"
-                description="Approved feature requests land here as features, each carrying the tasks produced for it." />
+                description="Features created by IT or approved from requester submissions appear here." />
         @endforelse
     </div>
 

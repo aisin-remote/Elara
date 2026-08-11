@@ -3,11 +3,13 @@
 namespace App\Contracts;
 
 use App\Exceptions\TaskBreakdownFailed;
+use App\Models\Feature;
 use App\Models\FeatureRequest;
+use App\Models\Project;
 use App\Models\ProjectRequest;
 
 /**
- * Turns a request into a proposed task list. One implementation today (OpenAI); swapping
+ * Turns delivery work into a proposed task list. One implementation today (OpenAI); swapping
  * provider is a new class and a config value, not a rewrite.
  */
 interface TaskBreakdownGenerator
@@ -19,7 +21,7 @@ interface TaskBreakdownGenerator
      *     model: string,
      *     tasks: array<int, array{
      *         title: string, description: string, estimate_minutes: int,
-     *         depends_on: array<int, int>, requires_user_validation: bool,
+     *         checklist: array<int, string>, requires_user_validation: bool,
      *         validation_reason: string|null
      *     }>,
      *     input_tokens: int|null,
@@ -28,5 +30,5 @@ interface TaskBreakdownGenerator
      *
      * @throws TaskBreakdownFailed On a refusal, an API error, a timeout, or missing credentials.
      */
-    public function generate(FeatureRequest|ProjectRequest $request, ?string $note = null): array;
+    public function generate(FeatureRequest|ProjectRequest|Feature|Project $subject, ?string $note = null): array;
 }

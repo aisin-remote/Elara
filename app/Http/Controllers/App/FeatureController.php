@@ -12,6 +12,20 @@ use Illuminate\View\View;
 
 class FeatureController extends Controller
 {
+    public function create(Workspace $workspace): View
+    {
+        $this->authorize('create', [Project::class, $workspace]);
+
+        return view('app.features.create', [
+            'workspace' => $workspace,
+            'systems' => $workspace->projects()
+                ->systems()
+                ->whereNull('archived_at')
+                ->orderBy('name')
+                ->get(),
+        ]);
+    }
+
     /** One card per system the user can see. */
     public function index(Request $request, Workspace $workspace): View
     {
@@ -68,7 +82,10 @@ class FeatureController extends Controller
         $this->authorize('view', $system);
 
         $features = $system->features()
-            ->with(['tasks' => fn ($query) => $query->whereNull('archived_at')->with(['status', 'assignees'])->orderBy('position')])
+            ->with([
+                'tasks' => fn ($query) => $query->whereNull('archived_at')->with(['status', 'assignees'])->orderBy('position'),
+                'breakdowns' => fn ($query) => $query->with('acceptedBy')->latest('id'),
+            ])
             ->orderByRaw('archived_at is not null')
             ->orderBy('name')
             ->get();

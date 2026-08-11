@@ -4,6 +4,7 @@ namespace App\Actions\Task;
 
 use App\Enums\TaskStatusCategory;
 use App\Models\ActivityLog;
+use App\Models\Feature;
 use App\Models\Project;
 use App\Models\ProjectMilestone;
 use App\Models\Task;
@@ -35,12 +36,14 @@ class CreateTask
                 throw ValidationException::withMessages(['status_public_id' => 'Choose a status from this project.']);
             }
             $categoryId = $this->categoryId($project, $data['category_public_id'] ?? null);
+            $featureId = $this->featureId($project, $data['feature_public_id'] ?? null);
             $milestoneId = $this->milestoneId($project, $data['milestone_public_id'] ?? null);
             $task = $project->tasks()->create([
-                ...Arr::except($data, ['status_public_id', 'category_public_id', 'milestone_public_id', 'assignee_public_ids', 'attachments']),
+                ...Arr::except($data, ['status_public_id', 'category_public_id', 'feature_public_id', 'milestone_public_id', 'assignee_public_ids', 'attachments']),
                 'workspace_id' => $project->workspace_id,
                 'status_id' => $status->id,
                 'category_id' => $categoryId,
+                'feature_id' => $featureId,
                 'milestone_id' => $milestoneId,
                 'creator_id' => $creator->id,
                 'position' => $this->positions->next($status),
@@ -94,6 +97,19 @@ class CreateTask
             ->where('project_id', $project->id)
             ->where('public_id', $publicId)
             ->value('id') ?? throw ValidationException::withMessages(['milestone_public_id' => 'Choose a milestone from this project.']);
+    }
+
+    public function featureId(Project $project, ?string $publicId): ?int
+    {
+        if (! $publicId) {
+            return null;
+        }
+
+        return Feature::query()
+            ->active()
+            ->where('project_id', $project->id)
+            ->where('public_id', $publicId)
+            ->value('id') ?? throw ValidationException::withMessages(['feature_public_id' => 'Choose an active feature from this system.']);
     }
 
     private function categoryId(Project $project, ?string $publicId): ?int

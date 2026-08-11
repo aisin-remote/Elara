@@ -43,10 +43,10 @@
             <h2 id="new-project-title" class="text-xl font-bold">Start a new project</h2>
             <p class="mt-1 text-sm text-slate-500">You become its leader, and can add more members later.</p>
 
-            <form method="POST" action="{{ route('internal.projects.store', $workspace) }}" class="mt-6 space-y-5">
+            <form method="POST" action="{{ route('internal.projects.store', $workspace) }}" class="mt-6 space-y-5" x-data="{ ai: {{ old('generate_with_ai', true) ? 'true' : 'false' }} }">
                 @csrf
                 <div><x-label for="name">Project name</x-label><x-input id="name" name="name" value="{{ old('name') }}" required autofocus /><x-field-error name="name" /></div>
-                <div><x-label for="description">Description</x-label><x-textarea id="description" name="description">{{ old('description') }}</x-textarea><x-field-error name="description" /></div>
+                <div><x-label for="description">Description</x-label><x-textarea id="description" name="description" rows="5" maxlength="5000" x-bind:required="ai" x-bind:minlength="ai ? 80 : null" placeholder="Goal, scope, expected result, constraints, and important context…">{{ old('description') }}</x-textarea><p class="mt-1 text-xs text-slate-500">When AI drafting is enabled, provide at least 80 characters so it can produce useful tasks and checklists.</p><x-field-error name="description" /></div>
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div><x-label for="status">Status</x-label><x-select id="status" name="status">@foreach (['planned' => 'Planned', 'active' => 'Active', 'on_hold' => 'On hold', 'completed' => 'Completed'] as $value => $label)<option value="{{ $value }}" @selected(old('status', 'planned') === $value)>{{ $label }}</option>@endforeach</x-select></div>
                     <div><x-label for="color">Color</x-label><x-input id="color" type="color" name="color" value="{{ old('color', '#4f46e5') }}" /></div>
@@ -56,6 +56,10 @@
                 @if ($availableMembers->isNotEmpty())
                     <fieldset><legend class="text-sm font-semibold">Initial members</legend><div class="mt-3 grid gap-2 sm:grid-cols-2">@foreach ($availableMembers as $membership)<label class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800"><input type="checkbox" name="member_public_ids[]" value="{{ $membership->user->public_id }}" class="rounded border-slate-300 text-orbit-600 focus:ring-orbit-500" @checked(in_array($membership->user->public_id, old('member_public_ids', [])))><span>{{ $membership->user->name }}</span></label>@endforeach</div></fieldset>
                 @endif
+                <label class="flex items-start gap-3 rounded-2xl border border-orbit-200 bg-orbit-50/60 p-4 dark:border-orbit-900/70 dark:bg-orbit-950/30">
+                    <input type="checkbox" name="generate_with_ai" value="1" x-model="ai" class="mt-0.5 rounded border-slate-300 text-orbit-600 focus:ring-orbit-500" @checked(old('generate_with_ai', true))>
+                    <span><span class="block text-sm font-bold">Draft tasks with AI</span><span class="mt-1 block text-xs leading-5 text-slate-500">AI proposes tasks and to-do checklists after creation. Nothing reaches the board until an IT team member reviews and accepts the plan.</span></span>
+                </label>
                 <div class="flex gap-3"><x-button>Create project</x-button><x-link-button href="{{ route('app.projects.index', $workspace) }}" variant="secondary">Cancel</x-link-button></div>
             </form>
         </section>

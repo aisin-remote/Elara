@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\App;
 
-use App\Enums\DependencyType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Http\Controllers\Controller;
@@ -86,25 +85,11 @@ class TaskController extends Controller
         $this->authorize('view', $task);
         $task->load([
             'workspace', 'project.taskStatuses', 'status', 'category', 'milestone', 'assignees',
-            'dependencies.status', 'dependencies.project', 'dependents.status', 'checklistItems', 'comments.author',
-            'files.uploader', 'timeEntries.user',
+            'checklistItems', 'comments.author', 'files.uploader',
         ]);
-
-        $linkedIds = $task->dependencies->modelKeys();
 
         return view('app.tasks.show', [
             'task' => $task,
-            'dependencyTypes' => DependencyType::cases(),
-            'dependencyCandidates' => Task::query()
-                ->where('workspace_id', $task->workspace_id)
-                ->whereNull('archived_at')
-                ->whereKeyNot($task->id)
-                ->whereNotIn('id', $linkedIds)
-                ->with('project:id,name')
-                ->orderBy('title')
-                ->limit(200)
-                ->get(['id', 'public_id', 'title', 'project_id']),
-            'loggedMinutes' => $task->loggedMinutes(),
             ...$this->formData($task->workspace, $task->project),
         ]);
     }
@@ -116,6 +101,7 @@ class TaskController extends Controller
             'projectMembers' => $project->memberships()->with('user')->get(),
             'priorities' => TaskPriority::cases(),
             'milestones' => $project->milestones()->get(),
+            'features' => $project->features()->active()->orderBy('name')->get(),
         ];
     }
 

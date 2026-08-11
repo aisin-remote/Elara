@@ -6,7 +6,9 @@ use App\Contracts\TaskBreakdownGenerator;
 use App\Enums\BreakdownStatus;
 use App\Exceptions\TaskBreakdownFailed;
 use App\Models\ActivityLog;
+use App\Models\Feature;
 use App\Models\FeatureRequest;
+use App\Models\Project;
 use App\Models\ProjectRequest;
 use App\Models\TaskBreakdown;
 use App\Services\NotificationPreferenceService;
@@ -40,7 +42,7 @@ class GenerateTaskBreakdown implements ShouldQueue
     private ?string $note = null;
 
     public function __construct(
-        private readonly FeatureRequest|ProjectRequest $request,
+        private readonly FeatureRequest|ProjectRequest|Feature|Project $request,
         ?string $note = null,
     ) {
         $this->note = $note;
@@ -114,7 +116,11 @@ class GenerateTaskBreakdown implements ShouldQueue
      */
     private function tellSomeone(TaskBreakdown $breakdown): void
     {
-        $recipient = $this->request->assignee;
+        $recipient = match (true) {
+            $this->request instanceof FeatureRequest, $this->request instanceof ProjectRequest => $this->request->assignee,
+            $this->request instanceof Feature => $this->request->project->pic(),
+            $this->request instanceof Project => $this->request->owner,
+        };
 
         if (! $recipient) {
             return;
@@ -122,12 +128,16 @@ class GenerateTaskBreakdown implements ShouldQueue
 
         $count = count($breakdown->tasks());
 
+        $label = $this->request instanceof FeatureRequest || $this->request instanceof ProjectRequest
+            ? $this->request->title
+            : $this->request->name;
+
         app(NotificationPreferenceService::class)->notify(
             $recipient,
             $this->request->workspace,
             'task_breakdown',
             'A plan is ready for your review',
-            "{$count} proposed tasks for “{$this->request->title}”, ".round($breakdown->totalMinutes() / 60, 1).' hours in total. Nothing reaches your board until you accept it.',
+            "{$count} proposed tasks for “{$label}”, ".round($breakdown->totalMinutes() / 60, 1).' hours in total. Nothing reaches your board until you accept it.',
             route('app.approvals.index', $this->request->workspace),
             ['breakdown_public_id' => $breakdown->public_id],
         );

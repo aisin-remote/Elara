@@ -104,6 +104,7 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::post('/app/workspaces/{workspace}/approvals/projects/{projectRequest}/meeting-held', [ProjectApprovalController::class, 'markMeetingHeld'])->name('app.approvals.projects.meeting-held');
     Route::post('/app/workspaces/{workspace}/approvals/projects/{projectRequest}/decide', [ProjectApprovalController::class, 'decide'])->name('app.approvals.projects.decide');
     Route::get('/app/workspaces/{workspace}/features', [FeatureController::class, 'index'])->name('app.features.index');
+    Route::get('/app/workspaces/{workspace}/features/create', [FeatureController::class, 'create'])->name('app.features.create');
     Route::get('/app/workspaces/{workspace}/features/{system}', [FeatureController::class, 'show'])->name('app.features.show');
     Route::get('/app/workspaces/{workspace}/settings/master/systems', [MasterDataController::class, 'systems'])->name('app.settings.master.systems');
     Route::get('/app/workspaces/{workspace}/projects', [ProjectController::class, 'index'])->name('app.projects.index');

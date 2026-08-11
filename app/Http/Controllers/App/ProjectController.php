@@ -77,6 +77,7 @@ class ProjectController extends Controller
             'taskBuckets' => $progress['buckets'],
             'schedule' => $project->scheduleHealth($progress['percentage']),
             'forecast' => $forecast->forProject($project),
+            'breakdown' => $project->breakdowns()->with('acceptedBy')->latest('id')->first(),
             'availableMembers' => $project->workspace->memberships()
                 ->active()
                 ->whereNotIn('user_id', $assignedUserIds)

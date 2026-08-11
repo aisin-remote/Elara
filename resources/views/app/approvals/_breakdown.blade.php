@@ -1,6 +1,8 @@
 @php
     $canManage = $breakdown && auth()->user()->can('manage', $breakdown);
     $draft = $breakdown?->tasks() ?? [];
+    $requesterOwned = $breakdown?->subject instanceof \App\Models\FeatureRequest
+        || $breakdown?->subject instanceof \App\Models\ProjectRequest;
 @endphp
 
 <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="breakdown-title">
@@ -94,32 +96,18 @@
                                 </div>
                             </div>
 
-                            <div x-show="index > 0" class="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                                <p class="text-xs font-bold text-slate-700 dark:text-slate-200">Prerequisites</p>
-                                <p class="mt-0.5 text-[11px] text-slate-400">This task stays blocked until every selected task is completed.</p>
-                                <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                                    <template x-for="(candidate, dependencyIndex) in tasks.slice(0, index)" :key="`${index}-dependency-${dependencyIndex}`">
-                                        <label class="flex min-w-0 items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800/60">
-                                            <input type="checkbox" :name="`tasks[${index}][depends_on][]`" :value="dependencyIndex"
-                                                :checked="task.depends_on.includes(dependencyIndex)"
-                                                @change="toggleDependency(index, dependencyIndex, $event.target.checked)"
-                                                class="rounded border-slate-300 text-orbit-600 focus:ring-orbit-500">
-                                            <span class="truncate" x-text="`${dependencyIndex + 1}. ${candidate.title}`"></span>
-                                        </label>
-                                    </template>
+                            @if ($requesterOwned)
+                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                    <label class="flex items-center gap-2 text-xs text-slate-500">
+                                        <input type="checkbox" :name="`tasks[${index}][requires_user_validation]`" value="1"
+                                            x-model="task.requires_user_validation"
+                                            class="rounded border-slate-300 text-orbit-600 focus:ring-orbit-500">
+                                        Requester must confirm this
+                                    </label>
                                 </div>
-                            </div>
-
-                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                <label class="flex items-center gap-2 text-xs text-slate-500">
-                                    <input type="checkbox" :name="`tasks[${index}][requires_user_validation]`" value="1"
-                                        x-model="task.requires_user_validation"
-                                        class="rounded border-slate-300 text-orbit-600 focus:ring-orbit-500">
-                                    Requester must confirm this
-                                </label>
-                            </div>
-                            <p class="text-xs text-slate-400" x-show="task.requires_user_validation && task.validation_reason" x-text="task.validation_reason"></p>
-                            <input type="hidden" :name="`tasks[${index}][validation_reason]`" :value="task.validation_reason || ''">
+                                <p class="text-xs text-slate-400" x-show="task.requires_user_validation && task.validation_reason" x-text="task.validation_reason"></p>
+                                <input type="hidden" :name="`tasks[${index}][validation_reason]`" :value="task.validation_reason || ''">
+                            @endif
                         </div>
 
                         <label class="flex items-center gap-2 text-xs text-slate-500">

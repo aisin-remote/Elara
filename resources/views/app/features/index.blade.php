@@ -9,9 +9,14 @@
             <h2 class="text-2xl font-bold">Systems</h2>
             <p class="mt-1 text-sm text-slate-500">Standing systems you maintain, and the feature work queued inside each.</p>
         </div>
-        @can('manageMasterData', $workspace)
-            <x-link-button href="{{ route('app.settings.master.systems', $workspace) }}" variant="secondary">Manage systems</x-link-button>
-        @endcan
+        <div class="flex flex-wrap gap-2">
+            @can('create', [App\Models\Project::class, $workspace])
+                <x-link-button href="{{ route('app.features.create', $workspace) }}"><x-icon name="plus" />New feature</x-link-button>
+            @endcan
+            @can('manageMasterData', $workspace)
+                <x-link-button href="{{ route('app.settings.master.systems', $workspace) }}" variant="secondary">Manage systems</x-link-button>
+            @endcan
+        </div>
     </div>
 
     <form method="GET" class="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-[1fr_220px_auto] dark:border-slate-800 dark:bg-slate-900">

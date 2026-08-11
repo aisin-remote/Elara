@@ -26,6 +26,7 @@ class StoreTaskRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:10000'],
             'status_public_id' => ['required', 'string', 'size:26'],
             'category_public_id' => ['nullable', 'string', 'size:26'],
+            'feature_public_id' => ['nullable', 'string', 'size:26'],
             'milestone_public_id' => ['nullable', 'string', 'size:26'],
             'priority' => ['required', Rule::enum(TaskPriority::class)],
             'start_at' => ['nullable', 'date'],

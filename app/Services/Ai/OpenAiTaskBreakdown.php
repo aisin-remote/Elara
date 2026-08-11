@@ -5,6 +5,7 @@ namespace App\Services\Ai;
 use App\Contracts\TaskBreakdownGenerator;
 use App\Enums\TaskStatusCategory;
 use App\Exceptions\TaskBreakdownFailed;
+use App\Models\Feature;
 use App\Models\FeatureRequest;
 use App\Models\Project;
 use App\Models\ProjectRequest;
@@ -40,17 +41,12 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
                             'maxItems' => 8,
                             'description' => 'Concrete completion steps used to measure task progress.',
                         ],
-                        'depends_on' => [
-                            'type' => 'array',
-                            'items' => ['type' => 'integer'],
-                            'description' => 'Zero-based indices of earlier tasks in this list.',
-                        ],
                         'requires_user_validation' => ['type' => 'boolean'],
                         'validation_reason' => ['type' => ['string', 'null']],
                     ],
                     // strict mode requires every property listed and no extras.
                     'required' => [
-                        'title', 'description', 'estimate_minutes', 'checklist', 'depends_on',
+                        'title', 'description', 'estimate_minutes', 'checklist',
                         'requires_user_validation', 'validation_reason',
                     ],
                     'additionalProperties' => false,
@@ -61,7 +57,7 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
         'additionalProperties' => false,
     ];
 
-    public function generate(FeatureRequest|ProjectRequest $request, ?string $note = null): array
+    public function generate(FeatureRequest|ProjectRequest|Feature|Project $subject, ?string $note = null): array
     {
         $key = config('services.openai.key');
 
@@ -69,7 +65,7 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
             throw TaskBreakdownFailed::notConfigured();
         }
 
-        $model = app(WorkspaceSettings::class)->aiModel($request->workspace);
+        $model = app(WorkspaceSettings::class)->aiModel($subject->workspace);
 
         try {
             $response = Http::withToken($key)
@@ -79,8 +75,8 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
                     // System context first and byte-stable per system, request-specific text
                     // last: provider-side caching keys off a stable prefix.
                     'input' => array_values(array_filter([
-                        ['role' => 'system', 'content' => $this->systemContext($request)],
-                        ['role' => 'user', 'content' => $this->requestText($request)],
+                        ['role' => 'system', 'content' => $this->systemContext($subject)],
+                        ['role' => 'user', 'content' => $this->requestText($subject)],
                         blank($note) ? null : ['role' => 'user', 'content' => 'Revise your plan: '.$note],
                     ])),
                     'text' => [
@@ -157,19 +153,29 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
      * Byte-stable for a given system: provider-side caching keys off a stable prefix, and
      * even without it a stable prefix makes two breakdowns for one system comparable.
      */
-    private function systemContext(FeatureRequest|ProjectRequest $request): string
+    private function systemContext(FeatureRequest|ProjectRequest|Feature|Project $subject): string
     {
-        $project = $request instanceof FeatureRequest ? $request->system : $request->project;
+        $project = match (true) {
+            $subject instanceof FeatureRequest => $subject->system,
+            $subject instanceof ProjectRequest => $subject->project,
+            $subject instanceof Feature => $subject->project,
+            default => $subject,
+        };
 
         $lines = [
             'You break a delivery request into concrete tasks for a software team.',
             'Estimate in minutes of focused work. Prefer several small tasks over one large one.',
             'Give every task 2 to 8 concrete checklist items that make completion measurable.',
-            'Set requires_user_validation only for tasks producing something the requester must confirm:',
-            'a visible UI change, a report format, or a migrated dataset. Give a reason when you do.',
-            'depends_on holds zero-based indices of earlier tasks in your own list.',
-            '',
         ];
+
+        if ($subject instanceof FeatureRequest || $subject instanceof ProjectRequest) {
+            $lines[] = 'Set requires_user_validation only for tasks producing something the requester must confirm:';
+            $lines[] = 'a visible UI change, a report format, or a migrated dataset. Give a reason when you do.';
+        } else {
+            $lines[] = 'This work was entered directly by the IT team. Set requires_user_validation to false and validation_reason to null.';
+        }
+
+        $lines[] = '';
 
         if ($project instanceof Project) {
             $lines[] = 'System: '.$project->name;
@@ -202,23 +208,39 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
         return implode("\n", $lines);
     }
 
-    private function requestText(FeatureRequest|ProjectRequest $request): string
+    private function requestText(FeatureRequest|ProjectRequest|Feature|Project $subject): string
     {
-        if ($request instanceof FeatureRequest) {
+        if ($subject instanceof FeatureRequest) {
             return implode("\n", [
-                'Title: '.$request->title,
-                'Problem: '.$request->problem,
-                'Desired outcome: '.$request->desired_outcome,
-                'Urgency: '.$request->urgency->value,
+                'Title: '.$subject->title,
+                'Problem: '.$subject->problem,
+                'Desired outcome: '.$subject->desired_outcome,
+                'Urgency: '.$subject->urgency->value,
+            ]);
+        }
+
+        if ($subject instanceof Feature) {
+            return implode("\n", [
+                'Feature: '.$subject->name,
+                'Description: '.($subject->description ?: 'No description recorded.'),
+            ]);
+        }
+
+        if ($subject instanceof Project) {
+            return implode("\n", [
+                'Project: '.$subject->name,
+                'Description: '.($subject->description ?: 'No description recorded.'),
+                'Planned start: '.($subject->start_date?->format('Y-m-d') ?? 'not set'),
+                'Planned due: '.($subject->due_date?->format('Y-m-d') ?? 'not set'),
             ]);
         }
 
         return implode("\n", [
-            'Title: '.$request->title,
-            'Benefit: '.$request->benefit,
-            'Concept: '.$request->concept,
-            'Current business process: '.$request->business_process,
-            'Proposed flow: '.$request->flow,
+            'Title: '.$subject->title,
+            'Benefit: '.$subject->benefit,
+            'Concept: '.$subject->concept,
+            'Current business process: '.$subject->business_process,
+            'Proposed flow: '.$subject->flow,
         ]);
     }
 }

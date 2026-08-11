@@ -8,6 +8,7 @@ use App\Http\Controllers\InternalApi\ConversationController;
 use App\Http\Controllers\InternalApi\ConversationMessageController;
 use App\Http\Controllers\InternalApi\ConversationReadController;
 use App\Http\Controllers\InternalApi\DashboardController;
+use App\Http\Controllers\InternalApi\FeatureController;
 use App\Http\Controllers\InternalApi\FileController;
 use App\Http\Controllers\InternalApi\IntegrationController;
 use App\Http\Controllers\InternalApi\MasterDataController;
@@ -100,6 +101,7 @@ Route::patch('/supporting-tasks/{supportingTask}', [SupportingTaskController::cl
 Route::delete('/supporting-tasks/{supportingTask}', [SupportingTaskController::class, 'destroy'])->name('internal.supporting-tasks.destroy');
 
 Route::post('/workspaces/{workspace}/projects', [ProjectController::class, 'store'])->name('internal.projects.store');
+Route::post('/workspaces/{workspace}/features', [FeatureController::class, 'store'])->name('internal.features.store');
 Route::patch('/projects/{project}', [ProjectController::class, 'update'])->name('internal.projects.update');
 Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('internal.projects.destroy');
 Route::post('/projects/{project}/restore', [ProjectController::class, 'restore'])->withTrashed()->name('internal.projects.restore');

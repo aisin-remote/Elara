@@ -22,7 +22,7 @@ class CreateProject
 
         return DB::transaction(function () use ($workspace, $owner, $data, $ipAddress) {
             $project = $workspace->projects()->create([
-                ...Arr::except($data, 'member_public_ids'),
+                ...Arr::except($data, ['member_public_ids', 'generate_with_ai']),
                 'owner_id' => $owner->id,
             ]);
 

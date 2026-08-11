@@ -137,12 +137,12 @@
         @elseif ($tab === 'plans')
             <p class="mb-4 text-sm text-slate-500">Drafted and idle. No task reaches a board until one of these is accepted.</p>
             @if ($awaitingAcceptance->isEmpty())
-                <x-empty-state icon="sparkles" title="No plans waiting" description="A plan is drafted automatically once a request is approved." />
+                <x-empty-state icon="sparkles" title="No plans waiting" description="AI plans appear here after an approval or direct IT creation." />
             @else
                 <x-table class="bg-white dark:bg-slate-900">
                     <thead class="border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                            <th scope="col" class="{{ $head }}">Request</th>
+                            <th scope="col" class="{{ $head }}">Work item</th>
                             <th scope="col" class="{{ $head }} whitespace-nowrap">Tasks</th>
                             <th scope="col" class="{{ $head }} whitespace-nowrap">Effort</th>
                             <th scope="col" class="{{ $head }}">Assigned to</th>
@@ -152,15 +152,28 @@
                     </thead>
                     <tbody>
                         @foreach ($awaitingAcceptance as $draft)
-                            @php($subject = $draft->subject)
-                            @php($url = $subject instanceof App\Models\FeatureRequest
-                                ? route('app.approvals.show', [$workspace, $subject])
-                                : route('app.approvals.projects.show', [$workspace, $subject]))
+                            @php
+                                $subject = $draft->subject;
+                                $title = $subject?->title ?? $subject?->name ?? 'Unavailable work item';
+                                $url = match (true) {
+                                    $subject instanceof App\Models\FeatureRequest => route('app.approvals.show', [$workspace, $subject]),
+                                    $subject instanceof App\Models\ProjectRequest => route('app.approvals.projects.show', [$workspace, $subject]),
+                                    $subject instanceof App\Models\Feature => route('app.features.show', [$workspace, $subject->project]),
+                                    $subject instanceof App\Models\Project => route('app.projects.show', $subject),
+                                    default => route('app.approvals.index', [$workspace, 'tab' => 'plans']),
+                                };
+                                $assignee = match (true) {
+                                    $subject instanceof App\Models\FeatureRequest, $subject instanceof App\Models\ProjectRequest => $subject->assignee,
+                                    $subject instanceof App\Models\Feature => $subject->project?->pic(),
+                                    $subject instanceof App\Models\Project => $subject->owner,
+                                    default => null,
+                                };
+                            @endphp
                             <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
-                                <td class="max-w-sm px-4 py-3"><a href="{{ $url }}" class="font-semibold hover:underline">{{ $subject?->title }}</a></td>
+                                <td class="max-w-sm px-4 py-3"><a href="{{ $url }}" class="font-semibold hover:underline">{{ $title }}</a></td>
                                 <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-500">{{ count($draft->tasks()) }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 tabular-nums text-slate-500">{{ round($draft->totalMinutes() / 60, 1) }}h</td>
-                                <td class="px-4 py-3 text-slate-500">{{ $subject?->assignee?->name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-slate-500">{{ $assignee?->name ?? '—' }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ $draft->generated_at?->diffForHumans() ?? '—' }}</td>
                                 <td class="px-4 py-3 text-right"><x-link-button href="{{ $url }}" variant="secondary">Review</x-link-button></td>
                             </tr>

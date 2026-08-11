@@ -11,6 +11,12 @@
 
     @include('app.projects._tabs', ['project' => $project])
 
+    @if ($breakdown)
+        <div class="mt-6">
+            @include('app.approvals._breakdown', ['breakdown' => $breakdown])
+        </div>
+    @endif
+
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_380px] xl:items-start">
         <section class="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="overview-title">
             <h2 id="overview-title" class="text-lg font-bold">Overview</h2>

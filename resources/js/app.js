@@ -124,7 +124,6 @@ Alpine.data('taskBreakdown', ({ tasks, previewUrl }) => ({
     tasks: tasks.map((task) => ({
         ...task,
         checklist: Array.isArray(task.checklist) ? [...task.checklist] : [],
-        depends_on: Array.isArray(task.depends_on) ? task.depends_on.map(Number) : [],
         requires_user_validation: !! task.requires_user_validation,
     })),
     finishLabel: '—',
@@ -138,11 +137,6 @@ Alpine.data('taskBreakdown', ({ tasks, previewUrl }) => ({
     },
     remove(index) {
         this.tasks.splice(index, 1);
-        this.tasks.forEach((task) => {
-            task.depends_on = task.depends_on
-                .filter((dependencyIndex) => dependencyIndex !== index)
-                .map((dependencyIndex) => dependencyIndex > index ? dependencyIndex - 1 : dependencyIndex);
-        });
         this.schedulePreview();
     },
     addChecklist(taskIndex) {
@@ -150,12 +144,6 @@ Alpine.data('taskBreakdown', ({ tasks, previewUrl }) => ({
     },
     removeChecklist(taskIndex, checklistIndex) {
         this.tasks[taskIndex].checklist.splice(checklistIndex, 1);
-    },
-    toggleDependency(taskIndex, dependencyIndex, selected) {
-        const dependencies = this.tasks[taskIndex].depends_on;
-        this.tasks[taskIndex].depends_on = selected
-            ? [...new Set([...dependencies, dependencyIndex])].sort((a, b) => a - b)
-            : dependencies.filter((index) => index !== dependencyIndex);
     },
     // Debounced: the reviewer types over an estimate, and one request per keystroke would
     // ask the planner to walk the calendar for nothing.

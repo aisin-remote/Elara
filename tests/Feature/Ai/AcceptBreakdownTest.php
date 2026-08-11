@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Ai;
 
+use App\Actions\Project\CreateProject;
 use App\Actions\Project\CreateSystem;
 use App\Actions\Workspace\CreateWorkspace;
 use App\Enums\BreakdownStatus;
 use App\Enums\FeatureRequestStatus;
+use App\Enums\ProjectStatus;
 use App\Enums\RequestUrgency;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
@@ -76,7 +78,7 @@ class AcceptBreakdownTest extends TestCase
         $this->assertSame(780, $breakdown->subject->fresh()->estimated_minutes);
     }
 
-    public function test_accepting_creates_checklists_and_real_task_dependencies(): void
+    public function test_accepting_creates_checklists_without_task_dependencies(): void
     {
         [$workspace, $pic, $system] = $this->system();
         $breakdown = $this->readyBreakdown($workspace, $system, $pic);
@@ -87,9 +89,8 @@ class AcceptBreakdownTest extends TestCase
 
         $tasks = Task::orderBy('position')->get();
         $this->assertSame(['Validate request parameters', 'Return the export file'], $tasks[0]->checklistItems()->pluck('title')->all());
-        $this->assertTrue($tasks[1]->dependencies()->whereKey($tasks[0]->id)->exists());
-        $this->assertSame(2, $tasks[2]->dependencies()->count());
-        $this->assertTrue($tasks[1]->isBlocked());
+        $this->assertSame(0, $tasks[1]->dependencies()->count());
+        $this->assertSame(0, $tasks[2]->dependencies()->count());
 
         $tasks[0]->checklistItems()->first()->update(['is_completed' => true, 'completed_at' => now()]);
 
@@ -99,18 +100,21 @@ class AcceptBreakdownTest extends TestCase
             ->assertSee('50 percent complete');
     }
 
-    public function test_a_dependency_can_only_point_to_an_earlier_task(): void
+    public function test_task_detail_hides_dependency_and_time_tracking_controls(): void
     {
         [$workspace, $pic, $system] = $this->system();
         $breakdown = $this->readyBreakdown($workspace, $system, $pic);
-        $tasks = $this->payload();
-        $tasks[0]['depends_on'] = [1];
 
         $this->actingAs($pic)
-            ->post(route('internal.breakdowns.accept', $breakdown), ['tasks' => $tasks])
-            ->assertSessionHasErrors('tasks.0.depends_on.0');
+            ->post(route('internal.breakdowns.accept', $breakdown), ['tasks' => $this->payload()])
+            ->assertRedirect();
 
-        $this->assertSame(0, Task::count());
+        $this->actingAs($pic)
+            ->get(route('app.tasks.show', Task::firstOrFail()))
+            ->assertOk()
+            ->assertDontSee('Dependencies')
+            ->assertDontSee('Time tracking')
+            ->assertDontSee('Log time');
     }
 
     public function test_tasks_are_laid_out_across_working_days_not_stacked_on_one(): void
@@ -215,6 +219,45 @@ class AcceptBreakdownTest extends TestCase
             ->assertJson(['total_minutes' => 720, 'finish' => '2026-08-04']);
     }
 
+    public function test_an_it_created_project_can_accept_an_ai_plan(): void
+    {
+        [$workspace, $owner] = $this->system();
+        $project = app(CreateProject::class)->handle($workspace, $owner, [
+            'name' => 'Internal automation',
+            'description' => 'Automate a recurring IT operations workflow.',
+            'color' => '#4f46e5',
+            'status' => ProjectStatus::ACTIVE->value,
+            'start_date' => '2026-08-03',
+            'due_date' => null,
+        ]);
+        $breakdown = TaskBreakdown::create([
+            'workspace_id' => $workspace->id,
+            'subject_type' => $project->getMorphClass(),
+            'subject_id' => $project->id,
+            'provider' => 'openai',
+            'model' => 'gpt-4o',
+            'status' => BreakdownStatus::READY,
+            'payload_json' => ['tasks' => [[
+                'title' => 'Build the automation',
+                'description' => 'Implement and verify it.',
+                'estimate_minutes' => 120,
+                'checklist' => ['Implement the workflow', 'Verify the result'],
+                'requires_user_validation' => true,
+                'validation_reason' => 'This should be ignored for direct IT work.',
+            ]]],
+            'generated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->post(route('internal.breakdowns.accept', $breakdown), [
+            'tasks' => $breakdown->tasks(),
+        ])->assertRedirect();
+
+        $task = Task::where('project_id', $project->id)->firstOrFail();
+        $this->assertFalse($task->requires_user_validation);
+        $this->assertNull($task->validation_reason);
+        $this->assertSame(['Implement the workflow', 'Verify the result'], $task->checklistItems()->pluck('title')->all());
+    }
+
     public function test_a_breakdown_in_another_workspace_is_not_reachable(): void
     {
         [, $pic] = $this->system();
@@ -232,17 +275,17 @@ class AcceptBreakdownTest extends TestCase
         return [
             [
                 'title' => 'Add the export endpoint', 'description' => 'Server side.', 'estimate_minutes' => 180,
-                'checklist' => ['Validate request parameters', 'Return the export file'], 'depends_on' => [],
+                'checklist' => ['Validate request parameters', 'Return the export file'],
                 'requires_user_validation' => 0,
             ],
             [
                 'title' => 'Add the download button', 'description' => 'Client side.', 'estimate_minutes' => 120,
-                'checklist' => ['Render the button', 'Handle the download response'], 'depends_on' => [0],
+                'checklist' => ['Render the button', 'Handle the download response'],
                 'requires_user_validation' => 1, 'validation_reason' => 'The requester confirms the columns.',
             ],
             [
                 'title' => 'Write the smoke test', 'description' => 'One run.', 'estimate_minutes' => 60,
-                'checklist' => ['Cover a successful export', 'Cover an invalid request'], 'depends_on' => [0, 1],
+                'checklist' => ['Cover a successful export', 'Cover an invalid request'],
                 'requires_user_validation' => 0,
             ],
         ];
