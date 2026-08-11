@@ -119,6 +119,30 @@ class DeleteUserAccountTest extends TestCase
         $this->assertDatabaseHas('workspaces', ['id' => $workspace->id]);
     }
 
+    public function test_a_workspace_nobody_else_belongs_to_leaves_with_its_owner(): void
+    {
+        [$workspace, $owner] = $this->workspace();
+        $admin = $this->member($workspace, WorkspaceRole::ADMIN);
+
+        // Registration gives everyone one of these. It has no other member, so the transfer
+        // screen can offer nobody — demanding a transfer made the account undeletable forever.
+        $solo = app(CreateWorkspace::class)->handle($owner, [
+            'name' => 'Personal', 'timezone' => 'UTC', 'locale' => 'en', 'week_start' => 1,
+        ]);
+        $workspace->memberships()->where('user_id', $owner->id)->delete();
+        $workspace->update(['owner_id' => $admin->id]);
+
+        app(DeleteUserAccount::class)->handle($owner, $admin);
+
+        $this->assertDatabaseMissing('users', ['id' => $owner->id]);
+
+        // Parked on the placeholder and soft deleted: eight tables point at it with RESTRICT,
+        // so the row has to stay even though nobody can reach it any more.
+        $solo = Workspace::withTrashed()->findOrFail($solo->id);
+        $this->assertNotNull($solo->deleted_at);
+        $this->assertSame('Deleted user', User::find($solo->owner_id)->name);
+    }
+
     public function test_you_cannot_delete_yourself_from_here(): void
     {
         [$workspace, $owner] = $this->workspace();

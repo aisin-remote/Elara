@@ -266,6 +266,26 @@ class OrganizationLoginTest extends TestCase
         $this->assertFalse($owner->fresh()->isOrganizationManaged());
     }
 
+    public function test_a_company_account_can_still_sign_in_after_being_handed_ownership(): void
+    {
+        $this->addOrganizationUser('Imam Rizky', 'imam@example.com', 'MGR', 'ITD');
+        $this->post(route('login'), ['email' => 'imam@example.com', 'password' => 'CompanyPass!123'])
+            ->assertRedirect();
+        $this->post(route('logout'));
+
+        $user = User::where('email', 'imam@example.com')->firstOrFail();
+        $membership = $user->workspaceMemberships()->firstOrFail();
+        // Promotion used to be a one-way door: the directory is where their password lives, and
+        // the owner/admin gate then refused the only credentials they have.
+        $membership->update(['role' => WorkspaceRole::OWNER]);
+        $membership->workspace->update(['owner_id' => $user->id]);
+
+        $this->post(route('login'), ['email' => 'imam@example.com', 'password' => 'CompanyPass!123'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertAuthenticatedAs($user->fresh());
+    }
+
     public function test_registration_is_unavailable_when_company_login_is_enabled(): void
     {
         $this->get(route('register'))->assertNotFound();

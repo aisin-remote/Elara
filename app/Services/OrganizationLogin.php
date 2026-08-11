@@ -30,9 +30,17 @@ class OrganizationLogin
             ->orWhere('email', $profile['email'])
             ->first();
 
-        if ($existing?->workspaceMemberships()->active()
-            ->whereIn('role', [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value])
-            ->exists()) {
+        // A local account that runs a workspace keeps its local password: signing in through the
+        // directory would reset it (see below) and hand a privileged account to whoever holds
+        // the matching directory entry.
+        //
+        // Accounts the directory already owns are exempt. They have no local password to protect
+        // and nothing to take over, so refusing them only locked people out of their own account
+        // the moment they were promoted to admin or handed ownership.
+        if ($existing && ! $existing->isOrganizationManaged()
+            && $existing->workspaceMemberships()->active()
+                ->whereIn('role', [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value])
+                ->exists()) {
             return null;
         }
 
