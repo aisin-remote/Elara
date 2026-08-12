@@ -18,7 +18,9 @@ class DuplicateTask
         return DB::transaction(function () use ($source, $actor, $ipAddress) {
             $status = $source->project->taskStatuses()->active()
                 ->where('category', TaskStatusCategory::BACKLOG->value)
-                ->firstOrFail();
+                ->orderBy('position')
+                ->first()
+                ?? $source->project->taskStatuses()->active()->orderBy('position')->firstOrFail();
             $copy = $source->replicate(['public_id', 'status_id', 'status_changed_at', 'position', 'version', 'completed_at', 'archived_at', 'deleted_at']);
             $copy->fill([
                 'title' => 'Copy of '.$source->title,

@@ -10,9 +10,6 @@
             <p class="mt-1 text-sm text-slate-500">Standing systems you maintain, and the feature work queued inside each.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            @can('create', [App\Models\Project::class, $workspace])
-                <x-link-button href="{{ route('app.features.create', $workspace) }}"><x-icon name="plus" />New feature</x-link-button>
-            @endcan
             @can('manageMasterData', $workspace)
                 <x-link-button href="{{ route('app.settings.master.systems', $workspace) }}" variant="secondary">Manage systems</x-link-button>
             @endcan

@@ -47,7 +47,7 @@ class UpdateTask
                 : $task->feature_id;
             $milestoneId = $this->createTask->milestoneId($task->project, $data['milestone_public_id'] ?? null);
             $attributes = [
-                ...Arr::except($data, ['status_public_id', 'category_public_id', 'feature_public_id', 'milestone_public_id', 'assignee_public_ids', 'attachments']),
+                ...Arr::except($data, ['status_public_id', 'category_public_id', 'feature_public_id', 'milestone_public_id', 'assignee_public_ids', 'attachments', 'property_values']),
                 'status_id' => $status->id,
                 'status_changed_at' => $task->status_id === $status->id ? $task->status_changed_at : now(),
                 'category_id' => $categoryId,

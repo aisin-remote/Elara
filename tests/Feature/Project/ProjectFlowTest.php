@@ -144,6 +144,29 @@ class ProjectFlowTest extends TestCase
         $this->assertDatabaseMissing('project_members', ['project_id' => $project->id, 'user_id' => $member->id]);
     }
 
+    public function test_project_overview_lists_leaders_before_members(): void
+    {
+        [$owner, $workspace, $project] = $this->project();
+        $member = User::factory()->create(['first_name' => 'Earlier', 'last_name' => 'Member']);
+        $leader = User::factory()->create(['first_name' => 'Later', 'last_name' => 'Leader']);
+
+        foreach ([$member, $leader] as $user) {
+            $workspace->memberships()->create([
+                'user_id' => $user->id,
+                'role' => WorkspaceRole::MEMBER,
+                'status' => WorkspaceMemberStatus::ACTIVE,
+                'joined_at' => now(),
+            ]);
+        }
+
+        $project->memberships()->create(['user_id' => $member->id, 'role' => ProjectMemberRole::MEMBER]);
+        $project->memberships()->create(['user_id' => $leader->id, 'role' => ProjectMemberRole::MANAGER]);
+
+        $this->actingAs($owner)->get(route('app.projects.show', $project))
+            ->assertOk()
+            ->assertSeeInOrder(['Later Leader', 'Earlier Member']);
+    }
+
     public function test_project_list_create_and_edit_pages_render(): void
     {
         [$owner, $workspace, $project] = $this->project();

@@ -38,7 +38,7 @@ class ProjectFileController extends Controller
             'workspace' => $workspace,
             'project' => $project,
             'files' => $files,
-            'tasks' => $project->tasks()->orderBy('title')->get(['id', 'public_id', 'title']),
+            'tasks' => $project->tasks()->visibleTo($request->user())->orderBy('title')->get(['id', 'public_id', 'title']),
             'uploaders' => $workspace->memberships()->active()->with('user')
                 ->whereIn('user_id', $project->files()->select('uploader_id')->distinct())
                 ->get()->pluck('user')->sortBy('name'),

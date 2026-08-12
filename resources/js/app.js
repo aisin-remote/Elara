@@ -5,7 +5,6 @@ import { apiRequest } from './api';
 import { initAskAi } from './ask-ai';
 import { initCalendars } from './calendar';
 import { initCharts } from './charts';
-import { initKanban } from './kanban';
 import { initMessaging } from './messaging';
 import { initNotifications, initNotificationSettings } from './notifications';
 import { initSchedules } from './schedule';
@@ -103,6 +102,202 @@ Alpine.data('appShell', () => ({
         const last = focusable.at(-1);
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
         if (! event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    },
+}));
+
+Alpine.data('globalSearch', ({ endpoint }) => ({
+    query: '',
+    results: [],
+    selected: 0,
+    loading: false,
+    searched: false,
+    error: '',
+    request: null,
+    open() {
+        if (! this.$refs.dialog.open) this.$refs.dialog.showModal();
+        this.$nextTick(() => this.$refs.input.focus());
+    },
+    close() {
+        this.$refs.dialog.close();
+    },
+    reset() {
+        this.request?.abort();
+        this.query = '';
+        this.results = [];
+        this.selected = 0;
+        this.loading = false;
+        this.searched = false;
+        this.error = '';
+    },
+    async search() {
+        const query = this.query.trim();
+        this.request?.abort();
+        this.results = [];
+        this.selected = 0;
+        this.searched = false;
+        this.error = '';
+
+        if (query.length < 2) {
+            this.loading = false;
+            return;
+        }
+
+        const request = new AbortController();
+        this.request = request;
+        this.loading = true;
+
+        try {
+            const response = await fetch(`${endpoint}?q=${encodeURIComponent(query)}`, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+                signal: request.signal,
+            });
+            if (! response.ok) throw new Error('Search is temporarily unavailable.');
+
+            const payload = await response.json();
+            if (this.query.trim() !== query) return;
+            this.results = payload.results ?? [];
+            this.searched = true;
+        } catch (error) {
+            if (error.name !== 'AbortError') this.error = error.message;
+        } finally {
+            if (this.request === request) this.loading = false;
+        }
+    },
+    move(direction) {
+        if (! this.results.length) return;
+        this.selected = (this.selected + direction + this.results.length) % this.results.length;
+        this.$nextTick(() => this.$refs.results.querySelector(`[data-search-index="${this.selected}"]`)?.scrollIntoView({ block: 'nearest' }));
+    },
+    openSelected() {
+        const result = this.results[this.selected];
+        if (result) window.location.assign(result.url);
+    },
+}));
+
+Alpine.data('taskDatabase', () => ({
+    openTask(defaults = {}) {
+        const dialog = document.getElementById('new-task-dialog');
+        const form = dialog?.querySelector('form');
+        if (! dialog || ! form) return;
+
+        form.reset();
+        Object.entries(defaults).forEach(([name, value]) => {
+            const field = form.elements.namedItem(name);
+            if (field) field.value = value ?? '';
+        });
+        dialog.showModal();
+    },
+}));
+
+Alpine.data('inlineTaskProperty', ({ url, initial, type, reloadOnSave = false }) => {
+    const empty = type === 'checkbox' ? false : '';
+    const startingValue = initial ?? empty;
+
+    return {
+        value: startingValue,
+        saved: startingValue,
+        saving: false,
+        request: null,
+        async save() {
+            const value = type === 'checkbox'
+                ? Boolean(this.value)
+                : (String(this.value ?? '').trim() || null);
+
+            if (value === this.saved || (value === null && this.saved === '')) return;
+
+            this.request?.abort();
+            const request = new AbortController();
+            this.request = request;
+            this.saving = true;
+
+            try {
+                await apiRequest(url, {
+                    method: 'PUT',
+                    body: JSON.stringify({ value }),
+                    signal: request.signal,
+                });
+                if (this.request !== request) return;
+                this.saved = value ?? empty;
+                this.value = value ?? empty;
+                if (reloadOnSave) window.location.reload();
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                this.value = this.saved;
+                window.dispatchEvent(new CustomEvent('orbitra-toast', {
+                    detail: { variant: 'error', title: 'Could not save property', message: error.message },
+                }));
+            } finally {
+                if (this.request === request) this.saving = false;
+            }
+        },
+    };
+});
+
+Alpine.data('inlineTaskRow', ({ url, version, initial, reloadFields = [] }) => ({
+    url,
+    version,
+    values: structuredClone(initial),
+    saved: structuredClone(initial),
+    savingField: null,
+    assigneeEditor: false,
+    normalize(field) {
+        if (field === 'assignees') return [...new Set(this.values.assignees ?? [])].sort();
+        if (field === 'description' || field === 'due_at') return String(this.values[field] ?? '').trim() || null;
+        return String(this.values[field] ?? '').trim();
+    },
+    same(left, right) {
+        return JSON.stringify(left) === JSON.stringify(right);
+    },
+    assigneeNames() {
+        const selected = new Set(this.values.assignees ?? []);
+        const names = [...this.$root.querySelectorAll('[data-assignee-id]')]
+            .filter((member) => selected.has(member.dataset.assigneeId))
+            .map((member) => member.dataset.assigneeName);
+
+        return names.join(', ') || 'Unassigned';
+    },
+    cancelAssignees() {
+        this.values.assignees = structuredClone(this.saved.assignees ?? []);
+        this.assigneeEditor = false;
+    },
+    async save(field) {
+        if (this.savingField !== null) return false;
+
+        const value = this.normalize(field);
+        const saved = field === 'assignees' ? [...(this.saved[field] ?? [])].sort() : this.saved[field];
+        if (this.same(value, saved)) return true;
+
+        this.savingField = field;
+
+        try {
+            const payload = await apiRequest(url, {
+                method: 'PATCH',
+                body: JSON.stringify({ field, value, version: this.version }),
+            });
+            this.version = payload.data.version;
+            this.saved[field] = structuredClone(value);
+            this.values[field] = structuredClone(value ?? '');
+            if (reloadFields.includes(field)) window.location.reload();
+
+            return true;
+        } catch (error) {
+            this.values[field] = structuredClone(this.saved[field] ?? (field === 'assignees' ? [] : ''));
+            if (error.response?.status === 409 && error.payload?.server_version) {
+                this.version = error.payload.server_version;
+            }
+            window.dispatchEvent(new CustomEvent('orbitra-toast', {
+                detail: {
+                    variant: 'error',
+                    title: error.response?.status === 409 ? 'Task changed elsewhere' : 'Could not save task',
+                    message: error.response?.status === 409 ? 'Your edit was reverted. Review the latest value and try again.' : error.message,
+                },
+            }));
+
+            return false;
+        } finally {
+            this.savingField = null;
+        }
     },
 }));
 
@@ -242,7 +437,6 @@ function initSubmitStates() {
 }
 
 Alpine.start();
-initKanban();
 initCalendars();
 initSchedules();
 initCharts();

@@ -78,12 +78,23 @@ class SystemCatalogTest extends TestCase
         $this->actingAs($owner)->get(route('app.features.index', $workspace))
             ->assertOk()
             ->assertSee('Inventory Core')
+            ->assertDontSee('New feature')
             ->assertSee('title="Bagas Nugroho"', false);
 
         $this->actingAs($owner)->get(route('app.features.show', [$workspace, $system]))
             ->assertOk()
+            ->assertSee('Overview')
+            ->assertSee('Task progress')
+            ->assertSee('System team')
+            ->assertSee('xl:grid-cols-[1fr_380px]', false)
+            ->assertSee('repeating-linear-gradient', false)
+            ->assertSee('Feature portfolio')
+            ->assertSee('Task health')
+            ->assertSee('<table', false)
+            ->assertDontSee('Next tasks')
+            ->assertSee('New feature')
+            ->assertSee(route('app.features.create', ['workspace' => $workspace, 'system' => $system->public_id]), false)
             ->assertSee('Bulk export')
-            ->assertSee('Design the export screen')
             ->assertSee('Maintenance tasks')
             ->assertSee('Rotate expired certificates');
     }
@@ -93,6 +104,55 @@ class SystemCatalogTest extends TestCase
         [$owner, $workspace, $project] = $this->project();
 
         $this->actingAs($owner)->get(route('app.features.show', [$workspace, $project]))->assertNotFound();
+    }
+
+    public function test_feature_has_its_own_overview_and_scoped_work_views(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $system = $this->system($workspace, $owner, 'Cubic-pro');
+        $feature = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $system->id,
+            'name' => 'Stock alerts',
+            'description' => 'Warn warehouse staff before an item runs out.',
+        ]);
+        $featureTask = $this->task($system, $owner, 'Send low-stock notification', $feature);
+        $looseTask = $this->task($system, $owner, 'Rotate server logs');
+
+        $this->actingAs($owner)->get(route('app.features.detail', [$workspace, $system, $feature]))
+            ->assertOk()
+            ->assertSee('aria-label="Breadcrumb"', false)
+            ->assertSee('Feature overview')
+            ->assertSee('Cubic-pro')
+            ->assertSee('Stock alerts')
+            ->assertSee($featureTask->title)
+            ->assertDontSee($looseTask->title);
+
+        foreach (['app.projects.tasks', 'app.projects.timeline'] as $routeName) {
+            $this->actingAs($owner)->get(route($routeName, [
+                'workspace' => $workspace,
+                'project' => $system,
+                'feature' => $feature->public_id,
+            ]))
+                ->assertOk()
+                ->assertSee($featureTask->title)
+                ->assertDontSee($looseTask->title);
+        }
+
+        $this->actingAs($owner)->get(route('app.projects.board', [
+            'workspace' => $workspace,
+            'project' => $system,
+            'feature' => $feature->public_id,
+        ]))->assertRedirect(route('app.projects.tasks', [
+            'workspace' => $workspace,
+            'project' => $system,
+            'feature' => $feature->public_id,
+        ]));
+
+        $otherSystem = $this->system($workspace, $owner, 'Other system');
+        $this->actingAs($owner)
+            ->get(route('app.features.detail', [$workspace, $otherSystem, $feature]))
+            ->assertNotFound();
     }
 
     public function test_creating_a_system_seeds_statuses_and_records_the_pic(): void

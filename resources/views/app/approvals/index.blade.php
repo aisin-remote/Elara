@@ -158,7 +158,7 @@
                                 $url = match (true) {
                                     $subject instanceof App\Models\FeatureRequest => route('app.approvals.show', [$workspace, $subject]),
                                     $subject instanceof App\Models\ProjectRequest => route('app.approvals.projects.show', [$workspace, $subject]),
-                                    $subject instanceof App\Models\Feature => route('app.features.show', [$workspace, $subject->project]),
+                                    $subject instanceof App\Models\Feature => route('app.features.detail', [$workspace, $subject->project, $subject]),
                                     $subject instanceof App\Models\Project => route('app.projects.show', $subject),
                                     default => route('app.approvals.index', [$workspace, 'tab' => 'plans']),
                                 };

@@ -12,15 +12,35 @@ use App\Models\Task;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SearchController extends Controller
 {
-    public function index(SearchRequest $request, Workspace $workspace): View
+    public function index(SearchRequest $request, Workspace $workspace): JsonResponse|View
     {
         $query = (string) ($request->validated('q') ?? '');
+
+        if ($request->expectsJson()) {
+            if ($query === '') {
+                return response()->json(['query' => '', 'results' => [], 'total' => 0]);
+            }
+
+            $results = $this->results($request, $workspace, $query);
+
+            return response()->json([
+                'query' => $query,
+                'results' => collect($results->items())->map(fn (object $result): array => [
+                    'type' => $result->result_type,
+                    'label' => $result->label,
+                    'description' => $result->description,
+                    'url' => $result->url,
+                ])->values(),
+                'total' => $results->total(),
+            ]);
+        }
 
         return view('app.search.index', [
             'workspace' => $workspace,

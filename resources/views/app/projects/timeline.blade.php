@@ -1,30 +1,34 @@
 @extends('layouts.app')
 
-@section('title', $project->name.' Timeline')
-@section('page-title', $project->name)
+@section('title', ($selectedFeature?->name ?? $project->name).' Timeline')
+@section('page-title', $selectedFeature?->name ?? $project->name)
 
 @section('content')
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <p class="text-sm text-slate-500">Projects / {{ $project->name }}</p>
-            <h2 class="mt-1 text-2xl font-bold tracking-tight">Project timeline</h2>
+            <p class="text-sm text-slate-500">Projects / {{ $project->name }}@if($selectedFeature) / {{ $selectedFeature->name }}@endif</p>
+            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ $selectedFeature ? 'Feature timeline' : 'Project timeline' }}</h2>
             <p class="mt-1 text-xs text-slate-500">{{ $criticalCount }} critical · projected finish {{ $projectedFinish ?? 'n/a' }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            @can('update', $project)
-                <form method="POST" action="{{ route('internal.projects.baseline', $project) }}">@csrf<x-button type="submit" variant="secondary">Capture baseline</x-button></form>
-                <form method="POST" action="{{ route('internal.projects.reschedule', $project) }}">@csrf<x-button type="submit" variant="secondary">Reschedule from dependencies</x-button></form>
-            @endcan
+            @if (! $selectedFeature)
+                @can('update', $project)
+                    <form method="POST" action="{{ route('internal.projects.baseline', $project) }}">@csrf<x-button type="submit" variant="secondary">Capture baseline</x-button></form>
+                    <form method="POST" action="{{ route('internal.projects.reschedule', $project) }}">@csrf<x-button type="submit" variant="secondary">Reschedule from dependencies</x-button></form>
+                @endcan
+            @endif
             @can('create', [App\Models\Task::class, $project])<x-button type="button" onclick="document.getElementById('new-task-dialog').showModal()"><x-icon name="plus"/>Add task</x-button>@endcan
         </div>
     </div>
 
-    @include('app.projects._tabs', ['project' => $project])
+    @if ($project->isSystem()) @include('app.features._tabs', ['workspace' => $workspace, 'system' => $project, 'feature' => $selectedFeature]) @else @include('app.projects._tabs', ['project' => $project]) @endif
 
+    @if (! $selectedFeature)
     <section class="mt-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="milestones-title">
         <div class="flex flex-wrap items-start justify-between gap-4"><div><h3 id="milestones-title" class="text-lg font-bold">Milestones</h3><p class="mt-1 text-xs text-slate-500">Zero-duration targets shown as diamonds on the timeline.</p></div>@can('update',$project)<details class="relative"><summary class="inline-flex min-h-10 cursor-pointer list-none items-center rounded-xl border border-slate-300 px-3 text-sm font-semibold hover:border-orbit-400">+ Add milestone</summary><form method="POST" action="{{ route('internal.project-milestones.store',$project) }}" class="absolute right-0 z-30 mt-2 w-72 space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900">@csrf<div><x-label for="milestone-name">Name</x-label><x-input id="milestone-name" name="name" required maxlength="160" /></div><div><x-label for="milestone-target">Target date</x-label><x-input id="milestone-target" type="date" name="target_date" required /></div><x-button class="w-full">Create milestone</x-button></form></details>@endcan</div>
         <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">@forelse($milestones as $milestone)<article class="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div class="flex items-start gap-3"><span class="mt-1 size-3 shrink-0 rotate-45 {{ $milestone->completed_at ? 'bg-emerald-500' : 'bg-violet-500' }}"></span><div class="min-w-0 flex-1"><h4 class="truncate font-bold">{{ $milestone->name }}</h4><p class="mt-1 text-xs text-slate-500">{{ $milestone->target_date->format('M j, Y') }} · {{ $milestone->tasks_count }} {{ Str::plural('task', $milestone->tasks_count) }}</p></div><span class="rounded-full px-2 py-1 text-[10px] font-bold {{ $milestone->completed_at ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200' : 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-200' }}">{{ $milestone->completed_at ? 'Complete' : 'Upcoming' }}</span></div>@can('update',$project)<details class="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800"><summary class="cursor-pointer text-xs font-bold text-orbit-700">Edit milestone</summary><form method="POST" action="{{ route('internal.project-milestones.update',$milestone) }}" class="mt-3 space-y-3">@csrf @method('PATCH')<x-input name="name" value="{{ $milestone->name }}" required maxlength="160" /><x-input type="date" name="target_date" value="{{ $milestone->target_date->toDateString() }}" required /><label class="flex items-center gap-2 text-sm"><input type="hidden" name="completed" value="0"><input type="checkbox" name="completed" value="1" class="rounded border-slate-300 text-orbit-600" @checked($milestone->completed_at)> Complete</label><x-button variant="secondary" class="w-full">Save milestone</x-button></form><form method="POST" action="{{ route('internal.project-milestones.destroy',$milestone) }}" class="mt-2" onsubmit="return confirm('Remove this milestone? Tasks will remain.')">@csrf @method('DELETE')<x-button variant="danger" class="w-full">Remove milestone</x-button></form></details>@endcan</article>@empty<div class="md:col-span-2 xl:col-span-3"><x-empty-state icon="calendar" title="No milestones yet" description="Add the first project target to anchor the delivery plan." class="p-6" /></div>@endforelse</div>
     </section>
+    @endif
 
     <section class="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="task-gantt-title">
         <div class="flex flex-col gap-4 border-b border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">

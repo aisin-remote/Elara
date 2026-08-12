@@ -73,17 +73,15 @@ class PlanningFoundationTest extends TestCase
         $this->assertDatabaseCount('task_dependencies', 2);
     }
 
-    public function test_board_and_timeline_explain_blocked_work_and_draw_the_dependency(): void
+    public function test_list_and_timeline_explain_blocked_work_and_draw_the_dependency(): void
     {
         [$owner, $workspace, $project] = $this->project();
         $prerequisite = $this->task($project, $owner, 'Approve design', '2026-08-06 17:00:00', '2026-08-05 09:00:00');
         $dependent = $this->task($project, $owner, 'Build interface', '2026-08-09 17:00:00', '2026-08-07 09:00:00');
         $dependent->dependencies()->attach($prerequisite->id);
 
-        $this->actingAs($owner)->get(route('app.projects.board', [$workspace, $project]))
+        $this->actingAs($owner)->get(route('app.projects.tasks', [$workspace, $project]))
             ->assertOk()
-            ->assertSee('data-blocked="true"', false)
-            ->assertSee('data-status-category="in_progress"', false)
             ->assertSee('Blocked');
 
         $this->actingAs($owner)->get(route('app.projects.timeline', [$workspace, $project]))
@@ -156,8 +154,10 @@ class PlanningFoundationTest extends TestCase
     private function task($project, User $creator, string $title, ?string $dueAt = null, ?string $startAt = null): Task
     {
         $status = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        $payload = $this->payload($status->public_id, $title, $dueAt, $startAt);
+        $payload['assignee_public_ids'] = [$creator->public_id];
 
-        return app(CreateTask::class)->handle($project, $creator, $this->payload($status->public_id, $title, $dueAt, $startAt));
+        return app(CreateTask::class)->handle($project, $creator, $payload);
     }
 
     private function payload(string $statusPublicId, string $title = 'Planning task', ?string $dueAt = null, ?string $startAt = null): array

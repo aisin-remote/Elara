@@ -38,7 +38,9 @@ use App\Http\Controllers\InternalApi\TaskChecklistController;
 use App\Http\Controllers\InternalApi\TaskCommentController;
 use App\Http\Controllers\InternalApi\TaskController;
 use App\Http\Controllers\InternalApi\TaskDependencyController;
+use App\Http\Controllers\InternalApi\TaskFieldController;
 use App\Http\Controllers\InternalApi\TaskMoveController;
+use App\Http\Controllers\InternalApi\TaskPropertyController;
 use App\Http\Controllers\InternalApi\TaskStatusController;
 use App\Http\Controllers\InternalApi\TaskTimeEntryController;
 use App\Http\Controllers\InternalApi\TwoFactorController;
@@ -114,6 +116,7 @@ Route::post('/projects/{project}/tasks', [TaskController::class, 'store'])->name
 Route::post('/projects/{project}/tasks/bulk', [BulkTaskController::class, 'store'])->name('internal.tasks.bulk');
 Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('internal.tasks.show');
 Route::patch('/tasks/{task}', [TaskController::class, 'update'])->name('internal.tasks.update');
+Route::patch('/tasks/{task}/field', [TaskController::class, 'updateField'])->name('internal.tasks.fields.update');
 Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('internal.tasks.destroy');
 Route::post('/tasks/{task}/restore', [TaskController::class, 'restore'])->withTrashed()->name('internal.tasks.restore');
 Route::post('/tasks/{task}/duplicate', [TaskController::class, 'duplicate'])->name('internal.tasks.duplicate');
@@ -133,6 +136,11 @@ Route::post('/projects/{project}/statuses', [TaskStatusController::class, 'store
 Route::patch('/task-statuses/{status}', [TaskStatusController::class, 'update'])->name('internal.task-statuses.update');
 Route::delete('/task-statuses/{status}', [TaskStatusController::class, 'destroy'])->name('internal.task-statuses.destroy');
 Route::post('/projects/{project}/statuses/reorder', [TaskStatusController::class, 'reorder'])->name('internal.task-statuses.reorder');
+Route::post('/projects/{project}/task-properties', [TaskPropertyController::class, 'store'])->name('internal.task-properties.store');
+Route::patch('/projects/{project}/task-fields/{field}', [TaskFieldController::class, 'update'])->name('internal.task-fields.update');
+Route::patch('/task-properties/{property}', [TaskPropertyController::class, 'update'])->name('internal.task-properties.update');
+Route::delete('/task-properties/{property}', [TaskPropertyController::class, 'destroy'])->name('internal.task-properties.destroy');
+Route::put('/tasks/{task}/task-properties/{property}', [TaskPropertyController::class, 'updateValue'])->name('internal.task-properties.values.update');
 Route::post('/workspaces/{workspace}/task-categories', [TaskCategoryController::class, 'store'])->name('internal.task-categories.store');
 
 // Master data (PRD-08). Reference rows archive, never delete.

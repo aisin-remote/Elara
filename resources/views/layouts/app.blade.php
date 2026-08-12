@@ -43,10 +43,11 @@
                             $projectCreateUrl = auth()->user()->can('create', [App\Models\Project::class, $activeWorkspace])
                                 ? route('app.projects.create', $activeWorkspace)
                                 : null;
+                            $taskRouteActive = request()->routeIs('app.tasks.*');
+                            $taskSubject = request()->string('assignee')->toString() ?: auth()->user()->public_id;
                         @endphp
 
                         <nav class="mt-2 space-y-0.5" aria-label="Main navigation">
-                            <x-sidebar.item :href="route('app.search', $activeWorkspace)" icon="search" :active="request()->routeIs('app.search')">Search</x-sidebar.item>
                             <x-sidebar.item :href="route('app.workspaces.show', $activeWorkspace)" icon="dashboard" :active="request()->routeIs('app.workspaces.show')">Home</x-sidebar.item>
                             <x-sidebar.item :href="route('app.ai.index', $activeWorkspace)" icon="sparkles" :active="request()->routeIs('app.ai.*')">Ask AI</x-sidebar.item>
 
@@ -56,7 +57,27 @@
                         </nav>
 
                         <x-sidebar.section id="work" title="Work">
-                            <x-sidebar.item :href="route('app.tasks.index', $activeWorkspace)" icon="tasks" :active="request()->routeIs('app.tasks.*')">Task List</x-sidebar.item>
+                            <details class="group" @if($taskRouteActive) open @endif>
+                                <summary class="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors [&::-webkit-details-marker]:hidden {{ $taskRouteActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                    <x-icon name="tasks" class="size-4 {{ $taskRouteActive ? 'text-orbit-600 dark:text-orbit-300' : 'text-slate-500 dark:text-slate-400' }}" />
+                                    <span class="min-w-0 flex-1 truncate">Tasks</span>
+                                    <x-icon name="chevron-right" class="size-3 transition-transform group-open:rotate-90" />
+                                </summary>
+                                <div class="ml-4 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2 dark:border-slate-700">
+                                    @foreach ($sidebarTaskMembers as $taskMember)
+                                        @php
+                                            $isMyTasks = $taskMember->is(auth()->user());
+                                            $taskMemberActive = request()->routeIs('app.tasks.index') && $taskSubject === $taskMember->public_id;
+                                        @endphp
+                                        <a href="{{ $isMyTasks ? route('app.tasks.index', $activeWorkspace) : route('app.tasks.index', ['workspace' => $activeWorkspace, 'assignee' => $taskMember->public_id]) }}"
+                                            @if($taskMemberActive) aria-current="page" @endif
+                                            class="flex h-8 items-center gap-2 rounded-md px-2 text-[12px] font-medium transition-colors {{ $taskMemberActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                            <span class="size-1.5 shrink-0 rounded-full {{ $isMyTasks ? 'bg-orbit-500' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
+                                            <span class="truncate">{{ $isMyTasks ? 'My tasks' : $taskMember->name }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </details>
                             <x-sidebar.item :href="route('app.schedule.index', $activeWorkspace)" icon="calendar" :active="request()->routeIs('app.schedule.*')">Schedule</x-sidebar.item>
                             <x-sidebar.item :href="route('app.features.index', $activeWorkspace)" icon="board" :active="request()->routeIs('app.features.*') || $viewingSystem">Features</x-sidebar.item>
                             <x-sidebar.item :href="route('app.supporting.index', $activeWorkspace)" icon="supporting" :active="request()->routeIs('app.supporting.*')">Supporting</x-sidebar.item>
@@ -131,11 +152,12 @@
                     </div>
                     <div class="flex items-center gap-3">
                         @if ($activeWorkspace)
-                            <a href="{{ route('app.search', $activeWorkspace) }}" class="grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 md:hidden dark:border-slate-700 dark:text-slate-300" aria-label="Search workspace"><x-icon name="search" /></a>
-                            <form method="GET" action="{{ route('app.search', $activeWorkspace) }}" class="relative hidden md:block">
-                                <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input name="q" minlength="2" class="h-10 w-60 rounded-xl border-slate-200 bg-slate-50 pl-9 pr-3 text-sm focus:border-orbit-500 focus:ring-orbit-500 dark:border-slate-700 dark:bg-slate-900" placeholder="Search workspace…" aria-label="Search workspace">
-                            </form>
+                            <button type="button" x-on:click="$dispatch('open-global-search')" class="grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 md:hidden dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900" aria-label="Open global search"><x-icon name="search" /></button>
+                            <button type="button" x-on:click="$dispatch('open-global-search')" class="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600 hover:border-slate-300 hover:bg-white md:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800" aria-label="Open global search">
+                                <x-icon name="search" class="text-slate-400" />
+                                <span>Search</span>
+                                <kbd class="ml-2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">Ctrl K</kbd>
+                            </button>
                         @endif
                         <div data-notification-center data-url="{{ route('internal.notifications.index') }}" data-read-all-url="{{ route('internal.notifications.read-all') }}" data-workspace="{{ $activeWorkspace?->public_id }}" data-user="{{ auth()->user()->public_id }}" class="relative">
                             <button data-notification-toggle type="button" class="relative grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900" aria-label="Notifications" aria-expanded="false">
@@ -159,6 +181,9 @@
                 </main>
             </div>
         </div>
+        @if ($activeWorkspace)
+            <x-global-search :workspace="$activeWorkspace" />
+        @endif
         <x-toast />
     </body>
 </html>

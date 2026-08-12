@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OrganizationHierarchyLevel;
 use App\Enums\OrganizationRankGroup;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
@@ -17,6 +18,12 @@ use RuntimeException;
 
 class OrganizationDirectory
 {
+    /** @var array<string, Collection<int, User>> */
+    private array $taskMemberCache = [];
+
+    /** @var array<int, array<int, array<int, int>>> */
+    private array $taskVisibilityCache = [];
+
     public function __construct(
         private readonly DepartmentWorkspaceService $departmentWorkspaces,
         private readonly OrphanedDataPruner $orphanedData,
@@ -117,6 +124,80 @@ class OrganizationDirectory
             && $profile['rank_group'] === OrganizationRankGroup::MANAGEMENT
             && $profile['department_id'] === $departmentId
             && strcasecmp($profile['department_code'], config('organization.it_department_code')) !== 0;
+    }
+
+    /**
+     * The viewer plus every lower-level workspace member in the same organisation branch.
+     *
+     * @return Collection<int, User>
+     */
+    public function taskMembers(User $viewer, Workspace $workspace): Collection
+    {
+        $key = $viewer->id.':'.$workspace->id;
+
+        if (isset($this->taskMemberCache[$key])) {
+            return $this->taskMemberCache[$key];
+        }
+
+        $members = $workspace->memberships()
+            ->active()
+            ->whereHas('user')
+            ->with('user')
+            ->orderBy('id')
+            ->get()
+            ->pluck('user')
+            ->filter();
+
+        if (! config('organization.required')) {
+            return $this->taskMemberCache[$key] = $members->values();
+        }
+
+        $viewerProfile = $this->profile($viewer);
+        $viewerLevel = OrganizationHierarchyLevel::fromCode($viewerProfile['rank_code'] ?? null);
+
+        if (! $viewerProfile || ! $viewerLevel) {
+            return $this->taskMemberCache[$key] = $members->where('id', $viewer->id)->values();
+        }
+
+        $profiles = $this->profilesFor($members);
+
+        return $this->taskMemberCache[$key] = $members
+            ->filter(function (User $member) use ($viewer, $viewerProfile, $viewerLevel, $profiles): bool {
+                if ($member->is($viewer)) {
+                    return true;
+                }
+
+                $profile = $profiles->get($member->id);
+                $level = OrganizationHierarchyLevel::fromCode($profile['rank_code'] ?? null);
+
+                return $profile !== null
+                    && $level !== null
+                    && $viewerLevel->isAbove($level)
+                    && $this->sameTaskBranch($viewerProfile, $profile, $viewerLevel);
+            })
+            ->values();
+    }
+
+    /** @return array<int, array<int, int>> workspace id => visible Orbitra user ids */
+    public function taskVisibility(User $viewer): array
+    {
+        if (isset($this->taskVisibilityCache[$viewer->id])) {
+            return $this->taskVisibilityCache[$viewer->id];
+        }
+
+        $workspaces = $viewer->workspaceMemberships()->active()->with('workspace')->get()->pluck('workspace')->filter();
+
+        return $this->taskVisibilityCache[$viewer->id] = $workspaces
+            ->mapWithKeys(fn (Workspace $workspace) => [
+                $workspace->id => $this->taskMembers($viewer, $workspace)->pluck('id')->all(),
+            ])
+            ->all();
+    }
+
+    public function canViewTasksOf(User $viewer, User $subject, Workspace $workspace): bool
+    {
+        return ! config('organization.required')
+            || $this->taskMembers($viewer, $workspace)->contains(fn (User $member) => $member->is($subject));
     }
 
     public function syncMembershipRoles(User $user): bool
@@ -315,6 +396,68 @@ class OrganizationDirectory
             return null;
         }
 
+        return $this->profileFromRows($rows, $withPassword);
+    }
+
+    /** @param Collection<int, User> $users
+     * @return Collection<int, array<string, mixed>> keyed by Orbitra user id
+     */
+    private function profilesFor(Collection $users): Collection
+    {
+        $organizationIds = $users->pluck('organization_user_id')->filter()->map(fn ($id) => (int) $id)->values();
+        $emails = $users->pluck('email')->filter()->map(fn (string $email) => strtolower($email))->values();
+
+        try {
+            $rows = DB::connection(config('organization.connection'))
+                ->table('users as users')
+                ->leftJoin('model_has_job_ranks as user_rank', 'user_rank.model_id', '=', 'users.id')
+                ->leftJoin('job_ranks as rank', 'rank.id', '=', 'user_rank.job_rank_id')
+                ->leftJoin('model_has_departments as user_department', 'user_department.model_id', '=', 'users.id')
+                ->leftJoin('departments as department', 'department.id', '=', 'user_department.department_id')
+                ->leftJoin('divisions as division', 'division.id', '=', 'department.division_id')
+                ->leftJoin('model_has_sections as user_section', 'user_section.model_id', '=', 'users.id')
+                ->leftJoin('sections as section', 'section.id', '=', 'user_section.section_id')
+                ->where(function ($query) use ($organizationIds, $emails): void {
+                    $query->whereIn('users.id', $organizationIds)
+                        ->orWhereIn(DB::raw('LOWER(users.email)'), $emails);
+                })
+                ->select([
+                    'users.id as organization_user_id',
+                    'users.name as name',
+                    'users.email as email',
+                    'rank.code as rank_code',
+                    'rank.name as rank_name',
+                    'division.id as division_id',
+                    'division.code as division_code',
+                    'division.name as division_name',
+                    'department.id as department_id',
+                    'department.code as department_code',
+                    'department.name as department_name',
+                    'section.id as section_id',
+                    'section.name as section_name',
+                ])
+                ->get();
+        } catch (QueryException) {
+            return collect();
+        }
+
+        $byId = $rows->groupBy('organization_user_id');
+        $byEmail = $rows->groupBy(fn ($row) => strtolower((string) $row->email));
+
+        return $users->mapWithKeys(function (User $user) use ($byId, $byEmail): array {
+            $rows = $user->organization_user_id
+                ? $byId->get($user->organization_user_id, collect())
+                : $byEmail->get(strtolower($user->email), collect());
+
+            $profile = $this->profileFromRows($rows);
+
+            return $profile ? [$user->id => $profile] : [];
+        });
+    }
+
+    /** @return array<string, mixed>|null */
+    private function profileFromRows(Collection $rows, bool $withPassword = false): ?array
+    {
         if ($rows->isEmpty() || $rows->pluck('department_id')->filter()->unique()->count() !== 1) {
             return null;
         }
@@ -343,6 +486,22 @@ class OrganizationDirectory
             'section_name' => $row->section_name,
             ...($withPassword ? ['credential_hash' => $row->credential_hash] : []),
         ];
+    }
+
+    /** @param array<string, mixed> $viewer
+     * @param  array<string, mixed>  $member
+     */
+    private function sameTaskBranch(array $viewer, array $member, OrganizationHierarchyLevel $level): bool
+    {
+        return match ($level) {
+            OrganizationHierarchyLevel::GROUP_MANAGER => $viewer['division_id'] !== null
+                && $viewer['division_id'] === $member['division_id'],
+            OrganizationHierarchyLevel::MANAGER => $viewer['department_id'] === $member['department_id'],
+            OrganizationHierarchyLevel::SUPERVISOR, OrganizationHierarchyLevel::STAFF => $viewer['section_id'] !== null
+                ? $viewer['section_id'] === $member['section_id']
+                : $viewer['department_id'] === $member['department_id'],
+            OrganizationHierarchyLevel::OPERATOR => false,
+        };
     }
 
     private function isMissingFromDirectory(User $user): bool

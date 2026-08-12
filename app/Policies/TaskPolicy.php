@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\WorkspaceMember;
+use App\Services\OrganizationDirectory;
 
 class TaskPolicy
 {
@@ -19,7 +20,17 @@ class TaskPolicy
 
     public function view(User $user, Task $task): bool
     {
-        return app(ProjectPolicy::class)->view($user, $task->project);
+        if (! app(ProjectPolicy::class)->view($user, $task->project)) {
+            return false;
+        }
+
+        if (! config('organization.required')) {
+            return true;
+        }
+
+        $visibleUserIds = app(OrganizationDirectory::class)->taskVisibility($user)[$task->workspace_id] ?? [];
+
+        return $task->assignees()->whereIn('users.id', $visibleUserIds)->exists();
     }
 
     public function create(User $user, Project $project): bool
@@ -29,7 +40,7 @@ class TaskPolicy
 
     public function update(User $user, Task $task): bool
     {
-        return $this->canMutateProject($user, $task->project);
+        return $this->view($user, $task) && $this->canMutateProject($user, $task->project);
     }
 
     public function delete(User $user, Task $task): bool

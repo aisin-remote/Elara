@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\App;
 
+use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
 use App\Enums\TaskPriority;
 use App\Http\Controllers\Controller;
+use App\Models\Feature;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\OrganizationDirectory;
 use App\Services\Planning\CriticalPathAnalyzer;
 use App\Services\Planning\ForecastHealthService;
 use App\Support\GanttTimeline;
@@ -63,10 +66,20 @@ class ProjectController extends Controller
     public function show(Project $project, ForecastHealthService $forecast): View
     {
         $this->authorize('view', $project);
-        $project->load(['workspace', 'owner', 'memberships.user']);
+        $project->load([
+            'workspace',
+            'owner',
+            'memberships' => fn ($memberships) => $memberships
+                ->orderByRaw('CASE project_members.role WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [
+                    ProjectMemberRole::MANAGER->value,
+                    ProjectMemberRole::MEMBER->value,
+                ])
+                ->orderBy('project_members.id'),
+            'memberships.user',
+        ]);
         $assignedUserIds = $project->memberships->pluck('user_id');
 
-        $progress = $project->taskProgress();
+        $progress = $project->taskProgress(request()->user());
 
         return view('app.projects.show', [
             'project' => $project,
@@ -90,6 +103,7 @@ class ProjectController extends Controller
     {
         abort_unless($project->workspace_id === $workspace->id, 404);
         $this->authorize('view', $project);
+        $selectedFeature = $this->selectedFeature($request, $project);
 
         $timeline = new GanttTimeline($request->string('scale')->toString(), $workspace->timezone);
         $path = $criticalPath->forProject($project);
@@ -97,8 +111,13 @@ class ProjectController extends Controller
         $slackByPublicId = collect($path['tasks'])->keyBy('public_id');
 
         $tasks = $project->tasks()
+            ->visibleTo($request->user())
             ->whereNull('archived_at')
-            ->with(['status', 'assignees', 'milestone', 'dependencies'])
+            ->when($selectedFeature, fn (Builder $query, Feature $feature) => $query->where('feature_id', $feature->id))
+            ->with([
+                'status', 'assignees', 'milestone',
+                'dependencies' => fn ($dependencies) => $dependencies->visibleTo($request->user()),
+            ])
             ->withCount([
                 'checklistItems as checklist_total',
                 'checklistItems as checklist_completed' => fn (Builder $query) => $query->where('is_completed', true),
@@ -147,7 +166,9 @@ class ProjectController extends Controller
             ];
         })->filter()->values();
 
-        $milestones = $project->milestones()->withCount('tasks')->get();
+        $milestones = $selectedFeature
+            ? collect()
+            : $project->milestones()->withCount('tasks')->get();
         $milestoneRows = $milestones->map(function ($milestone) use ($timeline, $workspace) {
             $target = CarbonImmutable::parse($milestone->target_date, $workspace->timezone)->startOfDay();
             $marker = $timeline->bar($target, $target->endOfDay());
@@ -187,6 +208,7 @@ class ProjectController extends Controller
         return view('app.projects.timeline', [
             'workspace' => $workspace,
             'project' => $project,
+            'selectedFeature' => $selectedFeature,
             'timeline' => $timeline,
             'rows' => $rows,
             'milestones' => $milestones,
@@ -198,11 +220,26 @@ class ProjectController extends Controller
             'unscheduled' => $unscheduled,
             'statuses' => $project->taskStatuses()->active()->get(),
             'categories' => $workspace->taskCategories()->orderBy('name')->get(),
-            'projectMembers' => $project->memberships()->with('user')->get(),
+            'projectMembers' => $project->memberships()
+                ->whereIn('user_id', app(OrganizationDirectory::class)->taskMembers($request->user(), $workspace)->pluck('id'))
+                ->with('user')
+                ->get(),
             'priorities' => TaskPriority::cases(),
-            'criticalCount' => count($path['critical_public_ids']),
-            'projectedFinish' => $path['projected_finish']?->format('M j, Y'),
+            'features' => $project->features()->active()->orderBy('name')->get(),
+            'criticalCount' => $rows->where('is_critical', true)->count(),
+            'projectedFinish' => $selectedFeature
+                ? $tasks->max('due_at')?->format('M j, Y')
+                : $path['projected_finish']?->format('M j, Y'),
         ]);
+    }
+
+    private function selectedFeature(Request $request, Project $project): ?Feature
+    {
+        $publicId = $request->string('feature')->toString();
+
+        return $publicId === ''
+            ? null
+            : $project->features()->where('public_id', $publicId)->firstOrFail();
     }
 
     public function edit(Project $project): View

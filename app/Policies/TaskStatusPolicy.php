@@ -14,6 +14,6 @@ class TaskStatusPolicy
 
     public function delete(User $user, TaskStatus $status): bool
     {
-        return ! $status->is_system && $this->update($user, $status);
+        return $this->update($user, $status);
     }
 }

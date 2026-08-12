@@ -131,7 +131,7 @@ class AiWorkspaceTools
             return ['error' => 'Project not found or not visible to this user.'];
         }
 
-        $progress = $project->taskProgress();
+        $progress = $project->taskProgress($user);
         $forecast = app(ForecastHealthService::class)->forProject($project);
 
         return [

@@ -107,9 +107,9 @@ class TaskFlowTest extends TestCase
         $this->assertNotNull($task->fresh()->completed_at);
     }
 
-    public function test_workflow_statuses_can_be_created_reordered_and_archived(): void
+    public function test_workflow_groups_can_be_created_reordered_and_deleted(): void
     {
-        [$owner, , $project] = $this->project();
+        [$owner, , $project, $task] = $this->task();
         $response = $this->actingAs($owner)->postJson(route('internal.task-statuses.store', $project), [
             'name' => 'Review',
             'color' => '#8b5cf6',
@@ -118,11 +118,33 @@ class TaskFlowTest extends TestCase
         $custom = $project->taskStatuses()->where('public_id', $response->json('data.public_id'))->firstOrFail();
         $ids = $project->taskStatuses()->active()->pluck('public_id')->reverse()->values()->all();
         $this->actingAs($owner)->postJson(route('internal.task-statuses.reorder', $project), ['status_public_ids' => $ids])->assertOk();
-        $replacement = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
-        $this->actingAs($owner)->deleteJson(route('internal.task-statuses.destroy', $custom), [
+        $this->actingAs($owner)->deleteJson(route('internal.task-statuses.destroy', $custom))->assertOk();
+        $this->assertNotNull($custom->fresh()->archived_at);
+
+        $todo = $project->taskStatuses()->active()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        $replacement = $project->taskStatuses()->active()->where('category', TaskStatusCategory::BACKLOG->value)->firstOrFail();
+        $this->actingAs($owner)->deleteJson(route('internal.task-statuses.destroy', $todo), [
             'replacement_status_public_id' => $replacement->public_id,
         ])->assertOk();
-        $this->assertNotNull($custom->fresh()->archived_at);
+        $this->assertSame($replacement->id, $task->fresh()->status_id);
+        $this->assertNotNull($todo->fresh()->archived_at);
+
+        $completed = $project->taskStatuses()->active()->where('category', TaskStatusCategory::COMPLETED->value)->firstOrFail();
+        $this->actingAs($owner)->deleteJson(route('internal.task-statuses.destroy', $completed))->assertOk();
+        $this->assertNotNull($completed->fresh()->archived_at);
+    }
+
+    public function test_last_workflow_group_cannot_be_deleted(): void
+    {
+        [$owner, , $project] = $this->project();
+        $lastGroup = $project->taskStatuses()->active()->firstOrFail();
+        $project->taskStatuses()->active()->whereKeyNot($lastGroup->id)->update(['archived_at' => now()]);
+
+        $this->actingAs($owner)->deleteJson(route('internal.task-statuses.destroy', $lastGroup))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->assertNull($lastGroup->fresh()->archived_at);
     }
 
     public function test_bulk_update_cannot_cross_project_scope(): void
@@ -172,18 +194,20 @@ class TaskFlowTest extends TestCase
         ])->assertForbidden();
         $this->actingAs($owner)->get(route('app.tasks.show', $otherTask))->assertNotFound();
         $this->actingAs($owner)->get('/app/tasks/'.$task->id)->assertNotFound();
-        $this->actingAs($viewer)->get(route('app.projects.board', [$workspace, $project]))->assertOk();
+        $this->actingAs($viewer)->get(route('app.projects.board', [$workspace, $project]))
+            ->assertRedirect(route('app.projects.tasks', [$workspace, $project]));
     }
 
-    public function test_list_board_and_task_detail_render_same_task(): void
+    public function test_project_and_global_lists_and_task_detail_render_same_task(): void
     {
         [$owner, $workspace, $project, $task] = $this->task();
 
         $this->actingAs($owner)->get(route('app.projects.tasks', [$workspace, $project]))->assertOk()->assertSee($task->title);
-        $this->actingAs($owner)->get(route('app.projects.board', [$workspace, $project]))
+        $this->actingAs($owner)->get(route('app.projects.tasks', [$workspace, $project]))
             ->assertOk()
             ->assertSee($task->title)
-            ->assertSee('Right →');
+            ->assertSee('Add property')
+            ->assertDontSee('Customize table');
         $this->actingAs($owner)->get(route('app.tasks.index', $workspace))->assertOk()->assertSee($task->title);
         $this->actingAs($owner)->get(route('app.tasks.show', $task))->assertOk()->assertSee($task->title);
     }
@@ -202,7 +226,9 @@ class TaskFlowTest extends TestCase
     {
         [$owner, $workspace, $project] = $this->project();
         $status = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
-        $task = app(CreateTask::class)->handle($project, $owner, $this->payload($status->public_id));
+        $payload = $this->payload($status->public_id);
+        $payload['assignee_public_ids'] = [$owner->public_id];
+        $task = app(CreateTask::class)->handle($project, $owner, $payload);
 
         return [$owner, $workspace, $project, $task];
     }

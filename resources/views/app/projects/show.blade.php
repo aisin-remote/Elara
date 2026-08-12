@@ -11,7 +11,7 @@
 
     @include('app.projects._tabs', ['project' => $project])
 
-    @if ($breakdown)
+    @if ($breakdown && $breakdown->status->value !== 'accepted')
         <div class="mt-6">
             @include('app.approvals._breakdown', ['breakdown' => $breakdown])
         </div>

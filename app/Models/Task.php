@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DependencyType;
 use App\Enums\TaskPriority;
 use App\Enums\WorkspaceMemberStatus;
+use App\Services\OrganizationDirectory;
 use App\Support\GeneratesPublicId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -161,6 +162,11 @@ class Task extends Model
         return $this->hasMany(TaskChecklistItem::class)->orderBy('position');
     }
 
+    public function propertyValues(): HasMany
+    {
+        return $this->hasMany(TaskPropertyValue::class);
+    }
+
     public function comments(): HasMany
     {
         return $this->hasMany(TaskComment::class)->latest();
@@ -178,7 +184,26 @@ class Task extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $query->whereHas('project', fn (Builder $project) => $project->visibleTo($user));
+        $query->whereHas('project', fn (Builder $project) => $project->visibleTo($user));
+
+        if (! config('organization.required')) {
+            return $query;
+        }
+
+        $visibility = app(OrganizationDirectory::class)->taskVisibility($user);
+
+        return $query->where(function (Builder $tasks) use ($visibility): void {
+            foreach ($visibility as $workspaceId => $userIds) {
+                $tasks->orWhere(function (Builder $workspaceTasks) use ($workspaceId, $userIds): void {
+                    $workspaceTasks->where('tasks.workspace_id', $workspaceId)
+                        ->whereHas('assignees', fn (Builder $assignees) => $assignees->whereIn('users.id', $userIds));
+                });
+            }
+
+            if ($visibility === []) {
+                $tasks->whereRaw('1 = 0');
+            }
+        });
     }
 
     public function resolveRouteBindingQuery($query, $value, $field = null): Builder
@@ -186,9 +211,11 @@ class Task extends Model
         $query = parent::resolveRouteBindingQuery($query, $value, $field);
 
         if (Auth::check()) {
-            $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-                ->where('user_id', Auth::id())
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+            Auth::user()->isRequester()
+                ? $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
+                    ->where('user_id', Auth::id())
+                    ->where('status', WorkspaceMemberStatus::ACTIVE->value))
+                : $query->visibleTo(Auth::user());
         }
 
         return $query;

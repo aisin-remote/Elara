@@ -20,7 +20,7 @@ class IntegrationController extends Controller
             'providers' => IntegrationProvider::cases(),
             'connections' => $workspace->integrationConnections()->with('links')->get()->keyBy(fn ($connection) => $connection->provider->value),
             'projects' => $workspace->projects()->whereNull('archived_at')->orderBy('name')->get(),
-            'tasks' => $workspace->tasks()->with('project')->whereNull('archived_at')->latest()->limit(50)->get(),
+            'tasks' => $workspace->tasks()->visibleTo(request()->user())->with('project')->whereNull('archived_at')->latest()->limit(50)->get(),
             'scheduleEvents' => $workspace->scheduleEvents()->where('end_at', '>=', now())->orderBy('start_at')->limit(50)->get(),
         ]);
     }

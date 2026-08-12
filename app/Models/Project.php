@@ -35,6 +35,7 @@ class Project extends Model
         'start_date',
         'due_date',
         'version',
+        'task_fields_json',
         'archived_at',
     ];
 
@@ -43,6 +44,7 @@ class Project extends Model
         'status' => ProjectStatus::class,
         'start_date' => 'date',
         'due_date' => 'date',
+        'task_fields_json' => 'array',
         'archived_at' => 'datetime',
     ];
 
@@ -76,6 +78,11 @@ class Project extends Model
     public function taskStatuses(): HasMany
     {
         return $this->hasMany(TaskStatus::class)->orderBy('position');
+    }
+
+    public function taskProperties(): HasMany
+    {
+        return $this->hasMany(TaskProperty::class)->orderBy('position');
     }
 
     public function tasks(): HasMany
@@ -113,9 +120,15 @@ class Project extends Model
         return $this->hasMany(AiConversation::class);
     }
 
-    public function taskProgress(): array
+    public function taskProgress(?User $viewer = null): array
     {
-        $rows = $this->tasks()
+        $tasks = $this->tasks();
+
+        if ($viewer) {
+            $tasks->visibleTo($viewer);
+        }
+
+        $rows = $tasks
             ->join('task_statuses', 'task_statuses.id', '=', 'tasks.status_id')
             ->where('task_statuses.category', '!=', TaskStatusCategory::CANCELLED->value)
             ->groupBy('task_statuses.category')

@@ -4,6 +4,7 @@ namespace Tests\Feature\Project;
 
 use App\Actions\Project\CreateSystem;
 use App\Actions\Workspace\CreateWorkspace;
+use App\Enums\BreakdownStatus;
 use App\Enums\ProjectStatus;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
@@ -13,6 +14,7 @@ use App\Jobs\GenerateTaskBreakdown;
 use App\Models\Feature;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\TaskBreakdown;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,9 +59,10 @@ class DirectDeliveryCreationTest extends TestCase
         $member = $this->member($workspace, WorkspaceRole::MEMBER);
 
         $this->actingAs($member)
-            ->get(route('app.features.create', $workspace))
+            ->get(route('app.features.create', ['workspace' => $workspace, 'system' => $system->public_id]))
             ->assertOk()
-            ->assertSee('ERP Core');
+            ->assertSee('ERP Core')
+            ->assertSee('<input type="hidden" name="system_public_id" value="'.$system->public_id.'">', false);
 
         $this->actingAs($member)->postJson(route('internal.features.store', $workspace), [
             'system_public_id' => $system->public_id,
@@ -96,7 +99,12 @@ class DirectDeliveryCreationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('app.features.show', [$workspace, $system]))
             ->assertOk()
-            ->assertSee('Add task');
+            ->assertSee(route('app.projects.tasks', [
+                'workspace' => $workspace,
+                'project' => $system,
+                'create' => 1,
+                'feature' => $feature->public_id,
+            ]));
 
         $this->actingAs($owner)->postJson(route('internal.tasks.store', $system), [
             'title' => 'Build invoice export query',
@@ -162,6 +170,54 @@ class DirectDeliveryCreationTest extends TestCase
         ])->assertCreated();
 
         Queue::assertNothingPushed();
+    }
+
+    public function test_feature_card_surfaces_an_active_ai_plan_and_hides_it_after_acceptance(): void
+    {
+        [$workspace, $owner] = $this->workspace();
+        $system = app(CreateSystem::class)->handle($workspace, $owner, [
+            'name' => 'ERP Core',
+            'description' => 'Company resource planning system.',
+            'color' => '#0ea5e9',
+            'pic_id' => $owner->id,
+        ]);
+        $feature = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $system->id,
+            'name' => 'Invoice export',
+            'description' => 'Export approved invoices for finance.',
+        ]);
+        $breakdown = TaskBreakdown::create([
+            'workspace_id' => $workspace->id,
+            'subject_type' => $feature->getMorphClass(),
+            'subject_id' => $feature->id,
+            'provider' => 'openai',
+            'model' => 'gpt-4o',
+            'status' => BreakdownStatus::READY,
+            'payload_json' => ['tasks' => []],
+            'generated_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->get(route('app.features.show', [$workspace, $system]))
+            ->assertOk()
+            ->assertSee('AI plan ready for review')
+            ->assertDontSee('x-data="{ open: true }"', false);
+        $this->actingAs($owner)->get(route('app.features.detail', [$workspace, $system, $feature]))
+            ->assertOk()
+            ->assertSee('Proposed tasks');
+
+        $breakdown->update([
+            'status' => BreakdownStatus::ACCEPTED,
+            'accepted_at' => now(),
+            'accepted_by' => $owner->id,
+        ]);
+
+        $this->actingAs($owner)->get(route('app.features.show', [$workspace, $system]))
+            ->assertOk()
+            ->assertDontSee('AI plan ready for review');
+        $this->actingAs($owner)->get(route('app.features.detail', [$workspace, $system, $feature]))
+            ->assertOk()
+            ->assertDontSee('Proposed tasks');
     }
 
     public function test_a_viewer_cannot_create_projects_or_features(): void

@@ -83,6 +83,21 @@ class MarketingSearchTest extends TestCase
 
         [, , $hiddenProject] = $this->project('Atlas Secret Project');
 
+        $this->actingAs($owner)->get(route('app.workspaces.show', $workspace))
+            ->assertOk()
+            ->assertSee('data-global-search-dialog', false)
+            ->assertSee('aria-label="Open global search"', false)
+            ->assertSee('Ctrl K')
+            ->assertDontSee('Search workspace…');
+
+        $this->actingAs($owner)->getJson(route('app.search', [$workspace, 'q' => 'Atlas']))
+            ->assertOk()
+            ->assertJsonPath('total', 5)
+            ->assertJsonCount(5, 'results')
+            ->assertJsonFragment(['type' => 'task', 'description' => 'Task in Atlas Project'])
+            ->assertJsonFragment(['type' => 'member', 'description' => 'atlas@example.com'])
+            ->assertJsonMissing(['label' => $hiddenProject->name]);
+
         $this->actingAs($owner)->get(route('app.search', [$workspace, 'q' => 'Atlas']))
             ->assertOk()
             ->assertSee('5 results')

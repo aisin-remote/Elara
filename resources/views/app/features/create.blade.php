@@ -4,6 +4,8 @@
 @section('page-title', 'New feature')
 
 @section('content')
+    @php($selectedSystem = $systems->firstWhere('public_id', old('system_public_id', request('system'))))
+
     <div class="mx-auto max-w-4xl">
         <section class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="new-feature-title">
             <div class="max-w-2xl">
@@ -16,13 +18,18 @@
                 <x-form-errors />
 
                 <div>
-                    <x-label for="system_public_id">System</x-label>
-                    <x-select id="system_public_id" name="system_public_id" required autofocus>
-                        <option value="">Choose a system</option>
-                        @foreach ($systems as $system)
-                            <option value="{{ $system->public_id }}" @selected(old('system_public_id') === $system->public_id)>{{ $system->name }}</option>
-                        @endforeach
-                    </x-select>
+                    <x-label>System</x-label>
+                    @if ($selectedSystem)
+                        <input type="hidden" name="system_public_id" value="{{ $selectedSystem->public_id }}">
+                        <div class="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800">{{ $selectedSystem->name }}</div>
+                    @else
+                        <x-select id="system_public_id" name="system_public_id" required autofocus>
+                            <option value="">Choose a system</option>
+                            @foreach ($systems as $system)
+                                <option value="{{ $system->public_id }}">{{ $system->name }}</option>
+                            @endforeach
+                        </x-select>
+                    @endif
                     <x-field-error name="system_public_id" />
                 </div>
 
@@ -51,7 +58,7 @@
 
                 <div class="flex flex-wrap gap-3">
                     <x-button>Create feature</x-button>
-                    <x-link-button href="{{ route('app.features.index', $workspace) }}" variant="secondary">Cancel</x-link-button>
+                    <x-link-button href="{{ $selectedSystem ? route('app.features.show', [$workspace, $selectedSystem]) : route('app.features.index', $workspace) }}" variant="secondary">Cancel</x-link-button>
                 </div>
             </form>
         </section>

@@ -5,7 +5,7 @@
 
 @section('content')
     <div class="flex flex-wrap items-end justify-between gap-4"><div><p class="text-sm text-slate-500">Projects / {{ $project->name }}</p><h2 class="mt-1 text-2xl font-bold tracking-tight">Project files</h2></div>@can('create', [App\Models\ProjectFile::class, $workspace])<x-button type="button" onclick="document.getElementById('file-upload-dialog').showModal()"><x-icon name="plus"/>Upload file</x-button>@endcan</div>
-    @include('app.projects._tabs', ['project' => $project])
+    @if ($project->isSystem()) @include('app.features._tabs', ['workspace' => $workspace, 'system' => $project]) @else @include('app.projects._tabs', ['project' => $project]) @endif
 
     <form method="GET" class="mt-5 flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
         <div class="relative min-w-64 flex-1"><x-icon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><x-input name="search" value="{{ request('search') }}" placeholder="Search files" class="pl-9"/></div>

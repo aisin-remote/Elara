@@ -11,9 +11,9 @@ enum OrganizationRankGroup: string
     public static function fromCode(?string $code): ?self
     {
         return match (strtoupper(trim((string) $code))) {
-            'MGR', 'COOR' => self::MANAGEMENT,
+            'GM', 'MGR', 'COOR' => self::MANAGEMENT,
             'SPV', 'SCH' => self::SUPERVISION,
-            'LDR', 'STF', 'SN STF' => self::STAFF,
+            'LDR', 'STF', 'SN STF', 'OP' => self::STAFF,
             default => null,
         };
     }

@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\ProjectMilestone;
 use App\Models\Task;
 use App\Models\TaskCategory;
+use App\Models\TaskPropertyValue;
 use App\Models\TaskStatus;
 use App\Models\User;
 use App\Services\NotificationPreferenceService;
@@ -26,7 +27,9 @@ class CreateTask
 
     public function handle(Project $project, User $creator, array $data, ?string $ipAddress = null): Task
     {
-        $task = DB::transaction(function () use ($project, $creator, $data, $ipAddress) {
+        $propertyValues = Arr::pull($data, 'property_values', []);
+
+        $task = DB::transaction(function () use ($project, $creator, $data, $propertyValues, $ipAddress) {
             $status = TaskStatus::query()
                 ->active()
                 ->where('project_id', $project->id)
@@ -52,10 +55,29 @@ class CreateTask
             ]);
 
             $task->assignees()->sync($this->assigneePayload($project, $creator, $data['assignee_public_ids'] ?? []));
+            $properties = $project->taskProperties()
+                ->active()
+                ->whereIn('public_id', array_keys($propertyValues))
+                ->get()
+                ->keyBy('public_id');
+
+            foreach ($propertyValues as $publicId => $input) {
+                $property = $properties->get($publicId);
+                $value = $property?->normalizeInputValue($input);
+
+                if ($property && $value !== null && $value !== false) {
+                    TaskPropertyValue::create([
+                        'task_property_id' => $property->id,
+                        'task_id' => $task->id,
+                        'value_json' => $value,
+                    ]);
+                }
+            }
+
             $task->watchers()->syncWithoutDetaching([$creator->id]);
             ActivityLog::record($project->workspace, $task, 'task.created', $creator, ipAddress: $ipAddress);
 
-            return $task->load(['status', 'category', 'milestone', 'assignees', 'dependencies']);
+            return $task->load(['status', 'category', 'milestone', 'assignees', 'dependencies', 'propertyValues']);
         });
 
         $task->assignees->where('id', '!=', $creator->id)->each(fn (User $assignee) => $this->notifications->notify(

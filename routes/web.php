@@ -106,6 +106,7 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::get('/app/workspaces/{workspace}/features', [FeatureController::class, 'index'])->name('app.features.index');
     Route::get('/app/workspaces/{workspace}/features/create', [FeatureController::class, 'create'])->name('app.features.create');
     Route::get('/app/workspaces/{workspace}/features/{system}', [FeatureController::class, 'show'])->name('app.features.show');
+    Route::get('/app/workspaces/{workspace}/features/{system}/{feature}', [FeatureController::class, 'detail'])->name('app.features.detail');
     Route::get('/app/workspaces/{workspace}/settings/master/systems', [MasterDataController::class, 'systems'])->name('app.settings.master.systems');
     Route::get('/app/workspaces/{workspace}/projects', [ProjectController::class, 'index'])->name('app.projects.index');
     Route::get('/app/workspaces/{workspace}/projects/create', [ProjectController::class, 'create'])->name('app.projects.create');

@@ -3,9 +3,12 @@
     $draft = $breakdown?->tasks() ?? [];
     $requesterOwned = $breakdown?->subject instanceof \App\Models\FeatureRequest
         || $breakdown?->subject instanceof \App\Models\ProjectRequest;
+    $embedded = $embedded ?? false;
+    $accepted = $breakdown?->status->value === 'accepted';
 @endphp
 
-<section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="breakdown-title">
+@if (! $accepted)
+<section class="{{ $embedded ? 'border-t border-slate-200 p-5 dark:border-slate-800' : 'rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900' }}" aria-labelledby="breakdown-title">
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <h3 id="breakdown-title" class="font-bold">Proposed tasks</h3>
@@ -158,3 +161,4 @@
         </p>
     @endif
 </section>
+@endif

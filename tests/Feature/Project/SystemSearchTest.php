@@ -64,7 +64,7 @@ class SystemSearchTest extends TestCase
             ->get(route('app.features.index', $workspace))
             ->assertOk()
             // A picker offering someone who owns nothing returns an empty page and reads as broken.
-            ->assertDontSee('Bystander');
+            ->assertDontSee('<option value="'.$bystander->public_id.'"', false);
     }
 
     /** @return array{0: Workspace, 1: User, 2: array<string, User>} */

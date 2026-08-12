@@ -1,15 +1,21 @@
 @extends('layouts.app')
 
-@section('title', 'Task List')
-@section('page-title', 'Task List')
+@section('title', 'Tasks')
+@section('page-title', 'Tasks')
 
 @section('content')
-    <div class="flex flex-wrap items-end justify-between gap-4"><div><p class="text-sm text-slate-500">{{ $workspace->name }}</p><h2 class="mt-1 text-2xl font-bold tracking-tight">All your work in one place</h2></div></div>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="text-sm text-slate-500">{{ $workspace->name }}</p>
+            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ $selectedMember->is(auth()->user()) ? 'My tasks' : $selectedMember->name."'s tasks" }}</h2>
+            <p class="mt-1 text-sm text-slate-500">Only work assigned to {{ $selectedMember->is(auth()->user()) ? 'you' : $selectedMember->name }} is shown.</p>
+        </div>
+    </div>
     <nav class="mt-6 flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Task filters">@foreach (['' => 'All', 'todo' => 'To Do', 'in_progress' => 'In Progress', 'completed' => 'Completed', 'overdue' => 'Overdue', 'blocked' => 'Blocked'] as $value => $label)<a href="{{ request()->fullUrlWithQuery(['tab' => $value ?: null, 'page' => null]) }}" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold {{ request('tab', '') === $value ? 'border-orbit-600 text-orbit-700' : 'border-transparent text-slate-500' }}">{{ $label }}</a>@endforeach</nav>
-    <form method="GET" class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 lg:grid-cols-[1fr_repeat(3,180px)_auto] dark:border-slate-800 dark:bg-slate-900">
+    <form method="GET" class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 lg:grid-cols-[1fr_repeat(2,180px)_auto] dark:border-slate-800 dark:bg-slate-900">
+        @unless($selectedMember->is(auth()->user()))<input type="hidden" name="assignee" value="{{ $selectedMember->public_id }}">@endunless
         <div class="relative"><x-icon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><x-input name="search" value="{{ request('search') }}" placeholder="Search task" class="pl-9" /></div>
         <x-select name="project"><option value="">All work</option>@foreach($projects->groupBy(fn($project) => $project->type->label()) as $group => $groupProjects)<optgroup label="{{ \Illuminate\Support\Str::plural($group) }}">@foreach($groupProjects as $project)<option value="{{ $project->public_id }}" @selected(request('project') === $project->public_id)>{{ $project->name }}</option>@endforeach</optgroup>@endforeach</x-select>
-        <x-select name="assignee"><option value="">All assignees</option>@foreach($members as $membership)<option value="{{ $membership->user->public_id }}" @selected(request('assignee') === $membership->user->public_id)>{{ $membership->user->name }}</option>@endforeach</x-select>
         <x-select name="priority"><option value="">All priorities</option>@foreach($priorities as $priority)<option value="{{ $priority->value }}" @selected(request('priority') === $priority->value)>{{ $priority->label() }}</option>@endforeach</x-select>
         <x-button variant="secondary">Filter</x-button>
     </form>

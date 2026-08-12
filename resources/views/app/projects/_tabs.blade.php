@@ -2,7 +2,6 @@
     @foreach ([
         ['app.projects.show', 'Overview', 'dashboard', [$project]],
         ['app.projects.tasks', 'List', 'list', [$project->workspace, $project]],
-        ['app.projects.board', 'Board', 'board', [$project->workspace, $project]],
         ['app.projects.timeline', 'Timeline', 'performance', [$project->workspace, $project]],
         ['app.projects.files', 'Files', 'files', [$project->workspace, $project]],
     ] as [$routeName, $label, $icon, $parameters])

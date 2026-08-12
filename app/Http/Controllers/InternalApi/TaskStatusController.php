@@ -30,7 +30,7 @@ class TaskStatusController extends Controller
         ]);
         ActivityLog::record($project->workspace, $status, 'task_status.created', $request->user(), ipAddress: $request->ip());
 
-        return $this->success($request, new TaskStatusResource($status), 'Status created.', route('app.projects.board', [$project->workspace, $project]), 201);
+        return $this->success($request, new TaskStatusResource($status), 'Status created.', route('app.projects.tasks', [$project->workspace, $project]), 201);
     }
 
     public function update(UpdateTaskStatusRequest $request, TaskStatus $status): JsonResponse|RedirectResponse
@@ -42,28 +42,45 @@ class TaskStatusController extends Controller
         $status->update($request->validated());
         ActivityLog::record($status->project->workspace, $status, 'task_status.updated', $request->user(), ipAddress: $request->ip());
 
-        return $this->success($request, new TaskStatusResource($status), 'Status updated.', route('app.projects.board', [$status->project->workspace, $status->project]));
+        return $this->success($request, new TaskStatusResource($status), 'Status updated.', route('app.projects.tasks', [$status->project->workspace, $status->project]));
     }
 
     public function destroy(DeleteTaskStatusRequest $request, TaskStatus $status): JsonResponse|RedirectResponse
     {
-        $replacement = $status->project->taskStatuses()
-            ->active()
-            ->whereKeyNot($status->id)
-            ->where('public_id', $request->string('replacement_status_public_id')->toString())
-            ->firstOrFail();
+        if ($status->project->taskStatuses()->active()->count() <= 1) {
+            throw ValidationException::withMessages(['status' => 'A project must keep at least one group.']);
+        }
+
+        $replacementId = $request->validated('replacement_status_public_id');
+        $replacement = filled($replacementId)
+            ? $status->project->taskStatuses()
+                ->active()
+                ->whereKeyNot($status->id)
+                ->where('public_id', $replacementId)
+                ->firstOrFail()
+            : null;
+
+        if ($status->tasks()->withTrashed()->exists() && $replacement === null) {
+            throw ValidationException::withMessages([
+                'replacement_status_public_id' => 'Choose where this group\'s tasks should move.',
+            ]);
+        }
 
         DB::transaction(function () use ($status, $replacement, $request): void {
-            $status->tasks()->update([
-                'status_id' => $replacement->id,
-                'completed_at' => $replacement->category === TaskStatusCategory::COMPLETED ? now() : null,
-                'version' => DB::raw('version + 1'),
-            ]);
+            if ($replacement !== null) {
+                $status->tasks()->withTrashed()->update([
+                    'status_id' => $replacement->id,
+                    'status_changed_at' => now(),
+                    'completed_at' => $replacement->category === TaskStatusCategory::COMPLETED ? now() : null,
+                    'version' => DB::raw('version + 1'),
+                ]);
+            }
+
             $status->update(['archived_at' => now()]);
             ActivityLog::record($status->project->workspace, $status, 'task_status.archived', $request->user(), ipAddress: $request->ip());
         });
 
-        return $this->success($request, null, 'Status archived.', route('app.projects.board', [$status->project->workspace, $status->project]));
+        return $this->success($request, null, 'Group deleted.', route('app.projects.tasks', [$status->project->workspace, $status->project]));
     }
 
     public function reorder(ReorderTaskStatusesRequest $request, Project $project): JsonResponse|RedirectResponse
@@ -81,6 +98,6 @@ class TaskStatusController extends Controller
             }
         });
 
-        return $this->success($request, TaskStatusResource::collection($project->taskStatuses()->active()->get()), 'Statuses reordered.', route('app.projects.board', [$project->workspace, $project]));
+        return $this->success($request, TaskStatusResource::collection($project->taskStatuses()->active()->get()), 'Statuses reordered.', route('app.projects.tasks', [$project->workspace, $project]));
     }
 }

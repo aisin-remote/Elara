@@ -68,13 +68,19 @@ class Feature extends Model
     }
 
     /** Same shape as Project::taskProgress so the two can be rendered by one component. */
-    public function progress(): array
+    public function progress(?User $viewer = null): array
     {
-        $total = $this->tasks()->whereNull('archived_at')
+        $tasks = $this->tasks()->whereNull('archived_at');
+
+        if ($viewer) {
+            $tasks->visibleTo($viewer);
+        }
+
+        $total = (clone $tasks)
             ->whereHas('status', fn (Builder $status) => $status->where('category', '!=', TaskStatusCategory::CANCELLED->value))
             ->count();
 
-        $completed = $this->tasks()->whereNull('archived_at')->whereNotNull('completed_at')->count();
+        $completed = (clone $tasks)->whereNotNull('completed_at')->count();
 
         return [
             'total' => $total,
