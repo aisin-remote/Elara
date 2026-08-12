@@ -83,7 +83,7 @@ class OpenAiDescriptionDraft
     {
         return implode("\n", [
             "You expand a short {$kind} brief for an internal IT delivery team.",
-            'Write in the same language as the brief.',
+            'Always write the generated description in Indonesian language (Bahasa Indonesia).',
             'Return two to four concise plain-text paragraphs suitable for a description field.',
             'Clarify the current problem or goal, scope, intended users or stakeholders, expected result, important constraints or assumptions, and measurable completion signals.',
             'Preserve every fact supplied by the user. Do not invent dates, budgets, vendors, people, integrations, or technology choices.',
