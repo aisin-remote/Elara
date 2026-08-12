@@ -56,6 +56,7 @@ Alpine.data('themePreference', () => ({
 
 Alpine.data('appShell', () => ({
     sidebarOpen: false,
+    sidebarCollapsed: false,
     mobile: window.matchMedia('(max-width: 1023px)').matches,
     sidebarSections: {
         work: true,
@@ -64,6 +65,8 @@ Alpine.data('appShell', () => ({
         more: false,
     },
     init() {
+        this.sidebarCollapsed = localStorage.getItem('orbitra-sidebar-collapsed') === '1';
+
         const media = window.matchMedia('(max-width: 1023px)');
         media.addEventListener('change', (event) => {
             this.mobile = event.matches;
@@ -85,6 +88,18 @@ Alpine.data('appShell', () => ({
         if (! this.sidebarOpen) return;
         this.sidebarOpen = false;
         this.$nextTick(() => this.$refs.sidebarTrigger?.focus());
+    },
+    collapseDesktopSidebar() {
+        if (this.mobile) return;
+        this.sidebarCollapsed = true;
+        localStorage.setItem('orbitra-sidebar-collapsed', '1');
+        this.$nextTick(() => this.$refs.sidebarExpand?.focus());
+    },
+    expandDesktopSidebar() {
+        if (this.mobile) return;
+        this.sidebarCollapsed = false;
+        localStorage.setItem('orbitra-sidebar-collapsed', '0');
+        this.$nextTick(() => this.$refs.sidebarCollapse?.focus());
     },
     sidebarSectionOpen(section) {
         return this.sidebarSections[section] ?? true;
