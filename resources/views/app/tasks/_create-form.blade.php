@@ -1,5 +1,6 @@
 <form method="POST" action="{{ route('internal.tasks.store', $project) }}" class="space-y-5">
     @csrf
+    <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
     <div>
         <x-label for="new-task-status">Group</x-label>
         <x-select id="new-task-status" name="status_public_id" required>
@@ -10,7 +11,9 @@
         <x-field-error name="status_public_id" />
     </div>
 
-    @if (request('feature'))
+    @if ($selectedFeature ?? null)
+        <input type="hidden" name="feature_public_id" value="{{ $selectedFeature->public_id }}">
+    @elseif (request('feature'))
         <input type="hidden" name="feature_public_id" value="{{ request('feature') }}">
     @endif
 

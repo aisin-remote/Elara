@@ -201,7 +201,7 @@ class DirectDeliveryCreationTest extends TestCase
         $this->actingAs($owner)->get(route('app.features.show', [$workspace, $system]))
             ->assertOk()
             ->assertSee('AI plan ready for review')
-            ->assertDontSee('x-data="{ open: true }"', false);
+            ->assertDontSee('Proposed tasks');
         $this->actingAs($owner)->get(route('app.features.detail', [$workspace, $system, $feature]))
             ->assertOk()
             ->assertSee('Proposed tasks');

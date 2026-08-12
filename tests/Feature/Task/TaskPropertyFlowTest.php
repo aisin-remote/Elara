@@ -3,6 +3,7 @@
 namespace Tests\Feature\Task;
 
 use App\Actions\Project\CreateProject;
+use App\Actions\Project\CreateSystem;
 use App\Actions\Task\CreateTask;
 use App\Actions\Workspace\CreateWorkspace;
 use App\Enums\ProjectMemberRole;
@@ -12,6 +13,7 @@ use App\Enums\TaskPropertyType;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Models\Feature;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskProperty;
@@ -59,6 +61,77 @@ class TaskPropertyFlowTest extends TestCase
 
         $this->actingAs($owner)->get(route('app.projects.board', [$workspace, $project]))
             ->assertRedirect(route('app.projects.tasks', [$workspace, $project]));
+    }
+
+    public function test_system_and_feature_lists_share_custom_properties_while_overviews_stay_task_free(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = app(CreateWorkspace::class)->handle($owner, [
+            'name' => 'Product Studio',
+            'timezone' => 'UTC',
+            'locale' => 'en',
+            'week_start' => 1,
+        ]);
+        $system = app(CreateSystem::class)->handle($workspace, $owner, [
+            'name' => 'ERP Core',
+            'description' => 'Company resource planning system.',
+            'color' => '#0ea5e9',
+            'pic_id' => $owner->id,
+        ]);
+        $feature = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $system->id,
+            'name' => 'Invoice export',
+            'description' => 'Export approved invoices for finance.',
+        ]);
+        $stage = $this->property($owner, $system, 'Delivery stage', TaskPropertyType::SELECT, ['Ready', 'Released']);
+        $status = $system->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+
+        $this->actingAs($owner)->postJson(route('internal.tasks.store', $system), [
+            'title' => 'Build invoice export query',
+            'status_public_id' => $status->public_id,
+            'feature_public_id' => $feature->public_id,
+            'property_values' => [$stage->public_id => 'Ready'],
+        ])->assertCreated();
+
+        foreach ([
+            route('app.features.show', [$workspace, $system]),
+            route('app.features.detail', [$workspace, $system, $feature]),
+        ] as $url) {
+            $this->actingAs($owner)->get($url.'?group_by=property:'.$stage->public_id)
+                ->assertOk()
+                ->assertDontSee('Add property')
+                ->assertDontSee('data-task-group-name="Ready"', false)
+                ->assertDontSee('Build invoice export query');
+        }
+
+        $systemListUrl = route('app.projects.tasks', [$workspace, $system]);
+        $featureListUrl = route('app.projects.tasks', [
+            'workspace' => $workspace,
+            'project' => $system,
+            'feature' => $feature->public_id,
+        ]);
+
+        foreach ([$systemListUrl, $featureListUrl] as $url) {
+            $this->actingAs($owner)->get($url.(str_contains($url, '?') ? '&' : '?').'group_by=property:'.$stage->public_id)
+                ->assertOk()
+                ->assertSee('Add property')
+                ->assertSee('Delivery stage')
+                ->assertSee('data-task-group-name="Ready"', false)
+                ->assertSee('data-task-group-name="Released"', false)
+                ->assertSee('Build invoice export query');
+        }
+
+        $this->actingAs($owner)->get($featureListUrl)
+            ->assertOk()
+            ->assertSee('name="feature_public_id" value="'.$feature->public_id.'"', false);
+
+        $this->actingAs($owner)->post(route('internal.task-properties.store', $system), [
+            'name' => 'Requester note',
+            'type' => TaskPropertyType::TEXT->value,
+            'options' => [],
+            'return_to' => str($featureListUrl)->after(url('/'))->toString(),
+        ])->assertRedirect($featureListUrl);
     }
 
     public function test_select_and_checklist_values_are_validated_and_types_can_be_changed(): void

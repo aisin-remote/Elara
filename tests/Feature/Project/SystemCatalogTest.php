@@ -95,8 +95,8 @@ class SystemCatalogTest extends TestCase
             ->assertSee('New feature')
             ->assertSee(route('app.features.create', ['workspace' => $workspace, 'system' => $system->public_id]), false)
             ->assertSee('Bulk export')
-            ->assertSee('Maintenance tasks')
-            ->assertSee('Rotate expired certificates');
+            ->assertDontSee('Maintenance tasks')
+            ->assertDontSee('Rotate expired certificates');
     }
 
     public function test_a_delivery_project_cannot_be_opened_as_a_system(): void
@@ -125,7 +125,7 @@ class SystemCatalogTest extends TestCase
             ->assertSee('Feature overview')
             ->assertSee('Cubic-pro')
             ->assertSee('Stock alerts')
-            ->assertSee($featureTask->title)
+            ->assertDontSee($featureTask->title)
             ->assertDontSee($looseTask->title);
 
         foreach (['app.projects.tasks', 'app.projects.timeline'] as $routeName) {

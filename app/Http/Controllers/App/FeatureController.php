@@ -85,7 +85,7 @@ class FeatureController extends Controller
         abort_unless($system->workspace_id === $workspace->id && $system->isSystem(), 404);
         $this->authorize('view', $system);
 
-        $features = $system->features()
+        $featurePortfolio = $system->features()
             ->with([
                 'tasks' => fn ($query) => $query->visibleTo($request->user())->whereNull('archived_at')->with(['status', 'assignees'])->orderBy('position'),
                 'breakdowns' => fn ($query) => $query->with('acceptedBy')->latest('id'),
@@ -97,16 +97,8 @@ class FeatureController extends Controller
         return view('app.features.show', [
             'workspace' => $workspace,
             'system' => $system,
-            'features' => $features,
+            'featurePortfolio' => $featurePortfolio,
             'progress' => $system->taskProgress($request->user()),
-            // Maintenance work that belongs to no feature still has to be visible somewhere.
-            'looseTasks' => $system->tasks()
-                ->visibleTo($request->user())
-                ->whereNull('feature_id')
-                ->whereNull('archived_at')
-                ->with(['status', 'assignees'])
-                ->orderBy('position')
-                ->get(),
         ]);
     }
 
@@ -136,7 +128,6 @@ class FeatureController extends Controller
             'workspace' => $workspace,
             'system' => $system,
             'feature' => $feature,
-            'tasks' => $feature->tasks,
             'progress' => $progress,
             'overdueTaskCount' => $feature->tasks->filter(fn ($task) => ! $task->completed_at && $task->due_at?->isPast())->count(),
             'assignees' => $feature->tasks->flatMap(fn ($task) => $task->assignees)->unique('id')->values(),

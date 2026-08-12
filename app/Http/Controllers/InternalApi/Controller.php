@@ -15,6 +15,12 @@ abstract class Controller extends BaseController
             return response()->json(['data' => $data, 'message' => $message], $status);
         }
 
+        $returnTo = $request->string('return_to')->toString();
+
+        if (str_starts_with($returnTo, '/app/') && ! str_starts_with($returnTo, '//')) {
+            $redirect = $returnTo;
+        }
+
         return redirect($redirect)->with('status', $message);
     }
 }

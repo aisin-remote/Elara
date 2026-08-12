@@ -11,6 +11,7 @@
 
     <form method="POST" action="{{ route('internal.task-properties.store', $project) }}" class="mt-4 space-y-3">
         @csrf
+        <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
         <div>
             <x-label for="new-property-name-{{ $editorKey }}">Property name</x-label>
             <x-input id="new-property-name-{{ $editorKey }}" name="name" placeholder="e.g. Bug type" required maxlength="80" />
@@ -38,6 +39,7 @@
                     <form method="POST" action="{{ route('internal.task-fields.update', [$project, $hiddenField['key']]) }}">
                         @csrf
                         @method('PATCH')
+                        <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
                         <input type="hidden" name="name" value="{{ $hiddenField['name'] }}">
                         <input type="hidden" name="visible" value="1">
                         <x-button variant="secondary"><x-icon name="plus" />{{ $hiddenField['name'] }}</x-button>
@@ -64,6 +66,7 @@
             <form method="POST" action="{{ route('internal.task-fields.update', [$project, $systemField['key']]) }}" class="space-y-3">
                 @csrf
                 @method('PATCH')
+                <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
                 <input type="hidden" name="visible" value="1">
                 <div class="flex-1">
                     <x-label for="system-field-name-{{ $editorKey }}-{{ $systemField['key'] }}">Property name</x-label>
@@ -76,6 +79,7 @@
                 <form method="POST" action="{{ route('internal.task-fields.update', [$project, $systemField['key']]) }}" onsubmit="return confirm('Hide this property from the table and Add task form? Existing data will stay safe.')">
                     @csrf
                     @method('PATCH')
+                    <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
                     <input type="hidden" name="name" value="{{ $systemField['name'] }}">
                     <input type="hidden" name="visible" value="0">
                     <x-button variant="danger" class="w-full">Hide property</x-button>
@@ -103,6 +107,7 @@
             <form method="POST" action="{{ route('internal.task-properties.update', $property) }}" class="space-y-3">
                 @csrf
                 @method('PATCH')
+                <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
                 <div>
                     <x-label for="property-name-{{ $editorKey }}-{{ $property->public_id }}">Property name</x-label>
                     <x-input id="property-name-{{ $editorKey }}-{{ $property->public_id }}" name="name" value="{{ $property->name }}" required maxlength="80" />
@@ -125,6 +130,7 @@
             <form method="POST" action="{{ route('internal.task-properties.destroy', $property) }}" onsubmit="return confirm('Delete this property? Its values will be hidden.')">
                 @csrf
                 @method('DELETE')
+                <input type="hidden" name="return_to" value="{{ request()->getRequestUri() }}">
                 <x-button variant="danger" class="w-full">Delete property</x-button>
             </form>
         </div>

@@ -22,7 +22,7 @@
     @include('app.features._tabs')
 
     @php
-        $activeFeatureCount = $features->whereNull('archived_at')->count();
+        $activeFeatureCount = $featurePortfolio->whereNull('archived_at')->count();
         $systemMembers = $system->members;
         $pic = $system->pic();
     @endphp
@@ -112,7 +112,7 @@
             <table class="w-full min-w-[1050px] text-left text-sm">
                 <thead class="bg-slate-50/80 text-[11px] uppercase tracking-[.1em] text-slate-400 dark:bg-slate-900"><tr><th class="px-5 py-3">Feature</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Schedule</th><th class="px-4 py-3">Task health</th><th class="px-4 py-3">Progress</th><th class="px-4 py-3">Team</th><th class="px-5 py-3 text-right">Action</th></tr></thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                    @forelse ($features as $feature)
+                    @forelse ($featurePortfolio as $feature)
                         @php
                             $featureTasks = $feature->tasks;
                             $eligibleTasks = $featureTasks->reject(fn ($task) => $task->status->category === App\Enums\TaskStatusCategory::CANCELLED);
@@ -142,17 +142,4 @@
         </div>
     </section>
 
-    @if ($looseTasks->isNotEmpty())
-        <section class="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="loose-tasks-title">
-            <header class="border-b border-slate-200 p-5 dark:border-slate-800">
-                <h3 id="loose-tasks-title" class="font-bold">Maintenance tasks</h3>
-                <p class="mt-1 text-xs text-slate-500">Work on this system that belongs to no feature.</p>
-            </header>
-            <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                @foreach ($looseTasks as $task)
-                    @include('app.features._task-row', ['task' => $task])
-                @endforeach
-            </div>
-        </section>
-    @endif
 @endsection
