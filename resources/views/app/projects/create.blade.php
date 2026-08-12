@@ -43,10 +43,25 @@
             <h2 id="new-project-title" class="text-xl font-bold">Start a new project</h2>
             <p class="mt-1 text-sm text-slate-500">You become its leader, and can add more members later.</p>
 
-            <form method="POST" action="{{ route('internal.projects.store', $workspace) }}" class="mt-6 space-y-5" x-data="{ ai: {{ old('generate_with_ai', true) ? 'true' : 'false' }} }">
+            <form method="POST" action="{{ route('internal.projects.store', $workspace) }}" class="mt-6 space-y-5" x-data="descriptionDraft({ endpoint: @js(route('internal.ai.descriptions.store', $workspace)), kind: 'project', initialDescription: @js(old('description', '')), aiEnabled: @js((bool) old('generate_with_ai', true)) })">
                 @csrf
                 <div><x-label for="name">Project name</x-label><x-input id="name" name="name" value="{{ old('name') }}" required autofocus /><x-field-error name="name" /></div>
-                <div><x-label for="description">Description</x-label><x-textarea id="description" name="description" rows="5" maxlength="5000" x-bind:required="ai" x-bind:minlength="ai ? 80 : null" placeholder="Goal, scope, expected result, constraints, and important context…">{{ old('description') }}</x-textarea><p class="mt-1 text-xs text-slate-500">When AI drafting is enabled, provide at least 80 characters so it can produce useful tasks and checklists.</p><x-field-error name="description" /></div>
+                <div>
+                    <x-label for="description" class="mb-2 block">Description</x-label>
+                    <div class="relative">
+                        <x-textarea id="description" name="description" rows="7" maxlength="5000" x-model="description" x-ref="description" x-bind:required="ai" x-bind:minlength="ai ? 80 : null" placeholder="Write a short idea, then select Generate with AI to expand it…" class="pb-12">{{ old('description') }}</x-textarea>
+                        <div class="absolute bottom-2 right-2">
+                            <button type="button" x-on:click="generate" x-bind:disabled="generating" class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-orbit-100 px-3 py-1.5 text-xs font-bold text-orbit-800 transition hover:bg-orbit-200 disabled:cursor-wait disabled:opacity-60 dark:bg-orbit-900/50 dark:text-orbit-200 dark:hover:bg-orbit-900">
+                                <x-icon name="sparkles" class="size-4" />
+                                <span x-text="generating ? 'Generating…' : 'Generate with AI'">Generate with AI</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p x-show="generated" x-cloak class="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">AI expanded the description. Review and edit it before creating the project.</p>
+                    <p x-show="error" x-cloak x-text="error" class="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300" role="alert"></p>
+                    <p class="mt-1 text-xs text-slate-500">A short brief is enough for Generate with AI. Keep at least 80 characters when task drafting is enabled.</p>
+                    <x-field-error name="description" />
+                </div>
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div><x-label for="status">Status</x-label><x-select id="status" name="status">@foreach (['planned' => 'Planned', 'active' => 'Active', 'on_hold' => 'On hold', 'completed' => 'Completed'] as $value => $label)<option value="{{ $value }}" @selected(old('status', 'planned') === $value)>{{ $label }}</option>@endforeach</x-select></div>
                     <div><x-label for="color">Color</x-label><x-input id="color" type="color" name="color" value="{{ old('color', '#4f46e5') }}" /></div>

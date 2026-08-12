@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\InternalApi\AiDescriptionController;
 use App\Http\Controllers\InternalApi\AiMessageController;
 use App\Http\Controllers\InternalApi\AvatarController;
 use App\Http\Controllers\InternalApi\BulkTaskController;
@@ -62,6 +63,7 @@ Route::delete('/workspace-members/{member}/account', [UserAccountController::cla
 Route::post('/workspaces/{workspace}/transfer-ownership', [WorkspaceOwnershipController::class, 'store'])->name('internal.workspaces.transfer');
 Route::get('/workspaces/{workspace}/dashboard', [DashboardController::class, 'index'])->name('internal.dashboard.index');
 Route::get('/workspaces/{workspace}/performance', [PerformanceController::class, 'index'])->name('internal.performance.index');
+Route::post('/workspaces/{workspace}/ai/descriptions', [AiDescriptionController::class, 'store'])->middleware('throttle:10,1')->name('internal.ai.descriptions.store');
 Route::post('/workspaces/{workspace}/ask-ai/messages', [AiMessageController::class, 'store'])->middleware('throttle:12,1')->name('internal.ai.messages.store');
 Route::get('/workspaces/{workspace}/reports.csv', [ReportController::class, 'csv'])->name('internal.reports.csv');
 Route::get('/workspaces/{workspace}/reports.pdf', [ReportController::class, 'pdf'])->name('internal.reports.pdf');

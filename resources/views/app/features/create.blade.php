@@ -13,7 +13,7 @@
                 <p class="mt-1 text-sm leading-6 text-slate-500">Create work directly for a system. This skips requester approval because it is entered by the IT team.</p>
             </div>
 
-            <form method="POST" action="{{ route('internal.features.store', $workspace) }}" class="mt-7 space-y-5" x-data="{ ai: {{ old('generate_with_ai', true) ? 'true' : 'false' }} }">
+            <form method="POST" action="{{ route('internal.features.store', $workspace) }}" class="mt-7 space-y-5" x-data="descriptionDraft({ endpoint: @js(route('internal.ai.descriptions.store', $workspace)), kind: 'feature', initialDescription: @js(old('description', '')), aiEnabled: @js((bool) old('generate_with_ai', true)) })">
                 @csrf
                 <x-form-errors />
 
@@ -40,9 +40,19 @@
                 </div>
 
                 <div>
-                    <x-label for="description">Description</x-label>
-                    <x-textarea id="description" name="description" rows="5" maxlength="5000" required x-bind:minlength="ai ? 80 : 20" placeholder="Current problem, expected behavior, users, acceptance criteria, and constraints…">{{ old('description') }}</x-textarea>
-                    <p class="mt-1 text-xs text-slate-500">When AI drafting is enabled, provide at least 80 characters so it can produce useful tasks and checklists.</p>
+                    <x-label for="description" class="mb-2 block">Description</x-label>
+                    <div class="relative">
+                        <x-textarea id="description" name="description" rows="7" maxlength="5000" required x-model="description" x-ref="description" x-bind:minlength="ai ? 80 : 20" placeholder="Write a short feature idea, then select Generate with AI to expand it…" class="pb-12">{{ old('description') }}</x-textarea>
+                        <div class="absolute bottom-2 right-2">
+                            <button type="button" x-on:click="generate" x-bind:disabled="generating" class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-orbit-100 px-3 py-1.5 text-xs font-bold text-orbit-800 transition hover:bg-orbit-200 disabled:cursor-wait disabled:opacity-60 dark:bg-orbit-900/50 dark:text-orbit-200 dark:hover:bg-orbit-900">
+                                <x-icon name="sparkles" class="size-4" />
+                                <span x-text="generating ? 'Generating…' : 'Generate with AI'">Generate with AI</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p x-show="generated" x-cloak class="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">AI expanded the description. Review and edit it before creating the feature.</p>
+                    <p x-show="error" x-cloak x-text="error" class="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300" role="alert"></p>
+                    <p class="mt-1 text-xs text-slate-500">A short brief is enough for Generate with AI. Keep at least 80 characters when task drafting is enabled.</p>
                     <x-field-error name="description" />
                 </div>
 

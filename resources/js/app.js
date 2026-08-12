@@ -190,6 +190,64 @@ Alpine.data('globalSearch', ({ endpoint }) => ({
     },
 }));
 
+Alpine.data('descriptionDraft', ({ endpoint, kind, initialDescription = '', aiEnabled = true }) => ({
+    endpoint,
+    kind,
+    ai: aiEnabled,
+    description: initialDescription,
+    generating: false,
+    generated: false,
+    error: '',
+    async generate() {
+        const nameInput = this.$root.elements.namedItem('name');
+        const systemInput = this.$root.elements.namedItem('system_public_id');
+        const name = String(nameInput?.value ?? '').trim();
+        const brief = this.description.trim();
+
+        if (! name) {
+            this.error = `Enter the ${this.kind} name first.`;
+            nameInput?.focus();
+            return;
+        }
+
+        if (brief.length < 3) {
+            this.error = 'Write a short idea first, then let AI expand it.';
+            this.$refs.description?.focus();
+            return;
+        }
+
+        if (this.kind === 'feature' && ! systemInput?.value) {
+            this.error = 'Choose a system before generating a feature description.';
+            systemInput?.focus();
+            return;
+        }
+
+        this.generating = true;
+        this.generated = false;
+        this.error = '';
+
+        try {
+            const payload = await apiRequest(this.endpoint, {
+                method: 'POST',
+                body: JSON.stringify({
+                    kind: this.kind,
+                    name,
+                    description: brief,
+                    system_public_id: systemInput?.value || null,
+                }),
+            });
+
+            this.description = payload.data.description;
+            this.generated = true;
+            this.$nextTick(() => this.$refs.description?.focus());
+        } catch (error) {
+            this.error = error.message;
+        } finally {
+            this.generating = false;
+        }
+    },
+}));
+
 Alpine.data('taskDatabase', () => ({
     propertyPanel: null,
     propertyPosition: { left: 16, top: 16 },
