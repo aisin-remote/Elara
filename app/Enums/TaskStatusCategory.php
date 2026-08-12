@@ -13,8 +13,11 @@ enum TaskStatusCategory: string
     public function label(): string
     {
         return match ($this) {
+            self::BACKLOG => 'Pending',
+            self::TODO => 'Outstanding',
             self::IN_PROGRESS => 'In Progress',
-            default => ucfirst($this->value),
+            self::COMPLETED => 'Done',
+            self::CANCELLED => 'Cancelled',
         };
     }
 }

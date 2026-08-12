@@ -95,10 +95,10 @@ class DemoSeeder extends Seeder
             }
 
             foreach ([
-                ['Backlog', '#94a3b8', TaskStatusCategory::BACKLOG],
-                ['To Do', '#6366f1', TaskStatusCategory::TODO],
+                ['Outstanding', '#6366f1', TaskStatusCategory::TODO],
                 ['In Progress', '#f59e0b', TaskStatusCategory::IN_PROGRESS],
-                ['Completed', '#10b981', TaskStatusCategory::COMPLETED],
+                ['Pending', '#94a3b8', TaskStatusCategory::BACKLOG],
+                ['Done', '#10b981', TaskStatusCategory::COMPLETED],
             ] as $index => [$name, $color, $category]) {
                 $project->taskStatuses()->updateOrCreate(['name' => $name], [
                     'color' => $color, 'category' => $category, 'position' => ($index + 1) * 1024, 'is_system' => true,
@@ -117,9 +117,9 @@ class DemoSeeder extends Seeder
 
         foreach ($titles as $index => $title) {
             $project = $projects[$index < 10 ? 0 : 1];
-            $statusName = ['Backlog', 'To Do', 'In Progress', 'Completed'][$index % 4];
+            $statusName = ['Outstanding', 'In Progress', 'Pending', 'Done'][$index % 4];
             $status = $project->taskStatuses()->where('name', $statusName)->firstOrFail();
-            $completed = $statusName === 'Completed';
+            $completed = $statusName === 'Done';
             $dueAt = $completed ? now()->subDays(($index % 5) + 1) : ($index % 5 === 0 ? now()->subDays(2) : now()->addDays(($index % 8) + 1));
             $task = Task::updateOrCreate(['project_id' => $project->id, 'title' => $title], [
                 'workspace_id' => $workspace->id,

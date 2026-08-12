@@ -140,7 +140,8 @@ class MasterDataTest extends TestCase
 
         // Without a template the built-in four still apply.
         $before = app(CreateProject::class)->handle($workspace, $owner, $this->projectAttributes('Before'));
-        $this->assertSame(['Backlog', 'To Do', 'In Progress', 'Completed'], $before->taskStatuses()->orderBy('position')->pluck('name')->all());
+        $this->assertSame(['Outstanding', 'In Progress', 'Pending', 'Done'], $before->taskStatuses()->orderBy('position')->pluck('name')->all());
+        $this->assertSame(TaskStatusCategory::COMPLETED, $before->taskStatuses()->where('name', 'Done')->firstOrFail()->category);
 
         foreach ([['Intake', TaskStatusCategory::TODO], ['Build', TaskStatusCategory::IN_PROGRESS], ['Shipped', TaskStatusCategory::COMPLETED]] as [$name, $category]) {
             $this->actingAs($owner)->postJson(route('internal.master.status-templates.store', $workspace), [
@@ -150,7 +151,7 @@ class MasterDataTest extends TestCase
 
         $after = app(CreateProject::class)->handle($workspace, $owner, $this->projectAttributes('After'));
         $this->assertSame(['Intake', 'Build', 'Shipped'], $after->taskStatuses()->orderBy('position')->pluck('name')->all());
-        $this->assertSame(['Backlog', 'To Do', 'In Progress', 'Completed'], $before->fresh()->taskStatuses()->orderBy('position')->pluck('name')->all());
+        $this->assertSame(['Outstanding', 'In Progress', 'Pending', 'Done'], $before->fresh()->taskStatuses()->orderBy('position')->pluck('name')->all());
     }
 
     public function test_archived_status_template_stops_reaching_new_projects(): void
@@ -166,7 +167,42 @@ class MasterDataTest extends TestCase
         // Archiving the last template falls back to the built-in set rather than shipping
         // a project with no statuses at all.
         $project = app(CreateProject::class)->handle($workspace, $owner, $this->projectAttributes('Fallback'));
-        $this->assertSame(['Backlog', 'To Do', 'In Progress', 'Completed'], $project->taskStatuses()->orderBy('position')->pluck('name')->all());
+        $this->assertSame(['Outstanding', 'In Progress', 'Pending', 'Done'], $project->taskStatuses()->orderBy('position')->pluck('name')->all());
+    }
+
+    public function test_legacy_default_statuses_are_upgraded_without_touching_custom_groups(): void
+    {
+        [, , $project] = $this->project();
+        $legacy = [
+            'Outstanding' => ['To Do', TaskStatusCategory::TODO, 2048],
+            'In Progress' => ['In Progress', TaskStatusCategory::IN_PROGRESS, 3072],
+            'Pending' => ['Backlog', TaskStatusCategory::BACKLOG, 1024],
+            'Done' => ['Completed', TaskStatusCategory::COMPLETED, 4096],
+        ];
+
+        foreach ($legacy as $current => [$name, $category, $position]) {
+            $project->taskStatuses()->where('name', $current)->firstOrFail()->update(compact('name', 'category', 'position'));
+        }
+        $project->taskStatuses()->whereIn('name', ['Backlog', 'In Progress', 'Completed'])->update(['archived_at' => now()]);
+        $project->taskStatuses()->create([
+            'name' => 'Feature', 'color' => '#8b5cf6', 'category' => TaskStatusCategory::TODO,
+            'position' => 5120, 'is_system' => false,
+        ]);
+
+        $migration = require database_path('migrations/2026_08_12_120000_replace_default_task_statuses.php');
+        $migration->up();
+
+        $this->assertSame(
+            ['Outstanding', 'In Progress', 'Pending', 'Done', 'Feature'],
+            $project->taskStatuses()->active()->pluck('name')->all(),
+        );
+
+        $migration->down();
+
+        $this->assertSame(
+            ['Backlog', 'To Do', 'In Progress', 'Completed', 'Feature'],
+            $project->taskStatuses()->active()->pluck('name')->all(),
+        );
     }
 
     public function test_articles_are_editable_and_archiving_removes_them_from_the_help_centre(): void

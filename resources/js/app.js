@@ -191,6 +191,8 @@ Alpine.data('globalSearch', ({ endpoint }) => ({
 }));
 
 Alpine.data('taskDatabase', () => ({
+    propertyPanel: null,
+    propertyPosition: { left: 16, top: 16 },
     openTask(defaults = {}) {
         const dialog = document.getElementById('new-task-dialog');
         const form = dialog?.querySelector('form');
@@ -202,6 +204,23 @@ Alpine.data('taskDatabase', () => ({
             if (field) field.value = value ?? '';
         });
         dialog.showModal();
+    },
+    openProperty(panel, event) {
+        if (this.propertyPanel === panel) {
+            this.closeProperty();
+            return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const width = Math.min(384, window.innerWidth - 32);
+        this.propertyPosition = {
+            left: Math.max(16, Math.min(rect.left, window.innerWidth - width - 16)),
+            top: Math.max(16, Math.min(rect.bottom + 8, window.innerHeight - 520)),
+        };
+        this.propertyPanel = panel;
+    },
+    closeProperty() {
+        this.propertyPanel = null;
     },
 }));
 

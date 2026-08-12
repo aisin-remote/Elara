@@ -71,9 +71,9 @@
                         <x-sidebar.section id="work" title="Work">
                             <details class="group" @if($taskRouteActive) open @endif>
                                 <summary class="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors [&::-webkit-details-marker]:hidden {{ $taskRouteActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                    <x-icon name="chevron-right" class="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
                                     <x-icon name="tasks" class="size-4 {{ $taskRouteActive ? 'text-orbit-600 dark:text-orbit-300' : 'text-slate-500 dark:text-slate-400' }}" />
                                     <span class="min-w-0 flex-1 truncate">Tasks</span>
-                                    <x-icon name="chevron-right" class="size-3 transition-transform group-open:rotate-90" />
                                 </summary>
                                 <div class="ml-4 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2 dark:border-slate-700">
                                     @foreach ($sidebarTaskMembers as $taskMember)
@@ -83,7 +83,7 @@
                                         @endphp
                                         <a href="{{ $isMyTasks ? route('app.tasks.index', $activeWorkspace) : route('app.tasks.index', ['workspace' => $activeWorkspace, 'assignee' => $taskMember->public_id]) }}"
                                             @if($taskMemberActive) aria-current="page" @endif
-                                            class="flex h-8 items-center gap-2 rounded-md px-2 text-[12px] font-medium transition-colors {{ $taskMemberActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                            class="flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $taskMemberActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">
                                             <span class="size-1.5 shrink-0 rounded-full {{ $isMyTasks ? 'bg-orbit-500' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
                                             <span class="truncate">{{ $isMyTasks ? 'My tasks' : $taskMember->name }}</span>
                                         </a>

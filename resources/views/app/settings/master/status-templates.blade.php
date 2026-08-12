@@ -10,7 +10,7 @@
 
     @if ($usesFallback)
         <x-alert variant="info" class="mb-6 max-w-none">
-            No template yet, so new projects still start with the built-in set: Backlog, To Do, In Progress, Completed. Add a status below and the built-in set stops being used.
+            No template yet, so new projects start with the built-in set: Outstanding, In Progress, Pending, Done. Add a status below and the built-in set stops being used.
         </x-alert>
     @endif
 

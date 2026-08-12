@@ -54,10 +54,10 @@ class TaskStatus extends Model
             ->all();
 
         foreach ($template ?: [
-            ['Backlog', '#94a3b8', TaskStatusCategory::BACKLOG],
-            ['To Do', '#6366f1', TaskStatusCategory::TODO],
+            ['Outstanding', '#6366f1', TaskStatusCategory::TODO],
             ['In Progress', '#f59e0b', TaskStatusCategory::IN_PROGRESS],
-            ['Completed', '#10b981', TaskStatusCategory::COMPLETED],
+            ['Pending', '#94a3b8', TaskStatusCategory::BACKLOG],
+            ['Done', '#10b981', TaskStatusCategory::COMPLETED],
         ] as $index => [$name, $color, $category]) {
             $project->taskStatuses()->create([
                 'name' => $name,

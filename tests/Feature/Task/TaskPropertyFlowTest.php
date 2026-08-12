@@ -40,14 +40,22 @@ class TaskPropertyFlowTest extends TestCase
             'value' => 'INC-42',
         ])->assertOk()->assertJsonPath('data.value', 'INC-42');
 
-        $this->actingAs($owner)->get(route('app.projects.tasks', [$workspace, $project]))
+        $projectList = $this->actingAs($owner)->get(route('app.projects.tasks', [$workspace, $project]))
             ->assertOk()
             ->assertSee('Project database')
             ->assertSee('Add property')
+            ->assertSee('x-teleport="body"', false)
             ->assertDontSee('Customize table')
+            ->assertDontSee('<tr x-cloak x-show="propertyPanel !== null">', false)
             ->assertSee('Ticket reference')
             ->assertSee('inlineTaskProperty', false)
             ->assertDontSee('>Board<', false);
+        $projectList->assertSeeInOrder([
+            'data-task-group-name="Outstanding"',
+            'data-task-group-name="In Progress"',
+            'data-task-group-name="Pending"',
+            'data-task-group-name="Done"',
+        ], false);
 
         $this->actingAs($owner)->get(route('app.projects.board', [$workspace, $project]))
             ->assertRedirect(route('app.projects.tasks', [$workspace, $project]));

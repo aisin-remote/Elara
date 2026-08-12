@@ -11,7 +11,7 @@
         $statusIds = $statuses->pluck('public_id')->all();
     @endphp
 
-    <div x-data="taskDatabase">
+    <div x-data="taskDatabase" x-on:resize.window="closeProperty()">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <p class="text-sm text-slate-500">Projects / {{ $project->name }}@if($selectedFeature) / {{ $selectedFeature->name }}@endif</p>
@@ -64,9 +64,8 @@
             @php
                 $status = $taskGroup['status'];
                 $groupTasks = $taskGroup['tasks'];
-                $editorKey = md5($taskGroup['key']);
             @endphp
-            <section data-task-group-name="{{ $taskGroup['name'] }}" class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" x-data="{ open: true, propertyPanel: null }">
+            <section data-task-group-name="{{ $taskGroup['name'] }}" class="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" x-data="{ open: true }">
                 <header class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                     <div class="flex min-w-0 items-center gap-2">
                         <button type="button" class="grid size-7 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" x-on:click="open = ! open" :aria-expanded="open" aria-label="Toggle {{ $taskGroup['name'] }} group">
@@ -159,7 +158,7 @@
                                     @endphp
                                     <th class="min-w-44 px-3 py-3 normal-case tracking-normal">
                                         @if ($canManageWorkflow)
-                                            <button type="button" class="group/property flex w-full items-center gap-1.5 rounded-lg text-left hover:text-orbit-700 dark:hover:text-orbit-300" x-on:click="propertyPanel = propertyPanel === @js($fieldPanel) ? null : @js($fieldPanel)" aria-label="Edit {{ $field['name'] }} property">
+                                            <button type="button" class="group/property flex w-full items-center gap-1.5 rounded-lg text-left hover:text-orbit-700 dark:hover:text-orbit-300" x-on:click="openProperty(@js($fieldPanel), $event)" aria-label="Edit {{ $field['name'] }} property">
                                                 <span class="font-semibold text-slate-500 group-hover/property:text-orbit-700 dark:text-slate-300 dark:group-hover/property:text-orbit-300">{{ $field['name'] }}</span>
                                                 <span class="text-[10px] font-normal text-slate-400">{{ $fieldType }}</span>
                                                 <x-icon name="chevron-right" class="ml-auto size-3 rotate-90 opacity-0 transition-opacity group-hover/property:opacity-100" />
@@ -171,7 +170,7 @@
                                 @endforeach
                                 @if ($canManageWorkflow)
                                     <th class="w-14 px-2 py-2">
-                                        <button type="button" class="grid size-8 place-items-center rounded-lg border border-transparent text-slate-400 transition hover:border-orbit-200 hover:bg-orbit-50 hover:text-orbit-700 dark:hover:border-orbit-900 dark:hover:bg-orbit-950/50 dark:hover:text-orbit-300" x-on:click="propertyPanel = propertyPanel === 'new' ? null : 'new'" aria-label="Add property" title="Add property">
+                                        <button type="button" class="grid size-8 place-items-center rounded-lg border border-transparent text-slate-400 transition hover:border-orbit-200 hover:bg-orbit-50 hover:text-orbit-700 dark:hover:border-orbit-900 dark:hover:bg-orbit-950/50 dark:hover:text-orbit-300" x-on:click="openProperty('new', $event)" aria-label="Add property" title="Add property">
                                             <x-icon name="plus" class="size-4" />
                                         </button>
                                     </th>
@@ -179,13 +178,6 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                            @if ($canManageWorkflow)
-                                <tr x-cloak x-show="propertyPanel !== null">
-                                    <td colspan="{{ $tableColumnCount }}" class="bg-white p-3 dark:bg-slate-900">
-                                        @include('app.tasks._property-manager', ['editorKey' => $editorKey])
-                                    </td>
-                                </tr>
-                            @endif
                             @forelse ($groupTasks as $task)
                                 @php
                                     $canEditTask = auth()->user()->can('update', $task);
@@ -221,6 +213,18 @@
             </section>
         @endforeach
     </div>
+
+    @if ($canManageWorkflow)
+        <template x-teleport="body">
+            <div x-cloak x-show="propertyPanel !== null" x-transition.opacity
+                x-bind:style="`left: ${propertyPosition.left}px; top: ${propertyPosition.top}px`"
+                x-on:click.outside="closeProperty()" x-on:keydown.escape.window="closeProperty()"
+                class="fixed z-[80] max-h-[calc(100vh-2rem)] w-[min(384px,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 text-left shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                role="dialog" aria-label="Task property editor">
+                @include('app.tasks._property-manager', ['editorKey' => $project->public_id])
+            </div>
+        </template>
+    @endif
 
     @if ($canManageWorkflow && $groupBy === 'status')
         <details class="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">

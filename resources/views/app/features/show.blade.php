@@ -68,9 +68,9 @@
                     </div>
                     @php
                         $bucketChips = [
-                            ['todo', 'To do', $progress['buckets']['todo'], 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'],
+                    ['todo', 'Outstanding / Pending', $progress['buckets']['todo'], 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'],
                             ['in_progress', 'In progress', $progress['buckets']['in_progress'], 'bg-orbit-50 text-orbit-700 dark:bg-orbit-950/60 dark:text-orbit-300'],
-                            ['completed', 'Completed', $progress['completed'], 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'],
+                    ['completed', 'Done', $progress['completed'], 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'],
                             ['overdue', 'Overdue', $progress['overdue'], 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'],
                         ];
                     @endphp
