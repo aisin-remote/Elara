@@ -12,7 +12,7 @@ class TaskResource extends JsonResource
         return [
             'public_id' => $this->public_id,
             'workspace_public_id' => $this->workspace?->public_id,
-            'project_public_id' => $this->project?->public_id,
+            'project_public_id' => $this->project?->isPersonal() === true ? null : $this->project?->public_id,
             'title' => $this->title,
             'description' => $this->description,
             'priority' => $this->priority->value,

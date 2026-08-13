@@ -96,6 +96,6 @@ class TaskPropertyController extends Controller
 
     private function taskListUrl(Project $project): string
     {
-        return route('app.projects.tasks', [$project->workspace, $project]);
+        return $project->taskListUrl();
     }
 }

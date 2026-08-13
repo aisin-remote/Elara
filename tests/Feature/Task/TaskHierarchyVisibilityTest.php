@@ -79,11 +79,19 @@ class TaskHierarchyVisibilityTest extends TestCase
 
         $this->actingAs($manager)->get(route('app.tasks.index', $workspace))
             ->assertOk()
-            ->assertSee('My tasks')
-            ->assertSee($tasks['manager']->title)
+            ->assertSee('My task database')
+            ->assertDontSee($tasks['manager']->title)
             ->assertDontSee($tasks['supervisor']->title)
             ->assertSee(route('app.tasks.index', ['workspace' => $workspace, 'assignee' => $people['supervisor']->public_id]), false)
             ->assertDontSee(route('app.tasks.index', ['workspace' => $workspace, 'assignee' => $people['gm']->public_id]), false);
+
+        $this->actingAs($manager)->get(route('app.tasks.index', [
+            'workspace' => $workspace,
+            'view' => 'assigned',
+        ]))
+            ->assertOk()
+            ->assertSee($tasks['manager']->title)
+            ->assertDontSee($tasks['supervisor']->title);
 
         $this->actingAs($manager)->get(route('app.tasks.index', [
             'workspace' => $workspace,

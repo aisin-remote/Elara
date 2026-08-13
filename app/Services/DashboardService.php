@@ -328,12 +328,15 @@ class DashboardService
     {
         $membership = $workspace->memberships()->where('user_id', $user->id)->first();
         $isWorkspaceManager = in_array($membership?->role?->value, [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value], true);
+        $taskIds = $this->taskQuery($workspace, $user, $filters)->select('tasks.id');
         $query = $workspace->activityLogs()->with(['actor:id,public_id,first_name,last_name,avatar_path', 'subject'])
-            ->whereBetween('created_at', [$period['from_utc'], $period['to_utc']]);
+            ->whereBetween('created_at', [$period['from_utc'], $period['to_utc']])
+            ->where(fn (Builder $visible) => $visible
+                ->where('subject_type', '!=', (new Task)->getMorphClass())
+                ->orWhereIn('subject_id', $taskIds));
 
         if (! $isWorkspaceManager) {
             $projectIds = Project::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
-            $taskIds = $this->taskQuery($workspace, $user, $filters)->select('tasks.id');
             $supportingTaskIds = SupportingTask::query()->where('workspace_id', $workspace->id)->select('id');
             $eventIds = ScheduleEvent::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
             $query->where(fn (Builder $visible) => $visible

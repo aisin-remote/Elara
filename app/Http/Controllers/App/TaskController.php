@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\App;
 
+use App\Enums\ProjectType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Http\Controllers\Controller;
@@ -11,6 +12,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\OrganizationDirectory;
+use App\Services\PersonalTaskSpace;
 use App\Services\TaskDatabaseView;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -19,8 +21,13 @@ use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    public function global(Request $request, Workspace $workspace, OrganizationDirectory $organization): View
-    {
+    public function global(
+        Request $request,
+        Workspace $workspace,
+        OrganizationDirectory $organization,
+        PersonalTaskSpace $personalTasks,
+        TaskDatabaseView $database,
+    ): View {
         $this->authorize('view', $workspace);
         $members = $organization->taskMembers($request->user(), $workspace)
             ->sortBy(fn (User $user) => $user->is($request->user()) ? 0 : 1)
@@ -31,9 +38,22 @@ class TaskController extends Controller
         );
         abort_unless($selectedMember, 404);
 
+        if ($selectedMember->is($request->user()) && $request->string('view')->toString() !== 'assigned') {
+            $project = $personalTasks->for($workspace, $request->user());
+            $this->authorize('viewAny', [Task::class, $project]);
+
+            return view('app.tasks.personal', [
+                'workspace' => $workspace,
+                'project' => $project,
+                ...$database->data($request, $workspace, $project, $request->user()),
+            ]);
+        }
+
         $tasks = Task::query()
             ->visibleTo($request->user())
             ->where('workspace_id', $workspace->id)
+            ->whereHas('project', fn (Builder $project) => $project
+                ->where('type', '!=', ProjectType::PERSONAL->value))
             ->whereHas('assignees', fn (Builder $users) => $users->where('users.id', $selectedMember->id))
             ->with([
                 'project', 'status', 'category', 'assignees', 'milestone',

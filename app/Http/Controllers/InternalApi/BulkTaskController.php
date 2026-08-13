@@ -43,7 +43,7 @@ class BulkTaskController extends Controller
             }
         });
 
-        return $this->success($request, ['updated' => $tasks->count()], 'Tasks updated.', route('app.projects.tasks', [$project->workspace, $project]));
+        return $this->success($request, ['updated' => $tasks->count()], 'Tasks updated.', $project->taskListUrl());
     }
 
     private function changeStatus($tasks, Project $project, string $publicId): void

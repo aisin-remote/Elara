@@ -19,6 +19,10 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
+        if ($project->isPersonal()) {
+            return false;
+        }
+
         $workspaceRole = $this->workspaceMembership($user, $project->workspace)?->role;
 
         return in_array($workspaceRole, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true)
@@ -32,6 +36,10 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
+        if ($project->isPersonal()) {
+            return false;
+        }
+
         $workspaceRole = $this->workspaceMembership($user, $project->workspace)?->role;
 
         return in_array($workspaceRole, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true)

@@ -104,7 +104,7 @@ class TaskController extends Controller
         $project = $task->project;
         $archive->archive($task, $request->user(), $request->ip());
 
-        return $this->success($request, null, 'Task archived.', route('app.projects.tasks', [$project->workspace, $project]));
+        return $this->success($request, null, 'Task archived.', $project->taskListUrl());
     }
 
     public function restore(TaskMutationRequest $request, Task $task, ArchiveTask $archive): JsonResponse|RedirectResponse

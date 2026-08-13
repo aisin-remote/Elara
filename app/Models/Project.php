@@ -203,6 +203,18 @@ class Project extends Model
         return $this->type === ProjectType::SYSTEM;
     }
 
+    public function isPersonal(): bool
+    {
+        return $this->type === ProjectType::PERSONAL;
+    }
+
+    public function taskListUrl(): string
+    {
+        return $this->isPersonal()
+            ? route('app.tasks.index', $this->workspace)
+            : route('app.projects.tasks', [$this->workspace, $this]);
+    }
+
     /**
      * The person accountable for a system in one department.
      *
@@ -252,13 +264,14 @@ class Project extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $query->where(function (Builder $access) use ($user) {
-            $access->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-                ->where('user_id', $user->id)
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value)
-                ->whereIn('role', [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value]))
-                ->orWhereHas('memberships', fn (Builder $membership) => $membership->where('user_id', $user->id));
-        });
+        return $query->where('type', '!=', ProjectType::PERSONAL->value)
+            ->where(function (Builder $access) use ($user) {
+                $access->whereHas('workspace.memberships', fn (Builder $membership) => $membership
+                    ->where('user_id', $user->id)
+                    ->where('status', WorkspaceMemberStatus::ACTIVE->value)
+                    ->whereIn('role', [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value]))
+                    ->orWhereHas('memberships', fn (Builder $membership) => $membership->where('user_id', $user->id));
+            });
     }
 
     public function resolveRouteBindingQuery($query, $value, $field = null): Builder
@@ -268,7 +281,10 @@ class Project extends Model
         if (Auth::check()) {
             $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
                 ->where('user_id', Auth::id())
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+                ->where('status', WorkspaceMemberStatus::ACTIVE->value))
+                ->where(fn (Builder $project) => $project
+                    ->where('type', '!=', ProjectType::PERSONAL->value)
+                    ->orWhere('owner_id', Auth::id()));
         }
 
         return $query;

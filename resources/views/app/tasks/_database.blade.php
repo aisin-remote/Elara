@@ -1,6 +1,7 @@
     @php
         $canBulkEdit = auth()->user()->can('create', [App\Models\Task::class, $project]);
         $canManageWorkflow = auth()->user()->can('manageWorkflow', [App\Models\Task::class, $project]);
+        $isPersonalDatabase = $project->isPersonal();
         $tableColumnCount = 1 + $taskFields->count() + ($canManageWorkflow ? 1 : 0);
         $statusIds = $statuses->pluck('public_id')->all();
     @endphp
@@ -9,10 +10,12 @@
     @if ($showDatabaseHeader ?? true)
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <p class="text-sm text-slate-500">Projects / {{ $project->name }}@if($selectedFeature) / {{ $selectedFeature->name }}@endif</p>
-            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ $selectedFeature ? 'Feature task database' : ($project->isSystem() ? 'System task database' : 'Project database') }}</h2>
+            <p class="text-sm text-slate-500">{{ $isPersonalDatabase ? $workspace->name.' / Tasks' : 'Projects / '.$project->name }}@if($selectedFeature) / {{ $selectedFeature->name }}@endif</p>
+            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ $isPersonalDatabase ? 'My task database' : ($selectedFeature ? 'Feature task database' : ($project->isSystem() ? 'System task database' : 'Project database')) }}</h2>
             <p class="mt-1 text-sm text-slate-500">
-                @if ($project->isSystem() && ! $selectedFeature)
+                @if ($isPersonalDatabase)
+                    Private tasks only you can access. Customize properties and group them by any visible Select property.
+                @elseif ($project->isSystem() && ! $selectedFeature)
                     Group feature work and Maintenance tasks by workflow status or any visible Select property.
                 @else
                     Group tasks by workflow status or any visible Select property.
@@ -26,7 +29,12 @@
     @endif
 
     @if ($showTaskTabs ?? true)
-        @if ($project->isSystem())
+        @if ($isPersonalDatabase)
+            <nav class="mt-6 flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800" aria-label="My task views">
+                <a href="{{ route('app.tasks.index', $workspace) }}" aria-current="page" class="shrink-0 border-b-2 border-orbit-600 px-4 py-3 text-sm font-semibold text-orbit-700 dark:text-orbit-300">Personal</a>
+                <a href="{{ route('app.tasks.index', [$workspace, 'view' => 'assigned']) }}" class="shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">Assigned work</a>
+            </nav>
+        @elseif ($project->isSystem())
             @include('app.features._tabs', ['workspace' => $workspace, 'system' => $project, 'feature' => $selectedFeature])
         @else
             @include('app.projects._tabs', ['project' => $project])

@@ -15,11 +15,19 @@ class TaskPolicy
 {
     public function viewAny(User $user, Project $project): bool
     {
+        if ($project->isPersonal()) {
+            return $this->ownsPersonalSpace($user, $project);
+        }
+
         return app(ProjectPolicy::class)->view($user, $project);
     }
 
     public function view(User $user, Task $task): bool
     {
+        if ($task->project->isPersonal()) {
+            return $this->ownsPersonalSpace($user, $task->project);
+        }
+
         if (! app(ProjectPolicy::class)->view($user, $task->project)) {
             return false;
         }
@@ -55,6 +63,10 @@ class TaskPolicy
 
     public function manageWorkflow(User $user, Project $project): bool
     {
+        if ($project->isPersonal()) {
+            return $this->ownsPersonalSpace($user, $project);
+        }
+
         $workspaceRole = $this->workspaceMembership($user, $project)?->role;
 
         return in_array($workspaceRole, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true)
@@ -66,6 +78,10 @@ class TaskPolicy
 
     private function canMutateProject(User $user, Project $project): bool
     {
+        if ($project->isPersonal()) {
+            return $this->ownsPersonalSpace($user, $project);
+        }
+
         $workspaceRole = $this->workspaceMembership($user, $project)?->role;
 
         if (in_array($workspaceRole, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true)) {
@@ -85,5 +101,11 @@ class TaskPolicy
             ->where('user_id', $user->id)
             ->where('status', WorkspaceMemberStatus::ACTIVE->value)
             ->first();
+    }
+
+    private function ownsPersonalSpace(User $user, Project $project): bool
+    {
+        return $project->owner_id === $user->id
+            && $this->workspaceMembership($user, $project) !== null;
     }
 }

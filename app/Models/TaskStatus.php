@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProjectType;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Support\GeneratesPublicId;
@@ -76,7 +77,10 @@ class TaskStatus extends Model
         if (Auth::check()) {
             $query->whereHas('project.workspace.memberships', fn (Builder $membership) => $membership
                 ->where('user_id', Auth::id())
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+                ->where('status', WorkspaceMemberStatus::ACTIVE->value))
+                ->whereHas('project', fn (Builder $project) => $project
+                    ->where('type', '!=', ProjectType::PERSONAL->value)
+                    ->orWhere('owner_id', Auth::id()));
         }
 
         return $query;

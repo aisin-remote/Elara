@@ -5,6 +5,7 @@ namespace App\Http\Controllers\InternalApi;
 use App\Actions\Integration\ConnectIntegration;
 use App\Actions\Integration\DisconnectIntegration;
 use App\Enums\IntegrationProvider;
+use App\Enums\ProjectType;
 use App\Http\Requests\Integration\DisconnectIntegrationRequest;
 use App\Http\Requests\Integration\IntegrationCallbackRequest;
 use App\Http\Requests\Integration\IntegrationMutationRequest;
@@ -89,12 +90,18 @@ class IntegrationController extends Controller
 
     private function project(Workspace $workspace, string $publicId): Project
     {
-        return $workspace->projects()->where('public_id', $publicId)->firstOrFail();
+        return $workspace->projects()
+            ->where('type', '!=', ProjectType::PERSONAL->value)
+            ->where('public_id', $publicId)
+            ->firstOrFail();
     }
 
     private function task(Workspace $workspace, string $publicId): Task
     {
-        return $workspace->tasks()->where('public_id', $publicId)->firstOrFail();
+        return $workspace->tasks()
+            ->whereHas('project', fn ($project) => $project->where('type', '!=', ProjectType::PERSONAL->value))
+            ->where('public_id', $publicId)
+            ->firstOrFail();
     }
 
     private function event(Workspace $workspace, string $publicId): ScheduleEvent

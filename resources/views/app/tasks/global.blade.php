@@ -11,6 +11,12 @@
             <p class="mt-1 text-sm text-slate-500">Only work assigned to {{ $selectedMember->is(auth()->user()) ? 'you' : $selectedMember->name }} is shown.</p>
         </div>
     </div>
+    @if ($selectedMember->is(auth()->user()))
+        <nav class="mt-6 flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800" aria-label="My task views">
+            <a href="{{ route('app.tasks.index', $workspace) }}" class="shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">Personal</a>
+            <a href="{{ route('app.tasks.index', [$workspace, 'view' => 'assigned']) }}" aria-current="page" class="shrink-0 border-b-2 border-orbit-600 px-4 py-3 text-sm font-semibold text-orbit-700 dark:text-orbit-300">Assigned work</a>
+        </nav>
+    @endif
     <nav class="mt-6 flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Task filters">@foreach (['' => 'All', 'todo' => 'Outstanding / Pending', 'in_progress' => 'In Progress', 'completed' => 'Done', 'overdue' => 'Overdue', 'blocked' => 'Blocked'] as $value => $label)<a href="{{ request()->fullUrlWithQuery(['tab' => $value ?: null, 'page' => null]) }}" class="shrink-0 border-b-2 px-4 py-3 text-sm font-semibold {{ request('tab', '') === $value ? 'border-orbit-600 text-orbit-700' : 'border-transparent text-slate-500' }}">{{ $label }}</a>@endforeach</nav>
     <form method="GET" class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 lg:grid-cols-[1fr_repeat(2,180px)_auto] dark:border-slate-800 dark:bg-slate-900">
         @unless($selectedMember->is(auth()->user()))<input type="hidden" name="assignee" value="{{ $selectedMember->public_id }}">@endunless

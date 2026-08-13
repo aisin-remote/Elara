@@ -208,7 +208,10 @@ class TaskFlowTest extends TestCase
             ->assertSee($task->title)
             ->assertSee('Add property')
             ->assertDontSee('Customize table');
-        $this->actingAs($owner)->get(route('app.tasks.index', $workspace))->assertOk()->assertSee($task->title);
+        $this->actingAs($owner)->get(route('app.tasks.index', [
+            'workspace' => $workspace,
+            'view' => 'assigned',
+        ]))->assertOk()->assertSee($task->title);
         $this->actingAs($owner)->get(route('app.tasks.show', $task))->assertOk()->assertSee($task->title);
     }
 

@@ -33,7 +33,7 @@ class TaskFieldController extends Controller
             $request,
             $schema->systemFields($project->fresh()),
             'Task field updated.',
-            route('app.projects.tasks', [$project->workspace, $project]),
+            $project->taskListUrl(),
         );
     }
 }

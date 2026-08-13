@@ -30,7 +30,7 @@ class TaskStatusController extends Controller
         ]);
         ActivityLog::record($project->workspace, $status, 'task_status.created', $request->user(), ipAddress: $request->ip());
 
-        return $this->success($request, new TaskStatusResource($status), 'Status created.', route('app.projects.tasks', [$project->workspace, $project]), 201);
+        return $this->success($request, new TaskStatusResource($status), 'Status created.', $project->taskListUrl(), 201);
     }
 
     public function update(UpdateTaskStatusRequest $request, TaskStatus $status): JsonResponse|RedirectResponse
@@ -42,7 +42,7 @@ class TaskStatusController extends Controller
         $status->update($request->validated());
         ActivityLog::record($status->project->workspace, $status, 'task_status.updated', $request->user(), ipAddress: $request->ip());
 
-        return $this->success($request, new TaskStatusResource($status), 'Status updated.', route('app.projects.tasks', [$status->project->workspace, $status->project]));
+        return $this->success($request, new TaskStatusResource($status), 'Status updated.', $status->project->taskListUrl());
     }
 
     public function destroy(DeleteTaskStatusRequest $request, TaskStatus $status): JsonResponse|RedirectResponse
@@ -80,7 +80,7 @@ class TaskStatusController extends Controller
             ActivityLog::record($status->project->workspace, $status, 'task_status.archived', $request->user(), ipAddress: $request->ip());
         });
 
-        return $this->success($request, null, 'Group deleted.', route('app.projects.tasks', [$status->project->workspace, $status->project]));
+        return $this->success($request, null, 'Group deleted.', $status->project->taskListUrl());
     }
 
     public function reorder(ReorderTaskStatusesRequest $request, Project $project): JsonResponse|RedirectResponse
@@ -98,6 +98,6 @@ class TaskStatusController extends Controller
             }
         });
 
-        return $this->success($request, TaskStatusResource::collection($project->taskStatuses()->active()->get()), 'Statuses reordered.', route('app.projects.tasks', [$project->workspace, $project]));
+        return $this->success($request, TaskStatusResource::collection($project->taskStatuses()->active()->get()), 'Statuses reordered.', $project->taskListUrl());
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DependencyType;
+use App\Enums\ProjectType;
 use App\Enums\TaskPriority;
 use App\Enums\WorkspaceMemberStatus;
 use App\Services\OrganizationDirectory;
@@ -184,7 +185,15 @@ class Task extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        $query->whereHas('project', fn (Builder $project) => $project->visibleTo($user));
+        $query->where(function (Builder $visible) use ($user): void {
+            $visible->whereHas('project', fn (Builder $project) => $project->visibleTo($user))
+                ->orWhereHas('project', fn (Builder $project) => $project
+                    ->where('type', ProjectType::PERSONAL->value)
+                    ->where('owner_id', $user->id)
+                    ->whereHas('workspace.memberships', fn (Builder $membership) => $membership
+                        ->where('user_id', $user->id)
+                        ->where('status', WorkspaceMemberStatus::ACTIVE->value)));
+        });
 
         if (! config('organization.required')) {
             return $query;
@@ -192,7 +201,11 @@ class Task extends Model
 
         $visibility = app(OrganizationDirectory::class)->taskVisibility($user);
 
-        return $query->where(function (Builder $tasks) use ($visibility): void {
+        return $query->where(function (Builder $tasks) use ($user, $visibility): void {
+            $tasks->whereHas('project', fn (Builder $project) => $project
+                ->where('type', ProjectType::PERSONAL->value)
+                ->where('owner_id', $user->id));
+
             foreach ($visibility as $workspaceId => $userIds) {
                 $tasks->orWhere(function (Builder $workspaceTasks) use ($workspaceId, $userIds): void {
                     $workspaceTasks->where('tasks.workspace_id', $workspaceId)
@@ -200,9 +213,6 @@ class Task extends Model
                 });
             }
 
-            if ($visibility === []) {
-                $tasks->whereRaw('1 = 0');
-            }
         });
     }
 
@@ -212,9 +222,13 @@ class Task extends Model
 
         if (Auth::check()) {
             Auth::user()->isRequester()
-                ? $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-                    ->where('user_id', Auth::id())
-                    ->where('status', WorkspaceMemberStatus::ACTIVE->value))
+                ? $query
+                    ->whereHas('workspace.memberships', fn (Builder $membership) => $membership
+                        ->where('user_id', Auth::id())
+                        ->where('status', WorkspaceMemberStatus::ACTIVE->value))
+                    ->whereHas('project', fn (Builder $project) => $project
+                        ->where('type', '!=', ProjectType::PERSONAL->value)
+                        ->orWhere('owner_id', Auth::id()))
                 : $query->visibleTo(Auth::user());
         }
 
