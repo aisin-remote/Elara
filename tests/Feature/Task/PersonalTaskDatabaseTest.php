@@ -106,6 +106,11 @@ class PersonalTaskDatabaseTest extends TestCase
             'estimate_minutes' => null,
             'assignee_public_ids' => [],
         ]);
+        $this->actingAs($member)->postJson(route('internal.task-properties.store', $space), [
+            'name' => 'Secret personal field',
+            'type' => TaskPropertyType::TEXT->value,
+            'options' => [],
+        ])->assertCreated();
 
         $this->assertNull(Task::query()->visibleTo($workspaceOwner)->find($task->id));
         $this->actingAs($workspaceOwner)->get(route('app.tasks.show', $task))->assertNotFound();
@@ -114,7 +119,8 @@ class PersonalTaskDatabaseTest extends TestCase
             ->assertDontSee('Personal tasks');
         $this->actingAs($workspaceOwner)->get(route('app.workspaces.show', $workspace))
             ->assertOk()
-            ->assertDontSee('Private appointment');
+            ->assertDontSee('Private appointment')
+            ->assertDontSee('Secret personal field');
     }
 
     public function test_assigned_project_work_remains_in_its_own_view(): void

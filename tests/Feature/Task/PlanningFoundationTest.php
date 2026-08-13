@@ -34,7 +34,11 @@ class PlanningFoundationTest extends TestCase
         $this->assertTrue($dependent->fresh()->isBlocked());
         $this->assertDatabaseHas('task_dependencies', ['task_id' => $dependent->id, 'depends_on_task_id' => $prerequisite->id]);
 
-        $this->actingAs($owner)->get(route('app.tasks.index', ['workspace' => $workspace, 'tab' => 'blocked']))
+        $this->actingAs($owner)->get(route('app.tasks.index', [
+            'workspace' => $workspace,
+            'view' => 'assigned',
+            'tab' => 'blocked',
+        ]))
             ->assertOk()->assertSee('Build API')->assertDontSee('Approve API contract');
         $this->actingAs($owner)->get(route('app.projects.tasks', ['workspace' => $workspace, 'project' => $project, 'blocked' => 1]))
             ->assertOk()->assertSee('Build API')->assertDontSee('Approve API contract');

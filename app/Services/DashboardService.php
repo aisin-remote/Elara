@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\ScheduleEvent;
 use App\Models\SupportingTask;
 use App\Models\Task;
+use App\Models\TaskProperty;
 use App\Models\TaskStatus;
 use App\Models\User;
 use App\Models\Workspace;
@@ -328,15 +329,29 @@ class DashboardService
     {
         $membership = $workspace->memberships()->where('user_id', $user->id)->first();
         $isWorkspaceManager = in_array($membership?->role?->value, [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value], true);
+        $projectIds = Project::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
         $taskIds = $this->taskQuery($workspace, $user, $filters)->select('tasks.id');
+        $propertyIds = TaskProperty::query()->whereIn('project_id', clone $projectIds)->select('id');
+        $statusIds = TaskStatus::query()->whereIn('project_id', clone $projectIds)->select('id');
         $query = $workspace->activityLogs()->with(['actor:id,public_id,first_name,last_name,avatar_path', 'subject'])
             ->whereBetween('created_at', [$period['from_utc'], $period['to_utc']])
             ->where(fn (Builder $visible) => $visible
-                ->where('subject_type', '!=', (new Task)->getMorphClass())
-                ->orWhereIn('subject_id', $taskIds));
+                ->whereNotIn('subject_type', [
+                    (new Task)->getMorphClass(),
+                    (new TaskProperty)->getMorphClass(),
+                    (new TaskStatus)->getMorphClass(),
+                ])
+                ->orWhere(fn (Builder $task) => $task
+                    ->where('subject_type', (new Task)->getMorphClass())
+                    ->whereIn('subject_id', $taskIds))
+                ->orWhere(fn (Builder $property) => $property
+                    ->where('subject_type', (new TaskProperty)->getMorphClass())
+                    ->whereIn('subject_id', $propertyIds))
+                ->orWhere(fn (Builder $status) => $status
+                    ->where('subject_type', (new TaskStatus)->getMorphClass())
+                    ->whereIn('subject_id', $statusIds)));
 
         if (! $isWorkspaceManager) {
-            $projectIds = Project::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
             $supportingTaskIds = SupportingTask::query()->where('workspace_id', $workspace->id)->select('id');
             $eventIds = ScheduleEvent::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
             $query->where(fn (Builder $visible) => $visible

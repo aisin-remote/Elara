@@ -222,7 +222,9 @@ class TaskFlowTest extends TestCase
         $this->actingAs($owner)
             ->get(route('app.projects.tasks', [$workspace, $project]).'?create=1')
             ->assertOk()
-            ->assertSee('x-init="$nextTick(() => $el.showModal())"', false);
+            ->assertSee('x-init="$nextTick(() => $el.showModal())"', false)
+            ->assertSee('class="max-h-[90dvh] overflow-y-auto', false)
+            ->assertDontSee('class="h-full overflow-y-auto', false);
     }
 
     private function task(): array
