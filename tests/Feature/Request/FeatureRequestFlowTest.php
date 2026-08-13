@@ -135,7 +135,7 @@ class FeatureRequestFlowTest extends TestCase
         $this->assertSame(FeatureRequestStatus::PENDING_REVIEW, $request->fresh()->status);
     }
 
-    public function test_a_manager_may_watch_the_queue_but_not_decide_a_feature_request(): void
+    public function test_a_manager_decides_a_feature_request_without_waiting_for_a_supervisor(): void
     {
         [, $workspace, $system] = $this->system();
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
@@ -144,10 +144,51 @@ class FeatureRequestFlowTest extends TestCase
 
         $this->actingAs($manager)->get(route('app.approvals.index', $workspace))->assertOk();
 
-        // Managers are the second signature on project requests, not feature requests.
+        // One signature carries a feature request: supervisor or manager, whoever is available.
+        // The two-step order stays on project requests only.
         $this->actingAs($manager)
-            ->post(route('app.approvals.decide', [$workspace, $request]), ['decision' => 'approved'])
-            ->assertForbidden();
+            ->post(route('app.approvals.decide', [$workspace, $request]), [
+                'decision' => 'approved',
+                'estimated_hours' => 8,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(FeatureRequestStatus::APPROVED, $request->fresh()->status);
+    }
+
+    public function test_an_approver_can_pin_the_dates_instead_of_leaving_them_to_the_planner(): void
+    {
+        [$owner, $workspace, $system] = $this->system();
+        $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $request = $this->submit($workspace, $system, $requester);
+
+        $this->actingAs($owner)
+            ->post(route('app.approvals.decide', [$workspace, $request]), [
+                'decision' => 'approved',
+                'estimated_hours' => 8,
+                'scheduled_start' => '2026-09-01',
+                'scheduled_due' => '2026-09-03',
+            ])
+            ->assertRedirect();
+
+        $decided = $request->fresh();
+
+        // Scheduled outright: the drain only touches requests that are still approved, so
+        // typed dates survive the planner's next run.
+        $this->assertSame(FeatureRequestStatus::SCHEDULED, $decided->status);
+        $this->assertSame('2026-09-01', $decided->scheduled_start->toDateString());
+        $this->assertSame('2026-09-03', $decided->scheduled_due->toDateString());
+
+        // submit() authenticates as the requester, so the second one is raised up front.
+        $second = $this->submit($workspace, $system, $requester);
+
+        $this->actingAs($owner)
+            ->post(route('app.approvals.decide', [$workspace, $second]), [
+                'decision' => 'approved',
+                'estimated_hours' => 8,
+                'scheduled_due' => '2026-09-03',
+            ])
+            ->assertSessionHasErrors('scheduled_start');
     }
 
     public function test_a_requester_sees_only_their_own_requests(): void

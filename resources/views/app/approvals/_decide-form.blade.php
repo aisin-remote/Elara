@@ -20,10 +20,26 @@
     <div @class(['grid gap-4', 'sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end' => ! $compact])>
         <div>
             <div x-show="decision === 'approved'" x-cloak>
-                <x-label :for="'estimated_hours_'.$request->public_id">Rough effort, in hours</x-label>
-                <x-input :id="'estimated_hours_'.$request->public_id" type="number" step="0.5" min="0.5" name="estimated_hours" value="{{ old('estimated_hours') }}" placeholder="16" />
+                <x-label :for="'estimated_hours_'.$request->public_id">How many working hours will this take?</x-label>
+                <x-input :id="'estimated_hours_'.$request->public_id" type="number" step="0.5" min="0.5" name="estimated_hours" value="{{ old('estimated_hours') }}" placeholder="e.g. 16" />
                 <x-field-error name="estimated_hours" />
-                <p class="mt-2 text-xs text-slate-500">The scheduler needs a number to find a real slot. A rough one is fine — it can be corrected later.</p>
+                <p class="mt-2 text-xs text-slate-500">Total hours of work, not a deadline. Orbitra picks the start and due dates from this and the assignee's free capacity — a rough number is fine, it can be corrected later.</p>
+
+                <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <div @class(['grid gap-3', 'sm:grid-cols-2' => ! $compact])>
+                        <div>
+                            <x-label :for="'scheduled_start_'.$request->public_id">Start date (optional)</x-label>
+                            <x-input :id="'scheduled_start_'.$request->public_id" type="date" name="scheduled_start" value="{{ old('scheduled_start') }}" />
+                            <x-field-error name="scheduled_start" />
+                        </div>
+                        <div>
+                            <x-label :for="'scheduled_due_'.$request->public_id">Due date (optional)</x-label>
+                            <x-input :id="'scheduled_due_'.$request->public_id" type="date" name="scheduled_due" value="{{ old('scheduled_due') }}" />
+                            <x-field-error name="scheduled_due" />
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">Leave both empty and the planner books the earliest slot with real capacity. Fill them in to pin the dates yourself — the planner then leaves this request alone.</p>
+                </div>
             </div>
 
             <div x-show="decision !== 'approved'" x-cloak>

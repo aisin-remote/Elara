@@ -51,14 +51,15 @@ class FeatureRequestPolicy
     }
 
     /**
-     * Supervisors decide feature requests. Managers deliberately do not: they are the
-     * second signature on project requests (PRD-04), and letting them approve features
-     * blurs two streams that were separated on purpose.
+     * Supervisors and managers both decide feature requests: one signature is enough for a
+     * change to a standing system, and whoever is available signs it. Project requests keep
+     * the two-step order (supervisor first, then manager) — see ProjectRequestPolicy.
      */
     public function decide(User $user, FeatureRequest $request): bool
     {
         return in_array($this->role($user, $request->workspace), [
             WorkspaceRole::SUPERVISOR,
+            WorkspaceRole::MANAGER,
             WorkspaceRole::ADMIN,
             WorkspaceRole::OWNER,
         ], true);

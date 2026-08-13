@@ -119,11 +119,26 @@ class ApprovalController extends Controller
 
         $transition->handle($featureRequest, $decision, $request->user(), $request->input('decision_note'));
 
+        // Dates typed by hand win over the planner: the queue only drains requests that are
+        // still approved, so scheduling it here is what keeps those dates.
+        $bookedByHand = $decision === FeatureRequestStatus::APPROVED && $request->filled('scheduled_start');
+
+        if ($bookedByHand) {
+            $featureRequest->forceFill([
+                'scheduled_start' => $request->date('scheduled_start'),
+                'scheduled_due' => $request->date('scheduled_due'),
+                'assignee_id' => $featureRequest->assignee_id ?? $featureRequest->system->pic()?->id,
+            ])->save();
+
+            $transition->handle($featureRequest->fresh(), FeatureRequestStatus::SCHEDULED, $request->user());
+        }
+
         return redirect()
             ->route('app.approvals.index', $workspace)
-            ->with('status', match ($decision) {
-                FeatureRequestStatus::APPROVED => 'Approved. It joins the scheduling queue.',
-                FeatureRequestStatus::REJECTED => 'Rejected, and the requester has been told why.',
+            ->with('status', match (true) {
+                $bookedByHand => 'Approved and scheduled on the dates you set.',
+                $decision === FeatureRequestStatus::APPROVED => 'Approved. It joins the scheduling queue.',
+                $decision === FeatureRequestStatus::REJECTED => 'Rejected, and the requester has been told why.',
                 default => 'Sent back to the requester for more detail.',
             });
     }

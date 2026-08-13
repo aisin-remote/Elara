@@ -30,6 +30,10 @@ class DecideFeatureRequestRequest extends FormRequest
                 ], true)),
                 'nullable', 'string', 'max:2000',
             ],
+            // Both dates or neither: one date on its own is not a slot, and the planner would
+            // overwrite it on its next run anyway.
+            'scheduled_start' => ['required_with:scheduled_due', 'nullable', 'date'],
+            'scheduled_due' => ['required_with:scheduled_start', 'nullable', 'date', 'after_or_equal:scheduled_start'],
         ];
     }
 
@@ -37,6 +41,9 @@ class DecideFeatureRequestRequest extends FormRequest
     {
         return [
             'decision_note.required' => 'Say why, so the requester knows what to do next.',
+            'scheduled_start.required_with' => 'Give a start date too, or leave both empty for automatic scheduling.',
+            'scheduled_due.required_with' => 'Give a due date too, or leave both empty for automatic scheduling.',
+            'scheduled_due.after_or_equal' => 'The due date cannot be before the start date.',
         ];
     }
 }
