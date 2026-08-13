@@ -255,17 +255,52 @@ class MasterDataController extends Controller
         return User::where('public_id', $row['pic_public_id'])->firstOrFail();
     }
 
-    public function updateSystem(StoreSystemRequest $request, Project $system): JsonResponse|RedirectResponse
+    public function updateSystem(StoreSystemRequest $request, Project $system, AssignSystemPic $assign): JsonResponse|RedirectResponse
     {
         abort_unless($system->isSystem(), 404);
 
-        DB::transaction(function () use ($request, $system): void {
+        DB::transaction(function () use ($request, $system, $assign): void {
             $system->update($request->safe()->only(['name', 'description', 'color', 'plant']));
+
+            // The form posts every PIC row it shows, so the list it sends is the list the system
+            // should end up with: departments missing from it are the ones that lost their PIC.
+            if ($request->has('pics')) {
+                $this->syncSystemPics($request, $system, $assign);
+            }
 
             ActivityLog::record($system->workspace, $system, 'system.updated', $request->user());
         });
 
         return $this->success($request, ['public_id' => $system->public_id], 'System updated.', back()->getTargetUrl());
+    }
+
+    /** Brings the system's department PICs in line with the rows the edit form posted. */
+    private function syncSystemPics(StoreSystemRequest $request, Project $system, AssignSystemPic $assign): void
+    {
+        $rows = collect($request->validated('pics') ?? [])
+            ->filter(fn (array $row) => filled($row['organization_department_id'] ?? null));
+
+        $keep = $rows->pluck('organization_department_id')->map(fn ($id) => (int) $id);
+
+        foreach ($system->picAssignments() as $current) {
+            $departmentId = (int) ($current->pivot->organization_department_id ?? 0);
+
+            if ($departmentId !== 0 && ! $keep->contains($departmentId)) {
+                $assign->remove($system, $departmentId, $request->user());
+            }
+        }
+
+        foreach ($rows as $row) {
+            $departmentId = (int) $row['organization_department_id'];
+
+            $assign->assign(
+                $system,
+                $this->picByPublicId($row),
+                $departmentId,
+                $this->departmentCode($departmentId),
+                $request->user(),
+            );
+        }
     }
 
     /**

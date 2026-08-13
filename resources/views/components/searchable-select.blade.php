@@ -46,7 +46,8 @@
         },
     }"
     x-on:keydown.escape.stop="open = false"
-    {{ $attributes->class('relative') }}
+    {{-- min-w-0: a long option label must not widen the grid or flex track it sits in. --}}
+    {{ $attributes->class('relative min-w-0') }}
 >
     <input type="hidden" name="{{ $name }}" x-model="value">
 

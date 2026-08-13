@@ -14,14 +14,12 @@ class StoreSystemRequest extends MasterDataRequest
     {
         $workspace = $this->targetWorkspace();
 
-        // Editing a system no longer touches its PICs: it has one per department now, added and
-        // removed on their own. Leaving the old single-PIC field in would quietly demote every
-        // department but the one the form happened to carry.
-        if ($this->route('system')) {
-            return $this->detailRules($workspace);
-        }
-
         $known = app(OrganizationDirectory::class)->departments()->pluck('id')->all();
+
+        // Editing posts the whole PIC list, the same rows the create form uses, and the ones it
+        // leaves out are the ones to drop. A system with no PIC yet must still be editable, so
+        // here the list may be empty — on create it may not.
+        $editing = (bool) $this->route('system');
 
         // With several PICs each has to say which department it answers for, otherwise there is
         // no way to tell them apart. A single PIC may still go without one: that is a system
@@ -31,7 +29,7 @@ class StoreSystemRequest extends MasterDataRequest
 
         return [
             ...$this->detailRules($workspace),
-            'pics' => ['required', 'array', 'min:1', 'max:5'],
+            'pics' => $editing ? ['array', 'max:5'] : ['required', 'array', 'min:1', 'max:5'],
             // The PIC must be someone who can actually work on it: an active member who is
             // not a requester.
             'pics.*.pic_public_id' => [
@@ -44,7 +42,9 @@ class StoreSystemRequest extends MasterDataRequest
             // means someone else's database is down, and refusing every id then would make
             // this screen unusable for a reason that has nothing to do with the person using it.
             'pics.*.organization_department_id' => array_values(array_filter([
-                $several ? 'required' : 'nullable',
+                // On edit the department is the key the sync removes by, so a row without one
+                // would silently do nothing — unless the directory is down and none can be shown.
+                $several || ($editing && $known !== []) ? 'required' : 'nullable',
                 'integer', 'distinct',
                 $known === [] ? null : Rule::in($known),
             ])),
