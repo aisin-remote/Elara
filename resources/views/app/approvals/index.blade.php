@@ -43,6 +43,7 @@
                 <x-table class="bg-white dark:bg-slate-900">
                     <thead class="border-b border-slate-200 dark:border-slate-800">
                         <tr>
+                            <th scope="col" class="{{ $head }} w-12 text-right">#</th>
                             <th scope="col" class="{{ $head }}">Request</th>
                             <th scope="col" class="{{ $head }}">System</th>
                             <th scope="col" class="{{ $head }}">Requester</th>
@@ -50,15 +51,16 @@
                             <th scope="col" class="{{ $head }}"><span class="sr-only">Review</span></th>
                         </tr>
                     </thead>
-                    {{-- One tbody per request: two sibling rows have to share the same open
-                         state, and a tbody is the only element that legally wraps both. --}}
-                    @foreach ($pending as $request)
-                        <tbody x-data="{ open: false }" class="border-b border-slate-100 last:border-0 dark:border-slate-800">
-                            <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60" @click="open = ! open">
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        @foreach ($pending as $request)
+                            {{-- The whole row opens the request; the title stays a real link so
+                                 keyboard and middle-click still work. --}}
+                            <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                onclick="window.location='{{ route('app.approvals.show', [$workspace, $request]) }}'">
+                                <td class="w-12 px-4 py-3 text-right text-xs tabular-nums text-slate-400">{{ $loop->iteration }}</td>
                                 <td class="max-w-sm px-4 py-3">
                                     <div class="flex items-center gap-2">
-                                        <x-icon name="chevron-right" class="size-4 shrink-0 text-slate-400 transition" ::class="open ? 'rotate-90' : ''" />
-                                        <span class="font-semibold">{{ $request->title }}</span>
+                                        <a href="{{ route('app.approvals.show', [$workspace, $request]) }}" class="font-semibold hover:underline">{{ $request->title }}</a>
                                         @if ($request->urgency->value === 'high')
                                             <x-badge tone="danger">Urgent</x-badge>
                                         @endif
@@ -68,29 +70,11 @@
                                 <td class="px-4 py-3 text-slate-500">{{ $request->requester->name }}</td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ $request->created_at->diffForHumans(syntax: true) }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <button type="button" class="text-xs font-semibold text-orbit-600 hover:underline dark:text-orbit-400"
-                                        :aria-expanded="open ? 'true' : 'false'" x-text="open ? 'Close' : 'Review'"></button>
+                                    <span class="text-xs font-semibold text-orbit-600 dark:text-orbit-400">Review</span>
                                 </td>
                             </tr>
-                            <tr x-show="open" x-cloak>
-                                <td colspan="5" class="px-4 pb-5">
-                                    <dl class="grid gap-4 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2 dark:bg-slate-800/60">
-                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Current condition</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->problem }}</dd></div>
-                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Target condition</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->desired_outcome }}</dd></div>
-                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Benefit</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->benefit }}</dd></div>
-                                    </dl>
-
-                                    @if ($canDecide)
-                                        <div class="mt-4">
-                                            @include('app.approvals._decide-form')
-                                        </div>
-                                    @endif
-
-                                    <a href="{{ route('app.approvals.show', [$workspace, $request]) }}" class="mt-4 inline-block text-xs font-semibold text-orbit-600 hover:underline dark:text-orbit-400">Open the full request →</a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    @endforeach
+                        @endforeach
+                    </tbody>
                 </x-table>
             @endif
 

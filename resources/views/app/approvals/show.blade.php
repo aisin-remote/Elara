@@ -47,7 +47,7 @@
             @if ($canDecide && $request->status->isAwaitingReview())
                 <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                     <h3 class="mb-4 font-bold">Your decision</h3>
-                    @include('app.approvals._decide-form')
+                    @include('app.approvals._decide-form', ['compact' => true])
                 </section>
             @elseif (! $request->status->isAwaitingReview())
                 <x-alert variant="info" :dismissible="false" class="max-w-none">

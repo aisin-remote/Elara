@@ -57,9 +57,6 @@ class ApprovalController extends Controller
             // Landing on an empty tab while another one has work is the page failing at its
             // only job, so the default follows the work rather than a fixed order.
             'tab' => $this->activeTab($request->string('tab')->toString(), $counts),
-            // The decide policy reads the workspace role, not the individual request, so it is
-            // answered once here instead of once per row.
-            'canDecide' => $pending->isNotEmpty() && $request->user()->can('decide', $pending->first()),
             'recent' => FeatureRequest::where('workspace_id', $workspace->id)
                 ->whereNotNull('reviewed_at')
                 ->with(['system', 'requester', 'reviewer'])

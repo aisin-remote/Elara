@@ -1,10 +1,14 @@
 {{-- One decision form, used inline in the queue and on the detail page. Two copies would
-     drift, and the one that drifts is the one nobody is looking at. --}}
+     drift, and the one that drifts is the one nobody is looking at.
+     $compact is for the 360px rail: three side-by-side cards there wrap to four lines each,
+     and no media query helps because the rail is that narrow at every screen size. --}}
+@php($compact = $compact ?? false)
+
 <form method="POST" action="{{ route('app.approvals.decide', [$workspace, $request]) }}" class="space-y-4" x-data="{ decision: 'approved' }">
     @csrf
     <x-form-errors :except="['estimated_hours', 'decision_note', 'decision']" />
 
-    <div class="grid gap-2 sm:grid-cols-3">
+    <div @class(['grid gap-2', 'sm:grid-cols-3' => ! $compact])>
         @foreach ([['approved', 'Approve', 'It goes to scheduling.'], ['needs_info', 'Ask for more detail', 'Back to the requester, stays open.'], ['rejected', 'Reject', 'Closed, with your reason.']] as [$value, $label, $hint])
             <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
                 <input type="radio" name="decision" value="{{ $value }}" x-model="decision" @checked($value === 'approved') class="mt-1 border-slate-300 text-orbit-600 focus:ring-orbit-500">
@@ -13,7 +17,7 @@
         @endforeach
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+    <div @class(['grid gap-4', 'sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end' => ! $compact])>
         <div>
             <div x-show="decision === 'approved'" x-cloak>
                 <x-label :for="'estimated_hours_'.$request->public_id">Rough effort, in hours</x-label>
@@ -29,6 +33,6 @@
             </div>
         </div>
 
-        <x-button>Record decision</x-button>
+        <x-button @class(['w-full' => $compact])>Record decision</x-button>
     </div>
 </form>
