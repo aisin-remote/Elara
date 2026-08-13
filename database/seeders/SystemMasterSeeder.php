@@ -68,6 +68,9 @@ class SystemMasterSeeder extends Seeder
             return;
         }
 
+        $taken = Project::systems()->pluck('color')->filter()->map('strtolower')->all();
+        $hue = 0;
+
         foreach (self::SYSTEMS as $name) {
             $system = Project::firstOrNew([
                 'workspace_id' => $workspace->id,
@@ -75,19 +78,57 @@ class SystemMasterSeeder extends Seeder
                 'type' => ProjectType::SYSTEM->value,
             ]);
 
-            if ($system->exists) {
+            if ($system->exists && $system->color) {
                 continue;
             }
+
+            do {
+                $color = $this->hueColor($hue++);
+            } while (in_array($color, $taken, true));
+            $taken[] = $color;
+
+            $fresh = ! $system->exists;
 
             $system->fill([
                 'owner_id' => $workspace->owner_id,
                 'status' => ProjectStatus::ACTIVE,
+                'color' => $color,
             ])->save();
 
             // Without these the system's board has no columns to drop a task into.
-            TaskStatus::createDefaultsFor($system);
+            if ($fresh) {
+                TaskStatus::createDefaultsFor($system);
+            }
         }
 
         $this->command?->info(count(self::SYSTEMS).' systems checked in '.$workspace->name.'.');
+    }
+
+    /**
+     * Golden-angle hues at a fixed saturation and lightness: consecutive systems land far
+     * apart on the wheel, so the dots stay tellable without hand-picking 40 colours.
+     */
+    private function hueColor(int $index): string
+    {
+        $sector = fmod($index * 137.508, 360) / 60;
+        $chroma = 0.5;
+        $second = $chroma * (1 - abs(fmod($sector, 2) - 1));
+        $lift = 0.58 - $chroma / 2;
+
+        [$r, $g, $b] = match ((int) $sector) {
+            0 => [$chroma, $second, 0.0],
+            1 => [$second, $chroma, 0.0],
+            2 => [0.0, $chroma, $second],
+            3 => [0.0, $second, $chroma],
+            4 => [$second, 0.0, $chroma],
+            default => [$chroma, 0.0, $second],
+        };
+
+        return sprintf(
+            '#%02x%02x%02x',
+            (int) round(($r + $lift) * 255),
+            (int) round(($g + $lift) * 255),
+            (int) round(($b + $lift) * 255),
+        );
     }
 }
