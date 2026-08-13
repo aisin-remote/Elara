@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Tasks')
-@section('page-title', 'Tasks')
+@section('title', $selectedMember->is(auth()->user()) ? 'My tasks' : $selectedMember->name."'s tasks")
+@section('page-title', $selectedMember->is(auth()->user()) ? 'My tasks' : $selectedMember->name."'s tasks")
 
 @section('content')
     <div class="flex flex-wrap items-end justify-between gap-4">

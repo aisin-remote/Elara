@@ -225,7 +225,7 @@ class MasterDataController extends Controller
 
         $system = DB::transaction(function () use ($request, $workspace, $action, $assign, $rows, $first, $firstDepartmentId): Project {
             $system = $action->handle($workspace, $request->user(), [
-                ...$request->safe()->only(['name', 'description', 'color']),
+                ...$request->safe()->only(['name', 'description', 'color', 'plant']),
                 'organization_department_id' => $firstDepartmentId,
                 'organization_department_code' => $this->departmentCode($firstDepartmentId),
                 'pic_id' => $this->picByPublicId($first)->id,
@@ -260,7 +260,7 @@ class MasterDataController extends Controller
         abort_unless($system->isSystem(), 404);
 
         DB::transaction(function () use ($request, $system): void {
-            $system->update($request->safe()->only(['name', 'description', 'color']));
+            $system->update($request->safe()->only(['name', 'description', 'color', 'plant']));
 
             ActivityLog::record($system->workspace, $system, 'system.updated', $request->user());
         });

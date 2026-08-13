@@ -8,6 +8,7 @@ use App\Actions\Workspace\CreateWorkspace;
 use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
+use App\Enums\SystemPlant;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
@@ -161,14 +162,63 @@ class SystemCatalogTest extends TestCase
         $pic = $this->member($workspace, WorkspaceRole::MEMBER);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
-            'name' => 'Payroll', 'color' => '#2eb0fb', 'description' => 'Monthly payroll runs.',
+            'name' => 'Payroll', 'plant' => SystemPlant::BODY->value, 'color' => '#2eb0fb', 'description' => 'Monthly payroll runs.',
             'pics' => [['pic_public_id' => $pic->public_id]],
         ])->assertCreated();
 
         $system = Project::where('name', 'Payroll')->firstOrFail();
         $this->assertSame(ProjectType::SYSTEM, $system->type);
+        $this->assertSame(SystemPlant::BODY, $system->plant);
         $this->assertSame($pic->id, $system->pic()->id);
         $this->assertSame(4, $system->taskStatuses()->count(), 'A system gets the same starting statuses as a project.');
+    }
+
+    public function test_creating_a_system_requires_a_plant(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+
+        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
+            'name' => 'Payroll', 'color' => '#2eb0fb',
+            'pics' => [['pic_public_id' => $pic->public_id]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('plant');
+    }
+
+    public function test_the_systems_master_lists_plant_department_and_pic_in_a_table(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $system = $this->system($workspace, $owner, 'Bella', $pic);
+        $system->update(['plant' => SystemPlant::BODY]);
+        $system->memberships()->where('user_id', $pic->id)
+            ->update(['organization_department_id' => 7, 'organization_department_code' => 'PROD']);
+
+        $this->actingAs($owner)->get(route('app.settings.master.systems', $workspace))
+            ->assertOk()
+            ->assertSee('<table', false)
+            ->assertSee('id="add-system-dialog"', false)
+            ->assertSee('Add system')
+            ->assertSee('Plant')
+            ->assertSee('Department')
+            ->assertSee('PIC')
+            ->assertSee('Body')
+            ->assertSee('Bella')
+            ->assertSee($pic->name)
+            ->assertDontSee('xl:grid-cols-[1fr_380px]', false);
+    }
+
+    public function test_two_systems_cannot_share_the_same_colour(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $this->system($workspace, $owner, 'Bella', $pic)->update(['color' => '#2eb0fb']);
+
+        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
+            'name' => 'Cubic-pro',
+            'plant' => SystemPlant::UNIT->value,
+            'color' => '#2EB0FB',
+            'pics' => [['pic_public_id' => $pic->public_id]],
+        ])->assertUnprocessable()->assertJsonValidationErrors('color');
     }
 
     public function test_several_departments_can_be_named_while_the_system_is_created(): void
@@ -178,7 +228,7 @@ class SystemCatalogTest extends TestCase
         $produksi = $this->member($workspace, WorkspaceRole::MEMBER);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
-            'name' => 'Avicenna', 'color' => '#2eb0fb',
+            'name' => 'Avicenna', 'plant' => SystemPlant::UNIT->value, 'color' => '#2eb0fb',
             'pics' => [
                 ['organization_department_id' => 7, 'pic_public_id' => $ppic->public_id],
                 ['organization_department_id' => 9, 'pic_public_id' => $produksi->public_id],
@@ -199,7 +249,7 @@ class SystemCatalogTest extends TestCase
         $second = $this->member($workspace, WorkspaceRole::MEMBER);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
-            'name' => 'Avicenna', 'color' => '#2eb0fb',
+            'name' => 'Avicenna', 'plant' => SystemPlant::ELECTRIC->value, 'color' => '#2eb0fb',
             'pics' => [
                 ['organization_department_id' => 7, 'pic_public_id' => $first->public_id],
                 ['organization_department_id' => 7, 'pic_public_id' => $second->public_id],
@@ -215,7 +265,7 @@ class SystemCatalogTest extends TestCase
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
-            'name' => 'Payroll', 'color' => '#2eb0fb',
+            'name' => 'Payroll', 'plant' => SystemPlant::BODY->value, 'color' => '#2eb0fb',
             'pics' => [['pic_public_id' => $requester->public_id]],
         ])->assertUnprocessable()->assertJsonValidationErrors('pics.0.pic_public_id');
     }

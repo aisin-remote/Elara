@@ -5,6 +5,7 @@ namespace App\Actions\Project;
 use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
+use App\Enums\SystemPlant;
 use App\Models\ActivityLog;
 use App\Models\Project;
 use App\Models\TaskStatus;
@@ -21,10 +22,13 @@ class CreateSystem
     public function handle(Workspace $workspace, User $actor, array $data): Project
     {
         return DB::transaction(function () use ($workspace, $actor, $data): Project {
+            $plant = $data['plant'] ?? SystemPlant::BODY;
+
             $system = $workspace->projects()->create([
                 'owner_id' => $actor->id,
                 'name' => $data['name'],
                 'type' => ProjectType::SYSTEM,
+                'plant' => $plant instanceof SystemPlant ? $plant : SystemPlant::from($plant),
                 'description' => $data['description'] ?? null,
                 'color' => $data['color'],
                 'status' => ProjectStatus::ACTIVE,

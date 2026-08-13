@@ -73,6 +73,13 @@ class ShareWorkspaceNavigation
                 ->values()
             : collect();
 
+        $sidebarTeamTaskMembers = $deliverySidebar
+            ? $this->organization->teamSidebarMembers($request->user(), $activeWorkspace)
+                ->sortBy(fn ($member) => strtolower($member->name))
+                ->take(8)
+                ->values()
+            : collect();
+
         $pendingApprovals = 0;
 
         if ($deliverySidebar && $request->user()->can('viewAny', [FeatureRequest::class, $activeWorkspace])) {
@@ -120,6 +127,7 @@ class ShareWorkspaceNavigation
             'sidebarProjects' => $sidebarProjects,
             'sidebarMembers' => $sidebarMembers,
             'sidebarTaskMembers' => $sidebarTaskMembers,
+            'sidebarTeamTaskMembers' => $sidebarTeamTaskMembers,
             'pendingApprovals' => $pendingApprovals,
             'organizationProfile' => $organizationProfile,
             'canApproveDepartmentRequests' => $canApproveDepartmentRequests,

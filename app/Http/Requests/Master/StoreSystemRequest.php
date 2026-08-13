@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Master;
 
+use App\Enums\ProjectType;
+use App\Enums\SystemPlant;
 use App\Models\Workspace;
 use App\Services\OrganizationDirectory;
 use Illuminate\Validation\Rule;
@@ -56,6 +58,10 @@ class StoreSystemRequest extends MasterDataRequest
      */
     protected function prepareForValidation(): void
     {
+        if ($this->filled('color')) {
+            $this->merge(['color' => strtolower($this->string('color'))]);
+        }
+
         $pics = $this->input('pics');
 
         if (! is_array($pics)) {
@@ -78,6 +84,7 @@ class StoreSystemRequest extends MasterDataRequest
             'pics.*.organization_department_id.distinct' => 'Each department can have only one PIC on a system.',
             'pics.*.organization_department_id.in' => 'Choose a department from the organisation directory.',
             'pics.*.pic_public_id.exists' => 'Choose an active member who can work on this system.',
+            'color.unique' => 'That colour is already used by another system. Pick or randomise a free one.',
         ];
     }
 
@@ -91,8 +98,17 @@ class StoreSystemRequest extends MasterDataRequest
                     ->where('workspace_id', $workspace?->id)
                     ->ignore($this->route('system')?->id),
             ],
+            'plant' => ['required', Rule::enum(SystemPlant::class)],
             'description' => ['nullable', 'string', 'max:2000'],
-            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'color' => [
+                'required',
+                'regex:/^#[0-9A-Fa-f]{6}$/',
+                Rule::unique('projects', 'color')
+                    ->where('workspace_id', $workspace?->id)
+                    ->where('type', ProjectType::SYSTEM->value)
+                    ->whereNull('deleted_at')
+                    ->ignore($this->route('system')?->id),
+            ],
         ];
     }
 }

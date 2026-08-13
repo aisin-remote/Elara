@@ -9,6 +9,7 @@ use App\Enums\FeatureRequestStatus;
 use App\Enums\ProjectRequestStatus;
 use App\Enums\ProjectType;
 use App\Enums\RequestUrgency;
+use App\Enums\SystemPlant;
 use App\Models\FeatureRequest;
 use App\Models\MemberCapacity;
 use App\Models\Project;
@@ -90,6 +91,11 @@ class RequestDeskSeeder extends Seeder
                 'name' => $name,
                 'description' => $description,
                 'color' => $color,
+                'plant' => match ($name) {
+                    'Inventory Core' => SystemPlant::BODY,
+                    'Payroll Portal' => SystemPlant::UNIT,
+                    default => SystemPlant::ELECTRIC,
+                },
                 'pic_id' => $users[$picEmail]->id,
             ]);
         }

@@ -34,6 +34,7 @@ class MasterDataController extends Controller
                 'systems' => $workspace->projects()->systems()->whereNull('archived_at')->count(),
                 'categories' => $workspace->taskCategories()->whereNull('archived_at')->count(),
                 'statuses' => TaskStatusTemplate::where('workspace_id', $workspace->id)->active()->count(),
+                'holidays' => WorkspaceHoliday::where('workspace_id', $workspace->id)->count(),
                 'articles' => SupportArticle::active()->count(),
             ],
         ]);

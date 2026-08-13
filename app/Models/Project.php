@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
+use App\Enums\SystemPlant;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
@@ -29,6 +30,7 @@ class Project extends Model
         'owner_id',
         'name',
         'type',
+        'plant',
         'description',
         'color',
         'status',
@@ -41,6 +43,7 @@ class Project extends Model
 
     protected $casts = [
         'type' => ProjectType::class,
+        'plant' => SystemPlant::class,
         'status' => ProjectStatus::class,
         'start_date' => 'date',
         'due_date' => 'date',

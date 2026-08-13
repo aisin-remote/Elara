@@ -127,6 +127,23 @@ class OrganizationDirectory
     }
 
     /**
+     * People listed under Team: lower-level members in the viewer's organisation branch
+     * within this workspace. Empty when the viewer has no subordinates.
+     *
+     * @return Collection<int, User>
+     */
+    public function teamSidebarMembers(User $viewer, Workspace $workspace): Collection
+    {
+        if (! config('organization.required')) {
+            return collect();
+        }
+
+        return $this->taskMembers($viewer, $workspace)
+            ->reject(fn (User $member) => $member->is($viewer))
+            ->values();
+    }
+
+    /**
      * The viewer plus every lower-level workspace member in the same organisation branch.
      *
      * @return Collection<int, User>

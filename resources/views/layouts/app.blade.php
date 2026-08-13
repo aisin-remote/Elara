@@ -49,14 +49,13 @@
                         @php
                             $routeProject = request()->route('project');
                             $routeSystem = request()->route('system');
-                            $routeMember = request()->route('member');
                             $viewingSystem = $routeSystem instanceof App\Models\Project
                                 || ($routeProject instanceof App\Models\Project && $routeProject->isSystem());
                             $projectCreateUrl = auth()->user()->can('create', [App\Models\Project::class, $activeWorkspace])
                                 ? route('app.projects.create', $activeWorkspace)
                                 : null;
-                            $taskRouteActive = request()->routeIs('app.tasks.*');
-                            $taskSubject = request()->string('assignee')->toString() ?: auth()->user()->public_id;
+                            $myTasksActive = request()->routeIs('app.tasks.index')
+                                && (! filled(request('assignee')) || request('assignee') === auth()->user()->public_id);
                         @endphp
 
                         <nav class="mt-2 space-y-0.5" aria-label="Main navigation">
@@ -69,27 +68,7 @@
                         </nav>
 
                         <x-sidebar.section id="work" title="Work">
-                            <details class="group" @if($taskRouteActive) open @endif>
-                                <summary class="flex h-8 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors [&::-webkit-details-marker]:hidden {{ $taskRouteActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
-                                    <x-icon name="chevron-right" class="size-3.5 shrink-0 transition-transform group-open:rotate-90" />
-                                    <x-icon name="tasks" class="size-4 {{ $taskRouteActive ? 'text-orbit-600 dark:text-orbit-300' : 'text-slate-500 dark:text-slate-400' }}" />
-                                    <span class="min-w-0 flex-1 truncate">Tasks</span>
-                                </summary>
-                                <div class="ml-4 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2 dark:border-slate-700">
-                                    @foreach ($sidebarTaskMembers as $taskMember)
-                                        @php
-                                            $isMyTasks = $taskMember->is(auth()->user());
-                                            $taskMemberActive = request()->routeIs('app.tasks.index') && $taskSubject === $taskMember->public_id;
-                                        @endphp
-                                        <a href="{{ $isMyTasks ? route('app.tasks.index', $activeWorkspace) : route('app.tasks.index', ['workspace' => $activeWorkspace, 'assignee' => $taskMember->public_id]) }}"
-                                            @if($taskMemberActive) aria-current="page" @endif
-                                            class="flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $taskMemberActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">
-                                            <span class="size-1.5 shrink-0 rounded-full {{ $isMyTasks ? 'bg-orbit-500' : 'bg-slate-300 dark:bg-slate-600' }}"></span>
-                                            <span class="truncate">{{ $isMyTasks ? 'My tasks' : $taskMember->name }}</span>
-                                        </a>
-                                    @endforeach
-                                </div>
-                            </details>
+                            <x-sidebar.item :href="route('app.tasks.index', $activeWorkspace)" icon="tasks" :active="$myTasksActive">My tasks</x-sidebar.item>
                             <x-sidebar.item :href="route('app.schedule.index', $activeWorkspace)" icon="calendar" :active="request()->routeIs('app.schedule.*')">Schedule</x-sidebar.item>
                             <x-sidebar.item :href="route('app.features.index', $activeWorkspace)" icon="board" :active="request()->routeIs('app.features.*') || $viewingSystem">Features</x-sidebar.item>
                             <x-sidebar.item :href="route('app.supporting.index', $activeWorkspace)" icon="supporting" :active="request()->routeIs('app.supporting.*')">Supporting</x-sidebar.item>
@@ -112,16 +91,16 @@
                         </x-sidebar.section>
 
                         <x-sidebar.section id="team" title="Team">
-                            @foreach ($sidebarMembers as $sidebarMember)
+                            @foreach ($sidebarTeamTaskMembers as $taskMember)
                                 @php
-                                    $memberIsCurrent = $routeMember instanceof App\Models\WorkspaceMember
-                                        && $routeMember->is($sidebarMember);
+                                    $memberTasksActive = request()->routeIs('app.tasks.index')
+                                        && request('assignee') === $taskMember->public_id;
                                 @endphp
-                                <a href="{{ route('app.workspaces.team.show', [$activeWorkspace, $sidebarMember]) }}"
-                                    @if ($memberIsCurrent) aria-current="page" @endif
-                                    class="group flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $memberIsCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
-                                    <x-avatar :src="filled($sidebarMember->user->avatar_path) ? route('internal.users.avatar', $sidebarMember->user) : null" :name="$sidebarMember->user->name" size="size-5" class="shrink-0 rounded-md" />
-                                    <span class="min-w-0 flex-1 truncate">{{ $sidebarMember->user->name }}</span>
+                                <a href="{{ route('app.tasks.index', ['workspace' => $activeWorkspace, 'assignee' => $taskMember->public_id]) }}"
+                                    @if ($memberTasksActive) aria-current="page" @endif
+                                    class="group flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $memberTasksActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
+                                    <x-avatar :src="filled($taskMember->avatar_path) ? route('internal.users.avatar', $taskMember) : null" :name="$taskMember->name" size="size-5" class="shrink-0 rounded-md" />
+                                    <span class="min-w-0 flex-1 truncate">{{ $taskMember->name }}</span>
                                 </a>
                             @endforeach
                             <x-sidebar.item :href="route('app.workspaces.team', $activeWorkspace)" icon="team" :active="request()->routeIs('app.workspaces.team')">All team</x-sidebar.item>

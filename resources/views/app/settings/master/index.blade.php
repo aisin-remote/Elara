@@ -9,14 +9,11 @@
     @include('app.settings.master._navigation')
 
     @php
+        // Help articles, member capacity, request rules, and status templates stay wired but hidden for now.
         $masters = [
             ['app.settings.master.systems', 'Systems', 'The catalog feature requests are raised against.', $counts['systems'], 'projects', true],
             ['app.settings.master.categories', 'Task categories', 'Labels tasks are grouped by across every project.', $counts['categories'], 'list', true],
-            ['app.settings.master.status-templates', 'Status template', 'The starting status set copied into every new project.', $counts['statuses'], 'board', true],
-            ['app.settings.master.articles', 'Help articles', 'Knowledge base content served by the help centre.', $counts['articles'], 'help', true],
-            [null, 'Member capacity', 'Working hours, working days, and leave used to schedule work.', null, 'team', false],
-            [null, 'Holidays', 'Non-working dates skipped when a slot is picked.', null, 'calendar', false],
-            [null, 'Request rules', 'Validation window, PIC grace period, scheduling horizon.', null, 'settings', false],
+            ['app.settings.master.holidays', 'Holidays', 'Non-working dates skipped when a slot is picked.', $counts['holidays'], 'calendar', true],
         ];
     @endphp
 

@@ -1,13 +1,10 @@
 @php
+    // Help articles, member capacity, request rules, and status templates stay wired but hidden for now.
     $masterLinks = [
         ['app.settings.master', 'Overview'],
         ['app.settings.master.systems', 'Systems'],
         ['app.settings.master.categories', 'Task categories'],
-        ['app.settings.master.status-templates', 'Status template'],
-        ['app.settings.master.articles', 'Help articles'],
-        ['app.settings.master.capacity', 'Member capacity'],
         ['app.settings.master.holidays', 'Holidays'],
-        ['app.settings.master.rules', 'Request rules'],
     ];
 @endphp
 
