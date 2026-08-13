@@ -8,7 +8,6 @@ use App\Models\FeatureRequest;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
-use App\Services\DepartmentWorkspaceService;
 use App\Services\OrganizationDirectory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -211,14 +210,21 @@ Eliminate muda transfer ke area palletizing',
     public function run(): void
     {
         $directory = app(OrganizationDirectory::class);
-        $workspace = config('organization.jit_auth')
-            ? app(DepartmentWorkspaceService::class)->deliveryWorkspace()
-            : Workspace::query()->oldest('id')->first();
+        // The configured delivery workspace when this database has it, otherwise the first
+        // workspace there is: a seeder must not die because one env value names a row that
+        // only exists on another machine.
+        $publicId = config('organization.workspace_public_id');
+        $workspace = ($publicId ? Workspace::where('public_id', $publicId)->first() : null)
+            ?? Workspace::query()->oldest('id')->first();
 
         if (! $workspace) {
-            $this->command?->warn('No workspace yet, skipping feature requests.');
+            $this->command?->warn('No workspace in this database yet — run the workspace setup first.');
 
             return;
+        }
+
+        if ($publicId && $workspace->public_id !== $publicId) {
+            $this->command?->warn('ORG_WORKSPACE_PUBLIC_ID ('.$publicId.') is not in this database; using '.$workspace->name.' instead.');
         }
 
         $imported = 0;
