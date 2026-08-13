@@ -22,6 +22,7 @@
     </div>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_360px] xl:items-start">
+        <div class="space-y-6">
         <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div>
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Current condition</h3>
@@ -43,6 +44,13 @@
             @endif
         </section>
 
+            {{-- Evidence and history read with the request, not beside the decision: the rail
+                 is for acting, this column is for everything you act on. --}}
+            <x-attachments :files="$request->attachments" />
+
+            @include('app.approvals._timeline')
+        </div>
+
         <div class="space-y-6">
             @if ($canDecide && $request->status->isAwaitingReview())
                 <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
@@ -54,10 +62,6 @@
                     Already decided — {{ $request->status->label() }}{{ $request->reviewer ? ' by '.$request->reviewer->name : '' }}.
                 </x-alert>
             @endif
-
-            <x-attachments :files="$request->attachments" />
-
-            @include('app.approvals._timeline')
         </div>
     </div>
 
