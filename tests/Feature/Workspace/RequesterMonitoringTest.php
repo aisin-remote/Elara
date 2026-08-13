@@ -171,6 +171,7 @@ class RequesterMonitoringTest extends TestCase
             'title' => 'Export the monthly stock report',
             'problem' => 'The report is assembled manually and takes too long every month.',
             'desired_outcome' => 'A secure export matching the finance spreadsheet.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => RequestUrgency::NORMAL,
             'status' => FeatureRequestStatus::IN_PROGRESS,
             'feature_id' => $feature->id,

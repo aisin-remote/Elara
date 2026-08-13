@@ -7,6 +7,8 @@
 @layer base {
     html {
         color-scheme: light;
+        /* ponytail: 90% root font = ~10% zoom out; Tailwind sizing is rem so it all scales */
+        font-size: 90%;
     }
 
     html.dark {

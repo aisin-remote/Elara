@@ -92,6 +92,7 @@ class FeatureRequestController extends Controller
                 'title' => $request->string('title')->toString(),
                 'problem' => $request->string('problem')->toString(),
                 'desired_outcome' => $request->string('desired_outcome')->toString(),
+                'benefit' => $request->string('benefit')->toString(),
                 'urgency' => $request->string('urgency')->toString(),
                 'status' => FeatureRequestStatus::DRAFT,
                 ...$organization->snapshot($profile),
@@ -140,6 +141,7 @@ class FeatureRequestController extends Controller
         $validated = $request->validate([
             'problem' => ['required', 'string', 'min:20', 'max:4000'],
             'desired_outcome' => ['required', 'string', 'min:20', 'max:4000'],
+            'benefit' => ['required', 'string', 'min:20', 'max:4000'],
         ]);
 
         $featureRequest->update($validated);

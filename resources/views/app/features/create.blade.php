@@ -6,14 +6,41 @@
 @section('content')
     @php($selectedSystem = $systems->firstWhere('public_id', old('system_public_id', request('system'))))
 
-    <div class="mx-auto max-w-4xl">
-        <section class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="new-feature-title">
-            <div class="max-w-2xl">
-                <h2 id="new-feature-title" class="text-xl font-bold">Add feature work</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500">Create work directly for a system. This skips requester approval because it is entered by the IT team.</p>
+    <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="existing-features-title">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 id="existing-features-title" class="text-xl font-bold">Already in {{ $workspace->name }}</h2>
+                    <p class="mt-1 text-sm text-slate-500">{{ $existingFeatures->count() }} recent {{ \Illuminate\Support\Str::plural('feature', $existingFeatures->count()) }}. Check here before starting a duplicate.</p>
+                </div>
+                <a href="{{ route('app.features.index', $workspace) }}" class="shrink-0 text-xs font-bold text-orbit-700 dark:text-orbit-300">Open list</a>
             </div>
 
-            <form method="POST" action="{{ route('internal.features.store', $workspace) }}" class="mt-7 space-y-5" x-data="descriptionDraft({ endpoint: @js(route('internal.ai.descriptions.store', $workspace)), kind: 'feature', initialDescription: @js(old('description', '')), aiEnabled: @js((bool) old('generate_with_ai', true)) })">
+            <div class="mt-6 space-y-3">
+                @forelse ($existingFeatures as $existing)
+                    <a href="{{ route('app.features.detail', [$workspace, $existing->project, $existing]) }}" class="flex items-center gap-3 rounded-2xl border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:hover:border-slate-700 dark:hover:bg-slate-800/60">
+                        <span class="size-3 shrink-0 rounded-full" style="background: {{ $existing->project?->color ?? '#64748b' }}"></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate font-semibold">{{ $existing->name }}</span>
+                            <span class="mt-0.5 block truncate text-xs text-slate-500">
+                                {{ $existing->project?->name }}
+                                @if ($existing->due_at)
+                                    · due {{ $existing->due_at->format('M j, Y') }}
+                                @endif
+                            </span>
+                        </span>
+                    </a>
+                @empty
+                    <x-empty-state icon="board" title="No features yet" description="This will be the first feature in the workspace." class="p-8" />
+                @endforelse
+            </div>
+        </section>
+
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="new-feature-title">
+            <h2 id="new-feature-title" class="text-xl font-bold">Add feature work</h2>
+            <p class="mt-1 text-sm leading-6 text-slate-500">Create work directly for a system. This skips requester approval because it is entered by the IT team.</p>
+
+            <form method="POST" action="{{ route('internal.features.store', $workspace) }}" class="mt-6 space-y-5" x-data="descriptionDraft({ endpoint: @js(route('internal.ai.descriptions.store', $workspace)), kind: 'feature', initialDescription: @js(old('description', '')), aiEnabled: @js((bool) old('generate_with_ai', true)) })">
                 @csrf
                 <x-form-errors />
 

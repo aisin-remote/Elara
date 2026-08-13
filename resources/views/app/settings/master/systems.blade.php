@@ -19,7 +19,7 @@
             '#14b8a6', '#6366f1', '#84cc16', '#f97316', '#06b6d4', '#a855f7',
             '#e11d48', '#0ea5e9', '#22c55e', '#eab308', '#64748b', '#d946ef',
         ];
-        $takenColors = $systems->pluck('color')->map(fn ($color) => strtolower($color))->values();
+        $takenColors = $takenColors->filter()->map(fn ($color) => strtolower($color))->values();
         $defaultColor = collect($colorPalette)->first(
             fn (string $color) => ! $takenColors->contains(strtolower($color))
         ) ?? '#2eb0fb';
@@ -32,7 +32,7 @@
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="systems-title">
         <div class="flex flex-col gap-3 border-b border-slate-200 p-5 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <h3 id="systems-title" class="text-lg font-bold">{{ $systems->count() }} {{ \Illuminate\Support\Str::plural('system', $systems->count()) }}</h3>
+                <h3 id="systems-title" class="text-lg font-bold">{{ $systems->total() }} {{ \Illuminate\Support\Str::plural('system', $systems->total()) }}</h3>
                 <p class="mt-1 text-xs text-slate-500">Feature requests are raised against these. Each needs a PIC before it can receive one.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -118,6 +118,7 @@
                     </tbody>
                 </table>
             </div>
+            <x-pagination :paginator="$systems" class="border-t border-slate-200 p-4 dark:border-slate-800" />
         @endif
     </section>
 

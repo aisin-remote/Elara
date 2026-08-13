@@ -54,8 +54,9 @@ class FeatureRequestFlowTest extends TestCase
                 ...$this->payload($system),
                 'problem' => 'broken',
                 'desired_outcome' => 'fix it',
+                'benefit' => 'faster',
             ])
-            ->assertSessionHasErrors(['problem', 'desired_outcome']);
+            ->assertSessionHasErrors(['problem', 'desired_outcome', 'benefit']);
 
         $this->assertSame(0, FeatureRequest::count());
     }
@@ -128,6 +129,7 @@ class FeatureRequestFlowTest extends TestCase
         $this->actingAs($requester)->post(route('desk.requests.resubmit', $request), [
             'problem' => 'The monthly stock report is assembled by hand and takes two days.',
             'desired_outcome' => 'A download button that produces the same columns we use now.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
         ])->assertRedirect();
 
         $this->assertSame(FeatureRequestStatus::PENDING_REVIEW, $request->fresh()->status);
@@ -233,6 +235,7 @@ class FeatureRequestFlowTest extends TestCase
             'title' => 'Export the monthly stock report',
             'problem' => 'We copy the numbers into a spreadsheet by hand every month and it takes two days.',
             'desired_outcome' => 'A download button that produces the same columns we already use.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => 'normal',
         ];
     }

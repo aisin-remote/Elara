@@ -7,7 +7,7 @@
     <div class="border-b border-slate-200 pb-6 dark:border-slate-800">
         <h2 class="text-2xl font-bold tracking-tight">Request a change</h2>
         <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-            Describe the problem and what a good outcome looks like. A supervisor will review it,
+            Describe the current condition, the target condition, and the benefit. A supervisor will review it,
             then ITD will turn it into planned work. You do not need to design the solution.
         </p>
     </div>
@@ -29,7 +29,7 @@
 
     @include('desk._how-it-works', [
         'steps' => [
-            ['Describe the problem', 'Explain what is difficult today and what outcome you expect. Focus on the need, not how to build it.', 'You'],
+            ['Describe the need', 'Explain the current condition, the target condition, and the benefit. Focus on the need, not how to build it.', 'You'],
             ['Supervisor review', 'The reviewer approves it, rejects it with a reason, or asks you for more information.', 'Supervisor'],
             ['Capacity scheduling', 'Approved requests are scheduled against real team capacity.', 'Automatic'],
             ['Work planning', 'ITD breaks the request into estimated tasks and the assignee reviews the plan before work starts.', 'ITD'],
@@ -37,7 +37,7 @@
             ['Delivered', 'After the final task and validation are complete, the request moves to History.', 'ITD'],
         ],
         'writing' => [
-            'Explain the problem rather than prescribing a solution. ITD may know a simpler route to the same result.',
+            'Explain the current condition rather than prescribing a solution. ITD may know a simpler route to the same result.',
             'Include how often it happens and how much time it consumes.',
             'Select the system you actually use, even if you are unsure where the change belongs.',
             'Mark a request urgent only when waiting creates real harm.',
@@ -74,15 +74,21 @@
                 </div>
 
                 <div>
-                    <x-label for="problem">What is the current problem?</x-label>
+                    <x-label for="problem">Current condition</x-label>
                     <x-textarea id="problem" name="problem" rows="4" placeholder="We copy the figures into a spreadsheet every month. It takes two days and frequently introduces errors.">{{ old('problem') }}</x-textarea>
                     <x-field-error name="problem" />
                 </div>
 
                 <div>
-                    <x-label for="desired_outcome">What outcome do you expect?</x-label>
+                    <x-label for="desired_outcome">Target condition</x-label>
                     <x-textarea id="desired_outcome" name="desired_outcome" rows="4" placeholder="I can download the same report directly from the system with the columns we already use.">{{ old('desired_outcome') }}</x-textarea>
                     <x-field-error name="desired_outcome" />
+                </div>
+
+                <div>
+                    <x-label for="benefit">Benefit</x-label>
+                    <x-textarea id="benefit" name="benefit" rows="4" placeholder="Saves about two staff days each month and reduces transcription errors in the finance report.">{{ old('benefit') }}</x-textarea>
+                    <x-field-error name="benefit" />
                 </div>
 
                 <div>

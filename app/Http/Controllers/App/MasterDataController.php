@@ -85,7 +85,10 @@ class MasterDataController extends Controller
                 ->with('members:id,public_id,first_name,last_name,avatar_path')
                 ->withCount(['features as active_features_count' => fn (Builder $query) => $query->whereNull('archived_at')])
                 ->orderBy('name')
-                ->get(),
+                ->paginate(5)
+                ->withQueryString(),
+            // Every colour in use, not just the current page: the add form has to skip them all.
+            'takenColors' => $workspace->projects()->systems()->pluck('color'),
             // A requester can never be a PIC: they cannot open the delivery desk at all.
             'candidates' => $workspace->memberships()
                 ->active()

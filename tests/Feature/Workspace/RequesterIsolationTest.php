@@ -159,6 +159,7 @@ class RequesterIsolationTest extends TestCase
             'title' => $title,
             'problem' => 'The current process is manual and takes far longer than anyone budgeted for.',
             'desired_outcome' => 'The same output, produced by the system rather than by hand.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => RequestUrgency::NORMAL,
             'status' => FeatureRequestStatus::PENDING_REVIEW,
         ]);

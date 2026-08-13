@@ -182,6 +182,7 @@ class RequestAttachmentTest extends TestCase
             'title' => 'Export the monthly stock report',
             'problem' => 'We copy the numbers by hand every month and it takes two days.',
             'desired_outcome' => 'A download button producing the columns finance already uses.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => RequestUrgency::NORMAL,
             'status' => FeatureRequestStatus::PENDING_REVIEW,
         ]);

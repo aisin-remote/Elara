@@ -75,8 +75,9 @@
                             <tr x-show="open" x-cloak>
                                 <td colspan="5" class="px-4 pb-5">
                                     <dl class="grid gap-4 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2 dark:bg-slate-800/60">
-                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Problem</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->problem }}</dd></div>
-                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Desired outcome</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->desired_outcome }}</dd></div>
+                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Current condition</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->problem }}</dd></div>
+                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Target condition</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->desired_outcome }}</dd></div>
+                                        <div><dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Benefit</dt><dd class="mt-1 whitespace-pre-line leading-6">{{ $request->benefit }}</dd></div>
                                     </dl>
 
                                     @if ($canDecide)

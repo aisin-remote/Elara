@@ -25,6 +25,15 @@ class FeatureController extends Controller
                 ->whereNull('archived_at')
                 ->orderBy('name')
                 ->get(),
+            // Same duplicate check the project create screen offers.
+            'existingFeatures' => Feature::query()
+                ->where('workspace_id', $workspace->id)
+                ->whereNull('archived_at')
+                ->whereHas('project') // detail route needs a live system in the URL
+                ->with('project:id,public_id,name,color')
+                ->latest()
+                ->take(8)
+                ->get(),
         ]);
     }
 

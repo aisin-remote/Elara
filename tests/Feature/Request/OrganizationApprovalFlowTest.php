@@ -163,6 +163,7 @@ class OrganizationApprovalFlowTest extends TestCase
         $this->actingAs($requester)->post(route('desk.requests.resubmit', $feature), [
             'problem' => 'The monthly stock report is assembled manually every week and often contains errors.',
             'desired_outcome' => 'A verified export that finance can use every week without copying columns manually.',
+            'benefit' => 'Finance stops rebuilding the weekly stock report by hand.',
         ])->assertRedirect();
 
         $this->assertSame(FeatureRequestStatus::PENDING_DEPARTMENT, $feature->fresh()->status);
@@ -348,6 +349,7 @@ class OrganizationApprovalFlowTest extends TestCase
             'title' => 'Export the monthly stock report',
             'problem' => 'We copy the numbers into a spreadsheet by hand every month and it takes two days.',
             'desired_outcome' => 'A download button that produces the same columns we already use.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => 'normal',
         ];
     }

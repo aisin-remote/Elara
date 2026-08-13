@@ -185,6 +185,7 @@ class RequestDeskSeeder extends Seeder
                     'requester_id' => $requester->id,
                     'problem' => $problem,
                     'desired_outcome' => $outcome,
+                    'benefit' => 'Reduces manual work and the errors that come with it.',
                     'urgency' => $urgency,
                     'status' => $status,
                     'reviewed_by' => $decided ? $supervisor->id : null,

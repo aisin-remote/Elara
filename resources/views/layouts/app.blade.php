@@ -80,12 +80,12 @@
                                     $projectIsCurrent = $routeProject instanceof App\Models\Project
                                         && $routeProject->is($sidebarProject);
                                 @endphp
-                                <a href="{{ route('app.projects.show', $sidebarProject) }}"
-                                    @if ($projectIsCurrent) aria-current="page" @endif
-                                    class="group flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $projectIsCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
-                                    <span class="size-2.5 shrink-0 rounded-sm" style="background-color: {{ $sidebarProject->color ?? '#64748b' }}"></span>
-                                    <span class="min-w-0 flex-1 truncate">{{ $sidebarProject->name }}</span>
-                                </a>
+                                <x-sidebar.item :href="route('app.projects.show', $sidebarProject)" :active="$projectIsCurrent">
+                                    <x-slot:lead>
+                                        <span class="ml-1 size-2.5 shrink-0 rounded-sm" style="background-color: {{ $sidebarProject->color ?? '#64748b' }}"></span>
+                                    </x-slot:lead>
+                                    {{ $sidebarProject->name }}
+                                </x-sidebar.item>
                             @endforeach
                             <x-sidebar.item :href="route('app.projects.index', $activeWorkspace)" icon="projects" :active="request()->routeIs('app.projects.index', 'app.projects.create')">All projects</x-sidebar.item>
                         </x-sidebar.section>
@@ -96,12 +96,12 @@
                                     $memberTasksActive = request()->routeIs('app.tasks.index')
                                         && request('assignee') === $taskMember->public_id;
                                 @endphp
-                                <a href="{{ route('app.tasks.index', ['workspace' => $activeWorkspace, 'assignee' => $taskMember->public_id]) }}"
-                                    @if ($memberTasksActive) aria-current="page" @endif
-                                    class="group flex h-8 items-center gap-2 rounded-md px-2 text-[13px] font-medium transition-colors {{ $memberTasksActive ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white' }}">
-                                    <x-avatar :src="filled($taskMember->avatar_path) ? route('internal.users.avatar', $taskMember) : null" :name="$taskMember->name" size="size-5" class="shrink-0 rounded-md" />
-                                    <span class="min-w-0 flex-1 truncate">{{ $taskMember->name }}</span>
-                                </a>
+                                <x-sidebar.item :href="route('app.tasks.index', ['workspace' => $activeWorkspace, 'assignee' => $taskMember->public_id])" :active="$memberTasksActive">
+                                    <x-slot:lead>
+                                        <x-avatar :src="filled($taskMember->avatar_path) ? route('internal.users.avatar', $taskMember) : null" :name="$taskMember->name" size="size-5" class="shrink-0 rounded-md" />
+                                    </x-slot:lead>
+                                    {{ $taskMember->name }}
+                                </x-sidebar.item>
                             @endforeach
                             <x-sidebar.item :href="route('app.workspaces.team', $activeWorkspace)" icon="team" :active="request()->routeIs('app.workspaces.team')">All team</x-sidebar.item>
                         </x-sidebar.section>
@@ -121,8 +121,8 @@
                     <div class="mt-1 flex items-center gap-2 rounded-md px-2 py-1.5">
                         <x-avatar :src="filled(auth()->user()->avatar_path) ? route('internal.users.avatar', auth()->user()) : null" :name="auth()->user()->name" size="size-6" class="shrink-0 rounded-md" />
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-[12px] font-medium text-slate-700 dark:text-slate-200">{{ auth()->user()->name }}</p>
-                            <p class="truncate text-[10px] text-slate-400 dark:text-slate-500">{{ auth()->user()->email }}</p>
+                            <p class="truncate text-[13px] font-medium text-slate-700 dark:text-slate-200">{{ auth()->user()->name }}</p>
+                            <p class="truncate text-[11px] text-slate-400 dark:text-slate-500">{{ auth()->user()->email }}</p>
                         </div>
                         <form method="POST" action="{{ route('logout') }}" class="shrink-0">
                             @csrf
@@ -151,10 +151,10 @@
                     <div class="flex items-center gap-3">
                         @if ($activeWorkspace)
                             <button type="button" x-on:click="$dispatch('open-global-search')" class="grid size-10 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 md:hidden dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900" aria-label="Open global search"><x-icon name="search" /></button>
-                            <button type="button" x-on:click="$dispatch('open-global-search')" class="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600 hover:border-slate-300 hover:bg-white md:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800" aria-label="Open global search">
+                            <button type="button" x-on:click="$dispatch('open-global-search')" class="hidden h-10 w-72 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600 hover:border-slate-300 hover:bg-white md:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800" aria-label="Open global search">
                                 <x-icon name="search" class="text-slate-400" />
                                 <span>Search</span>
-                                <kbd class="ml-2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">Ctrl K</kbd>
+                                <kbd class="ml-auto rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500">Ctrl K</kbd>
                             </button>
                         @endif
                         <div data-notification-center data-url="{{ route('internal.notifications.index') }}" data-read-all-url="{{ route('internal.notifications.read-all') }}" data-workspace="{{ $activeWorkspace?->public_id }}" data-user="{{ auth()->user()->public_id }}" class="relative">

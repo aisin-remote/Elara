@@ -103,6 +103,7 @@ class RequestQueueTest extends TestCase
             'title' => 'Export the monthly stock report',
             'problem' => 'We copy the numbers into a spreadsheet by hand every month and it takes two days.',
             'desired_outcome' => 'A download button that produces the same columns we already use.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => RequestUrgency::NORMAL,
             'status' => FeatureRequestStatus::PENDING_REVIEW,
         ]);
@@ -150,6 +151,7 @@ class RequestQueueTest extends TestCase
             'title' => 'Approved at '.$reviewedAt,
             'problem' => 'The current process is manual and takes far longer than anyone budgeted for.',
             'desired_outcome' => 'The same output, produced by the system rather than by hand.',
+            'benefit' => 'Saves about two staff days each month and reduces transcription errors.',
             'urgency' => RequestUrgency::NORMAL,
             'status' => FeatureRequestStatus::APPROVED,
             'reviewed_by' => $reviewer->id,

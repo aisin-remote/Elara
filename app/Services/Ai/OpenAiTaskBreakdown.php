@@ -213,8 +213,9 @@ class OpenAiTaskBreakdown implements TaskBreakdownGenerator
         if ($subject instanceof FeatureRequest) {
             return implode("\n", [
                 'Title: '.$subject->title,
-                'Problem: '.$subject->problem,
-                'Desired outcome: '.$subject->desired_outcome,
+                'Current condition: '.$subject->problem,
+                'Target condition: '.$subject->desired_outcome,
+                'Benefit: '.$subject->benefit,
                 'Urgency: '.$subject->urgency->value,
             ]);
         }

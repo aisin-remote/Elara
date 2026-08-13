@@ -79,7 +79,9 @@ class SystemCatalogTest extends TestCase
         $this->actingAs($owner)->get(route('app.features.index', $workspace))
             ->assertOk()
             ->assertSee('Inventory Core')
-            ->assertDontSee('New feature')
+            // The system is picked inside the form, so the button does not need one yet.
+            ->assertSee('New feature')
+            ->assertSee(route('app.features.create', $workspace), false)
             ->assertSee('title="Bagas Nugroho"', false);
 
         $this->actingAs($owner)->get(route('app.features.show', [$workspace, $system]))

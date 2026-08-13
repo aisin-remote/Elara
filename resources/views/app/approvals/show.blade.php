@@ -24,12 +24,16 @@
     <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_360px] xl:items-start">
         <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div>
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">The problem</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Current condition</h3>
                 <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->problem }}</p>
             </div>
             <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">What done looks like</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Target condition</h3>
                 <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->desired_outcome }}</p>
+            </div>
+            <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Benefit</h3>
+                <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->benefit }}</p>
             </div>
             @if ($request->decision_note)
                 <div class="border-t border-slate-100 pt-5 dark:border-slate-800">

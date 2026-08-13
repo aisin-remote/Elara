@@ -13,6 +13,9 @@
             @can('manageMasterData', $workspace)
                 <x-link-button href="{{ route('app.settings.master.systems', $workspace) }}" variant="secondary">Manage systems</x-link-button>
             @endcan
+            @can('create', [App\Models\Project::class, $workspace])
+                <x-link-button href="{{ route('app.features.create', $workspace) }}"><x-icon name="plus" />New feature</x-link-button>
+            @endcan
         </div>
     </div>
 

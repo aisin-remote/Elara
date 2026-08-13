@@ -32,6 +32,7 @@ class StoreFeatureRequestRequest extends FormRequest
             'title' => ['required', 'string', 'max:200'],
             'problem' => ['required', 'string', 'min:20', 'max:4000'],
             'desired_outcome' => ['required', 'string', 'min:20', 'max:4000'],
+            'benefit' => ['required', 'string', 'min:20', 'max:4000'],
             'urgency' => ['required', Rule::enum(RequestUrgency::class)],
         ];
     }
@@ -39,8 +40,9 @@ class StoreFeatureRequestRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'problem.min' => 'Describe the problem in a sentence or two — a thin request produces thin work.',
-            'desired_outcome.min' => 'Describe what "done" looks like from your side.',
+            'problem.min' => 'Describe the current condition in a sentence or two — a thin request produces thin work.',
+            'desired_outcome.min' => 'Describe the target condition — what "done" looks like from your side.',
+            'benefit.min' => 'Describe the benefit this change would bring.',
         ];
     }
 

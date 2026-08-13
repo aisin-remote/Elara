@@ -20,7 +20,7 @@ class FeatureRequest extends Model
     use GeneratesPublicId, HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'workspace_id', 'project_id', 'requester_id', 'title', 'problem', 'desired_outcome',
+        'workspace_id', 'project_id', 'requester_id', 'title', 'problem', 'desired_outcome', 'benefit',
         'urgency', 'status', 'reviewed_by', 'reviewed_at', 'decision_note', 'feature_id',
         'estimated_minutes', 'version', 'organization_user_id', 'requester_job_rank_code',
         'requester_job_rank_name', 'requester_division_external_id', 'requester_division_code',

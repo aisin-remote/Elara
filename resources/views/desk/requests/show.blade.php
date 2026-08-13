@@ -36,8 +36,9 @@
             @can('resubmit', $request)
                 <form method="POST" action="{{ route('desk.requests.resubmit', $request) }}" class="mt-5 space-y-4">
                     @csrf
-                    <div><x-label for="problem">What is the current problem?</x-label><x-textarea id="problem" name="problem" rows="4" required>{{ old('problem', $request->problem) }}</x-textarea><x-field-error name="problem" /></div>
-                    <div><x-label for="desired_outcome">What outcome do you expect?</x-label><x-textarea id="desired_outcome" name="desired_outcome" rows="4" required>{{ old('desired_outcome', $request->desired_outcome) }}</x-textarea><x-field-error name="desired_outcome" /></div>
+                    <div><x-label for="problem">Current condition</x-label><x-textarea id="problem" name="problem" rows="4" required>{{ old('problem', $request->problem) }}</x-textarea><x-field-error name="problem" /></div>
+                    <div><x-label for="desired_outcome">Target condition</x-label><x-textarea id="desired_outcome" name="desired_outcome" rows="4" required>{{ old('desired_outcome', $request->desired_outcome) }}</x-textarea><x-field-error name="desired_outcome" /></div>
+                    <div><x-label for="benefit">Benefit</x-label><x-textarea id="benefit" name="benefit" rows="4" required>{{ old('benefit', $request->benefit) }}</x-textarea><x-field-error name="benefit" /></div>
                     <x-button>Resubmit for review</x-button>
                 </form>
             @endcan
@@ -51,12 +52,16 @@
     <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
         <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
             <div>
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Problem</h2>
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Current condition</h2>
                 <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->problem }}</p>
             </div>
             <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Expected outcome</h2>
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Target condition</h2>
                 <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->desired_outcome }}</p>
+            </div>
+            <div class="border-t border-slate-100 pt-5 dark:border-slate-800">
+                <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Benefit</h2>
+                <p class="mt-2 whitespace-pre-line text-sm leading-6">{{ $request->benefit }}</p>
             </div>
         </section>
 
