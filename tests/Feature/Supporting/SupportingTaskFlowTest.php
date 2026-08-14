@@ -96,7 +96,11 @@ class SupportingTaskFlowTest extends TestCase
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
 
         $this->actingAs($requester)->get(route('desk.supporting.create', $workspace))
-            ->assertOk()->assertSee('Ask ITD for operational support');
+            ->assertOk()
+            ->assertSee('Request operational support')
+            ->assertSee('Sent directly to ITD')
+            ->assertSee('How it works')
+            ->assertSee('Request details');
         $this->actingAs($requester)->post(route('desk.supporting.store', $workspace), [
             'title' => 'Repair meeting room printer',
             'description' => 'The printer is online but every print job remains queued.',
@@ -107,7 +111,10 @@ class SupportingTaskFlowTest extends TestCase
         $task = SupportingTask::where('creator_id', $requester->id)->firstOrFail();
         $this->assertSame(SupportingTaskStatus::TODO, $task->status);
         $this->actingAs($requester)->get(route('desk.supporting.show', $task))
-            ->assertOk()->assertSee('Waiting for ITD assignment');
+            ->assertOk()
+            ->assertSee('All requests')
+            ->assertSee('Request details')
+            ->assertSee('Waiting for ITD assignment');
     }
 
     private function workspace(): array
