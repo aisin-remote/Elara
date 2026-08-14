@@ -29,6 +29,15 @@ class MasterDataTest extends TestCase
         foreach (['app.settings.master', 'app.settings.master.categories', 'app.settings.master.status-templates', 'app.settings.master.articles'] as $routeName) {
             $this->actingAs($owner)->get(route($routeName, $workspace))->assertOk();
         }
+        $this->actingAs($owner)->get(route('app.settings.master.status-templates', $workspace))
+            ->assertSee('Workflow')
+            ->assertDontSee('Workflow defaults')
+            ->assertDontSee('Status template');
+        $this->actingAs($owner)->get(route('app.settings.master', $workspace))
+            ->assertSee('Workflow')
+            ->assertSee(route('app.settings.master.status-templates', $workspace), false)
+            ->assertDontSee('Holidays')
+            ->assertDontSee(route('app.settings.master.holidays', $workspace), false);
 
         foreach ([WorkspaceRole::MANAGER, WorkspaceRole::SUPERVISOR, WorkspaceRole::MEMBER, WorkspaceRole::VIEWER] as $role) {
             $this->actingAs($this->member($workspace, $role))

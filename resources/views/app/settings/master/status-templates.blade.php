@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Status template')
+@section('title', 'Workflow')
 @section('page-title', 'Settings')
-@section('master-title', 'Status template')
+@section('master-title', 'Workflow')
 
 @section('content')
     @include('app.settings._navigation')
@@ -10,7 +10,7 @@
 
     @if ($usesFallback)
         <x-alert variant="info" class="mb-6 max-w-none">
-            No template yet, so new projects start with the built-in set: Outstanding, In Progress, Pending, Done. Add a status below and the built-in set stops being used.
+            No workflow statuses have been configured, so new projects start with the built-in set: Outstanding, In Progress, Pending, Done. Add a status below and the built-in set stops being used.
         </x-alert>
     @endif
 
@@ -59,7 +59,7 @@
                     </form>
                 </div>
             @empty
-                <div class="p-5"><x-empty-state icon="board" title="No template statuses" description="Add the statuses your projects normally start with; order follows the order you add them." /></div>
+                <div class="p-5"><x-empty-state icon="board" title="No workflow statuses" description="Add the statuses your projects normally start with; order follows the order you add them." /></div>
             @endforelse
         </section>
 

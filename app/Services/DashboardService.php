@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProjectType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceRole;
@@ -410,7 +411,8 @@ class DashboardService
 
     private function gantt(Workspace $workspace, User $user, array $filters, string $timezone): array
     {
-        $scale = $filters['gantt_scale'] ?? 'monthly';
+        $view = $filters['gantt_view'] ?? 'projects';
+        $scale = $filters['gantt_scale'] ?? ($view === 'tasks' ? 'weekly' : 'monthly');
         $today = CarbonImmutable::now($timezone);
         [$from, $to] = match ($scale) {
             'weekly' => [$today->startOfWeek()->subWeeks(2), $today->endOfWeek()->addWeeks(9)],
@@ -419,7 +421,7 @@ class DashboardService
             default => [$today->startOfDay()->subDays(3), $today->endOfDay()->addDays(10)],
         };
         $rangeSeconds = max(1, $from->diffInSeconds($to));
-        $projects = Project::query()->delivery()->visibleTo($user)
+        $projects = $view === 'projects' ? Project::query()->delivery()->visibleTo($user)
             ->where('workspace_id', $workspace->id)
             ->whereNull('archived_at')
             ->whereNotNull('start_date')
@@ -438,7 +440,7 @@ class DashboardService
                     ->whereHas('status', fn (Builder $status) => $status->where('category', '!=', TaskStatusCategory::CANCELLED->value)),
             ])
             ->orderBy('start_date')
-            ->limit(12)
+            ->limit(5)
             ->get()
             ->map(function (Project $project) use ($from, $rangeSeconds, $timezone): array {
                 $start = CarbonImmutable::createFromFormat('!Y-m-d', $project->start_date->format('Y-m-d'), $timezone)->startOfDay();
@@ -452,6 +454,7 @@ class DashboardService
                 return [
                     'public_id' => $project->public_id,
                     'name' => $project->name,
+                    'url' => route('app.projects.show', $project),
                     'color' => $project->color ?: '#2eb0fb',
                     'start' => $start->format('Y-m-d'),
                     'due' => $due->format('Y-m-d'),
@@ -465,7 +468,62 @@ class DashboardService
                         'has_avatar' => filled($member->avatar_path),
                     ])->values()->all(),
                 ];
-            })->all();
+            })->all() : [];
+
+        $tasks = $view === 'tasks' ? $this->taskQuery($workspace, $user, $filters)
+            ->whereHas('project', fn (Builder $project) => $project->whereNull('archived_at'))
+            ->where(function (Builder $owned) use ($user): void {
+                $owned->whereHas('project', fn (Builder $project) => $project
+                    ->where('type', ProjectType::PERSONAL->value)
+                    ->where('owner_id', $user->id))
+                    ->orWhereHas('assignees', fn (Builder $assignees) => $assignees->where('users.id', $user->id));
+            })
+            ->whereRaw('COALESCE(start_at, due_at, created_at) <= ?', [$to->utc()->toDateTimeString()])
+            ->whereRaw('COALESCE(due_at, start_at, created_at) >= ?', [$from->utc()->toDateTimeString()])
+            ->with([
+                'project:id,public_id,name,color,type,owner_id,archived_at',
+                'status:id,category',
+                'assignees:id,public_id,first_name,last_name,avatar_path',
+            ])
+            ->withCount([
+                'checklistItems as gantt_checklist_total',
+                'checklistItems as gantt_checklist_completed' => fn (Builder $items) => $items->where('is_completed', true),
+            ])
+            ->orderByRaw('COALESCE(start_at, due_at, created_at)')
+            ->limit(5)
+            ->get()
+            ->map(function (Task $task) use ($from, $rangeSeconds, $timezone, $user): array {
+                $start = CarbonImmutable::instance($task->start_at ?? $task->due_at ?? $task->created_at)->setTimezone($timezone);
+                $due = CarbonImmutable::instance($task->due_at ?? $task->start_at ?? $task->created_at)->setTimezone($timezone)->max($start);
+                $visibleStart = $start->max($from);
+                $visibleEnd = $due->min($from->addSeconds($rangeSeconds));
+                $left = round($from->diffInSeconds($visibleStart) / $rangeSeconds * 100, 3);
+                $width = max(1.25, round($visibleStart->diffInSeconds($visibleEnd) / $rangeSeconds * 100, 3));
+                $checklistTotal = (int) $task->gantt_checklist_total;
+                $progress = $checklistTotal
+                    ? (int) round($task->gantt_checklist_completed / $checklistTotal * 100)
+                    : (in_array($task->status->category, [TaskStatusCategory::COMPLETED->value, TaskStatusCategory::CANCELLED->value]) ? 100 : 0);
+                $members = $task->assignees->isNotEmpty() ? $task->assignees : collect([$user]);
+
+                return [
+                    'public_id' => $task->public_id,
+                    'name' => $task->title,
+                    'url' => route('app.tasks.show', $task),
+                    'context' => $task->project->isPersonal() ? 'Personal task' : $task->project->name,
+                    'color' => $task->project->color ?: '#6366f1',
+                    'date_label' => $start->isSameDay($due)
+                        ? $start->format('M j, Y')
+                        : $start->format('M j').' – '.$due->format('M j, Y'),
+                    'progress' => $progress,
+                    'left' => $left,
+                    'width' => min(100 - $left, $width),
+                    'members' => $members->take(3)->map(fn (User $member) => [
+                        'public_id' => $member->public_id,
+                        'name' => $member->name,
+                        'has_avatar' => filled($member->avatar_path),
+                    ])->values()->all(),
+                ];
+            })->all() : [];
 
         $ticks = [];
         $cursor = $from;
@@ -488,6 +546,7 @@ class DashboardService
         }
 
         return [
+            'view' => $view,
             'scale' => $scale,
             'from' => $from->format('Y-m-d'),
             'to' => $to->format('Y-m-d'),
@@ -502,6 +561,7 @@ class DashboardService
                 default => 760,
             },
             'projects' => $projects,
+            'tasks' => $tasks,
         ];
     }
 

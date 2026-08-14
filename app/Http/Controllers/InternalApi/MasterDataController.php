@@ -85,7 +85,7 @@ class MasterDataController extends Controller
 
         ActivityLog::record($workspace, $template, 'task_status_template.created', $request->user());
 
-        return $this->success($request, ['public_id' => $template->public_id], 'Status template added.', back()->getTargetUrl(), 201);
+        return $this->success($request, ['public_id' => $template->public_id], 'Workflow status added.', back()->getTargetUrl(), 201);
     }
 
     public function updateStatusTemplate(StoreTaskStatusTemplateRequest $request, TaskStatusTemplate $template): JsonResponse|RedirectResponse
@@ -93,7 +93,7 @@ class MasterDataController extends Controller
         $template->update($request->safe()->only(['name', 'color', 'category']));
         ActivityLog::record($template->workspace, $template, 'task_status_template.updated', $request->user());
 
-        return $this->success($request, ['public_id' => $template->public_id], 'Status template updated.', back()->getTargetUrl());
+        return $this->success($request, ['public_id' => $template->public_id], 'Workflow status updated.', back()->getTargetUrl());
     }
 
     public function archiveStatusTemplate(MasterActionRequest $request, TaskStatusTemplate $template): JsonResponse|RedirectResponse
@@ -102,7 +102,7 @@ class MasterDataController extends Controller
         $template->update(['archived_at' => $template->archived_at ? null : now()]);
         ActivityLog::record($template->workspace, $template, $template->archived_at ? 'task_status_template.archived' : 'task_status_template.restored', $request->user());
 
-        return $this->success($request, ['public_id' => $template->public_id], $template->archived_at ? 'Status template archived.' : 'Status template restored.', back()->getTargetUrl());
+        return $this->success($request, ['public_id' => $template->public_id], $template->archived_at ? 'Workflow status archived.' : 'Workflow status restored.', back()->getTargetUrl());
     }
 
     public function storeArticle(StoreSupportArticleRequest $request): JsonResponse|RedirectResponse

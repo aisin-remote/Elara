@@ -36,7 +36,9 @@ class LegacyFeatureRequestSeeder extends Seeder
     /** Old final_status → where the request sits in Orbitra's flow. */
     private const STATUSES = [
         'manager approve' => FeatureRequestStatus::PENDING_REVIEW,
-        'it approve' => FeatureRequestStatus::APPROVED,
+        // Legacy IT approval has no Orbitra estimate, reviewer, or AI plan. Put it back in
+        // IT review so the current approval flow can collect those before scheduling it.
+        'it approve' => FeatureRequestStatus::PENDING_REVIEW,
         'on progress' => FeatureRequestStatus::IN_PROGRESS,
     ];
 
@@ -228,6 +230,7 @@ Eliminate muda transfer ke area palletizing',
         }
 
         $imported = 0;
+        $repaired = 0;
         $skipped = [];
 
         foreach (static::rows() as $row) {
@@ -259,6 +262,11 @@ Eliminate muda transfer ke area palletizing',
             ]);
 
             if ($request->exists) {
+                if ($this->needsItReviewRepair($request, $row)) {
+                    $request->update(['status' => FeatureRequestStatus::PENDING_REVIEW]);
+                    $repaired++;
+                }
+
                 continue;
             }
 
@@ -279,7 +287,7 @@ Eliminate muda transfer ke area palletizing',
             $imported++;
         }
 
-        $this->command?->info($imported.' legacy feature requests imported into '.$workspace->name.'.');
+        $this->command?->info($imported.' legacy feature requests imported and '.$repaired.' returned to IT review in '.$workspace->name.'.');
 
         foreach ($skipped as $note) {
             $this->command?->warn('Skipped '.$note);
@@ -290,6 +298,19 @@ Eliminate muda transfer ke area palletizing',
     protected static function rows(): array
     {
         return static::REQUESTS;
+    }
+
+    /** Only repairs untouched rows imported by the older mapping; real Orbitra decisions stay put. */
+    private function needsItReviewRepair(FeatureRequest $request, array $row): bool
+    {
+        return strcasecmp((string) ($row['status'] ?? ''), 'IT Approve') === 0
+            && $request->status === FeatureRequestStatus::APPROVED
+            && $request->version === 1
+            && $request->reviewed_at === null
+            && $request->estimated_minutes === null
+            && $request->assignee_id === null
+            && $request->scheduled_start === null
+            && $request->breakdowns()->doesntExist();
     }
 
     private function system(Workspace $workspace, ?string $application): ?Project

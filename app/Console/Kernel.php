@@ -17,6 +17,10 @@ class Kernel extends ConsoleKernel
         // After the drain: a takedown in this sweep frees capacity the next drain absorbs.
         $schedule->command('orbitra:sweep-validations')->hourly()->withoutOverlapping();
         $schedule->command('orbitra:generate-weekly-insights')->weeklyOn(1, '08:00')->withoutOverlapping();
+        $schedule->command('orbitra:sync-holidays')
+            ->monthlyOn(1, '02:00')
+            ->timezone('Asia/Jakarta')
+            ->withoutOverlapping();
 
         // Drains the queue from the same cron entry that runs this scheduler, so a deployment
         // needs one crontab line and no second process manager.

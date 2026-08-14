@@ -37,6 +37,7 @@
         <label class="min-w-40 flex-1 sm:flex-none"><span class="mb-1 block text-xs font-semibold text-slate-500">From</span><x-input type="date" name="from" value="{{ $dashboard['period']['from'] }}" /></label>
         <label class="min-w-40 flex-1 sm:flex-none"><span class="mb-1 block text-xs font-semibold text-slate-500">To</span><x-input type="date" name="to" value="{{ $dashboard['period']['to'] }}" /></label>
         <input type="hidden" name="distribution" value="{{ $dashboard['distribution']['type'] }}">
+        <input type="hidden" name="gantt_view" value="{{ $dashboard['gantt']['view'] }}">
         <input type="hidden" name="gantt_scale" value="{{ $dashboard['gantt']['scale'] }}">
         <x-button variant="secondary">Update range</x-button>
         <span class="ml-auto hidden text-xs text-slate-400 md:block">{{ $dashboard['period']['timezone'] }}</span>
@@ -62,23 +63,34 @@
     </section>
 
     <div class="mt-8 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
-    <section class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="project-timeline-title">
+    @php($timelineView = $dashboard['gantt']['view'])
+    @php($timelineItems = $timelineView === 'tasks' ? $dashboard['gantt']['tasks'] : $dashboard['gantt']['projects'])
+    <div class="flex min-w-0 flex-col">
+        <nav class="relative z-10 flex w-fit items-end" aria-label="Timeline view" role="tablist" data-timeline-tabs>
+            @foreach(['projects' => 'Projects', 'tasks' => 'Tasks'] as $view => $label)
+                <a href="{{ request()->fullUrlWithQuery(['gantt_view' => $view, 'gantt_scale' => $view === 'tasks' ? 'weekly' : 'monthly']) }}" role="tab" aria-selected="{{ $timelineView === $view ? 'true' : 'false' }}" aria-controls="dashboard-timeline-card" class="-mb-px -mr-px min-w-28 border px-5 py-3 text-center text-sm font-semibold transition first:rounded-tl-xl last:rounded-tr-xl {{ $timelineView === $view ? 'border-slate-200 border-b-white bg-white text-slate-950 dark:border-slate-800 dark:border-b-slate-900 dark:bg-slate-900 dark:text-white' : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">{{ $label }}</a>
+            @endforeach
+        </nav>
+    <section id="dashboard-timeline-card" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-b-2xl rounded-tr-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="timeline-title" data-gantt-view="{{ $timelineView }}">
         <div class="flex flex-col gap-4 border-b border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h3 id="project-timeline-title" class="text-lg font-bold">Project timeline</h3>
-                <p class="mt-1 text-xs text-slate-500">Visible project dates and task completion progress</p>
+            <div class="min-w-0">
+                <h3 id="timeline-title" class="text-lg font-bold">{{ $timelineView === 'tasks' ? 'Task timeline' : 'Project timeline' }}</h3>
+                <p class="mt-1 text-xs text-slate-500">{{ $timelineView === 'tasks' ? 'Your personal tasks and assigned work across the selected timeline' : 'Visible project dates and task completion progress' }}</p>
             </div>
-            <nav class="inline-flex w-fit rounded-xl bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800" aria-label="Project timeline scale">
-                @foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $scale => $label)
-                    <a href="{{ request()->fullUrlWithQuery(['gantt_scale' => $scale]) }}" @if($dashboard['gantt']['scale'] === $scale) aria-current="page" @endif class="rounded-lg px-3 py-2 transition {{ $dashboard['gantt']['scale'] === $scale ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white' }}">{{ $label }}</a>
-                @endforeach
-            </nav>
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ $timelineView === 'tasks' ? route('app.tasks.index', $workspace) : route('app.projects.index', $workspace) }}" class="text-xs font-bold text-orbit-700 hover:text-orbit-800 dark:text-orbit-300 dark:hover:text-orbit-200">View all</a>
+                <nav class="inline-flex w-fit shrink-0 rounded-xl bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800" aria-label="Timeline scale">
+                    @foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $scale => $label)
+                        <a href="{{ request()->fullUrlWithQuery(['gantt_scale' => $scale]) }}" @if($dashboard['gantt']['scale'] === $scale) aria-current="page" @endif class="rounded-lg px-3 py-2 transition {{ $dashboard['gantt']['scale'] === $scale ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white' }}">{{ $label }}</a>
+                    @endforeach
+                </nav>
+            </div>
         </div>
 
-        @if($dashboard['gantt']['projects'])
-            <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Scrollable project Gantt chart">
-                <div class="grid grid-cols-[minmax(170px,220px)_minmax(0,1fr)]" style="min-width: {{ $dashboard['gantt']['min_width'] }}px" data-gantt-chart>
-                    <div class="sticky left-0 z-20 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">Project</div>
+        @if($timelineItems)
+            <div class="min-h-0 flex-1 overflow-x-auto" tabindex="0" role="region" aria-label="Scrollable {{ $timelineView === 'tasks' ? 'task' : 'project' }} Gantt chart">
+                <div class="grid min-h-full grid-cols-[minmax(170px,220px)_minmax(0,1fr)]" style="min-width: {{ $dashboard['gantt']['min_width'] }}px; grid-template-rows: 3.5rem repeat({{ count($timelineItems) }}, minmax(4rem, 1fr))" data-gantt-chart>
+                    <div class="sticky left-0 z-20 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">{{ $timelineView === 'tasks' ? 'Task' : 'Project' }}</div>
                     <div class="relative h-14 border-b border-slate-200 dark:border-slate-800" aria-hidden="true">
                         @foreach($dashboard['gantt']['ticks'] as $tick)
                             <span class="absolute inset-y-0 border-l border-slate-200 dark:border-slate-800" style="left: {{ $tick['left'] }}%"><span class="absolute left-1 top-3 whitespace-nowrap text-[10px] font-medium text-slate-400">{{ $tick['label'] }}</span></span>
@@ -88,20 +100,28 @@
                         @endif
                     </div>
 
-                    @foreach($dashboard['gantt']['projects'] as $project)
-                        <a href="{{ route('app.projects.show', [$workspace, $project['public_id']]) }}" class="sticky left-0 z-20 flex min-w-0 items-center gap-3 border-b border-r border-slate-200 bg-white px-5 py-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/70">
-                            <span class="size-2.5 shrink-0 rounded-full" style="background-color: {{ $project['color'] }}"></span>
-                            <span class="min-w-0"><span class="block truncate text-sm font-semibold">{{ $project['name'] }}</span><span class="mt-0.5 block truncate text-[10px] text-slate-400">{{ $project['date_label'] }}</span></span>
+                    @foreach($timelineItems as $item)
+                        <a href="{{ $item['url'] }}" class="sticky left-0 z-20 flex min-w-0 items-center gap-3 border-b border-r border-slate-200 bg-white px-5 py-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/70">
+                            <span class="size-2.5 shrink-0 rounded-full" style="background-color: {{ $item['color'] }}"></span>
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm font-semibold">{{ $item['name'] }}</span>
+                                <span class="mt-0.5 block truncate text-[10px] text-slate-400">
+                                    @if($timelineView === 'tasks')
+                                        {{ $item['context'] }} ·
+                                    @endif
+                                    {{ $item['date_label'] }}
+                                </span>
+                            </span>
                         </a>
-                        <div class="relative h-16 border-b border-slate-200 dark:border-slate-800">
+                        <div class="relative min-h-16 border-b border-slate-200 dark:border-slate-800">
                             @foreach($dashboard['gantt']['ticks'] as $tick)<span class="absolute inset-y-0 border-l border-slate-100 dark:border-slate-800/80" style="left: {{ $tick['left'] }}%" aria-hidden="true"></span>@endforeach
                             @if($dashboard['gantt']['today_position'] !== null)<span class="absolute inset-y-0 z-10 border-l-2 border-slate-900 dark:border-orbit-300" style="left: {{ $dashboard['gantt']['today_position'] }}%" aria-hidden="true"></span>@endif
-                            <a href="{{ route('app.projects.show', [$workspace, $project['public_id']]) }}" class="absolute top-3 z-10 flex h-10 min-w-8 items-center overflow-hidden rounded-xl border px-2 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" style="left: {{ $project['left'] }}%; width: {{ $project['width'] }}%; border-color: {{ $project['color'] }}; background-color: color-mix(in srgb, {{ $project['color'] }} 13%, white)" aria-label="{{ $project['name'] }}, {{ $project['date_label'] }}, {{ $project['progress'] }} percent complete">
-                                <span class="absolute inset-y-0 left-0 opacity-20" style="width: {{ $project['progress'] }}%; background-color: {{ $project['color'] }}" aria-hidden="true"></span>
+                            <a href="{{ $item['url'] }}" class="absolute top-1/2 z-10 flex h-10 min-w-8 -translate-y-1/2 items-center overflow-hidden rounded-xl border px-2 shadow-sm transition hover:-translate-y-[calc(50%+0.125rem)] hover:shadow-md" style="left: {{ $item['left'] }}%; width: {{ $item['width'] }}%; border-color: {{ $item['color'] }}; background-color: color-mix(in srgb, {{ $item['color'] }} 13%, white)" aria-label="{{ $item['name'] }}, {{ $item['date_label'] }}, {{ $item['progress'] }} percent complete">
+                                <span class="absolute inset-y-0 left-0 opacity-20" style="width: {{ $item['progress'] }}%; background-color: {{ $item['color'] }}" aria-hidden="true"></span>
                                 <span class="relative flex min-w-0 flex-1 items-center gap-2">
-                                    @if($project['members'])<span class="hidden shrink-0 items-center sm:flex">@foreach($project['members'] as $member)<x-avatar :src="$member['has_avatar'] ? route('internal.users.avatar', $member['public_id']) : null" :name="$member['name']" size="size-6" class="-ml-1 border-2 border-white first:ml-0 dark:border-slate-900" />@endforeach</span>@endif
-                                    <span class="truncate text-[11px] font-semibold text-slate-700 dark:text-slate-950">{{ $project['name'] }}</span>
-                                    <span class="ml-auto shrink-0 text-[10px] font-bold text-slate-700 dark:text-slate-950">{{ $project['progress'] }}%</span>
+                                    @if($item['members'])<span class="hidden shrink-0 items-center sm:flex">@foreach($item['members'] as $member)<x-avatar :src="$member['has_avatar'] ? route('internal.users.avatar', $member['public_id']) : null" :name="$member['name']" size="size-6" class="-ml-1 border-2 border-white first:ml-0 dark:border-slate-900" />@endforeach</span>@endif
+                                    <span class="truncate text-[11px] font-semibold text-slate-700 dark:text-slate-950">{{ $item['name'] }}</span>
+                                    <span class="ml-auto shrink-0 text-[10px] font-bold text-slate-700 dark:text-slate-950">{{ $item['progress'] }}%</span>
                                 </span>
                             </a>
                         </div>
@@ -109,9 +129,10 @@
                 </div>
             </div>
         @else
-            <div class="p-5"><x-empty-state title="No dated projects in this window" description="Add start and due dates to an accessible project, or choose another timeline scale." /></div>
+            <div class="flex flex-1 items-center justify-center p-5"><x-empty-state :title="$timelineView === 'tasks' ? 'No personal or assigned tasks in this window' : 'No dated projects in this window'" :description="$timelineView === 'tasks' ? 'Create a personal task, get assigned work, or choose another timeline scale.' : 'Add start and due dates to an accessible project, or choose another timeline scale.'" /></div>
         @endif
     </section>
+    </div>
 
     <section class="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="today-tasks-title">
         @php($overdueCount = collect($dashboard['today_tasks'])->where('is_overdue')->count())

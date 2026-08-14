@@ -65,6 +65,12 @@ return [
         'timeout' => (int) env('OPENAI_TIMEOUT', 60),
     ],
 
+    'holidays' => [
+        'url' => env('HOLIDAY_API_URL', 'https://raw.githubusercontent.com/andifahruddinakas/api-hari-libur/main/data/{year}.json'),
+        'timeout' => (int) env('HOLIDAY_API_TIMEOUT', 10),
+        'ca_bundle' => env('HOLIDAY_API_CA_BUNDLE'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
