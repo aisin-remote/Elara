@@ -5,6 +5,7 @@ namespace App\Http\Controllers\App;
 use App\Actions\Request\TransitionFeatureRequest;
 use App\Enums\BreakdownStatus;
 use App\Enums\FeatureRequestStatus;
+use App\Enums\WorkspaceRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Request\DecideFeatureRequestRequest;
 use App\Models\ActivityLog;
@@ -16,6 +17,7 @@ use App\Services\ApprovalDelegationService;
 use App\Services\RequestSlaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ApprovalController extends Controller
@@ -94,8 +96,16 @@ class ApprovalController extends Controller
 
         return view('app.approvals.show', [
             'workspace' => $workspace,
-            'request' => $featureRequest->load(['system.members', 'requester', 'reviewer']),
+            'request' => $featureRequest->load(['system.members', 'requester', 'reviewer', 'assignee']),
             'canDecide' => $request->user()->can('decide', $featureRequest),
+            'picCandidates' => $workspace->memberships()
+                ->active()
+                ->whereIn('role', collect(WorkspaceRole::cases())->filter->canContribute()->pluck('value'))
+                ->whereHas('user')
+                ->with('user:id,public_id,first_name,last_name,job_title')
+                ->get()
+                ->sortBy(fn ($membership) => $membership->user->name, SORT_NATURAL | SORT_FLAG_CASE)
+                ->values(),
             'breakdown' => $featureRequest->breakdowns()->with('acceptedBy')->latest('id')->first(),
             'timeline' => ActivityLog::where('subject_type', $featureRequest->getMorphClass())
                 ->where('subject_id', $featureRequest->id)
@@ -115,11 +125,26 @@ class ApprovalController extends Controller
         // can never drain, so the estimate is collected with the decision. PRD-06 replaces
         // this hand-typed number with an AI breakdown.
         if ($decision === FeatureRequestStatus::APPROVED) {
-            $hours = $request->validate([
+            $approved = $request->validate([
                 'estimated_hours' => ['required', 'numeric', 'min:0.5', 'max:400'],
-            ])['estimated_hours'];
+            ]);
+            $assigneeMembership = $workspace->memberships()
+                ->active()
+                ->whereIn('role', collect(WorkspaceRole::cases())->filter->canContribute()->pluck('value'))
+                ->whereHas('user', fn ($user) => $user->where('public_id', $request->string('assignee_public_id')))
+                ->with('user')
+                ->first();
 
-            $featureRequest->update(['estimated_minutes' => (int) round($hours * 60)]);
+            if (! $assigneeMembership) {
+                throw ValidationException::withMessages([
+                    'assignee_public_id' => 'Choose an active IT member who can own delivery work.',
+                ]);
+            }
+
+            $featureRequest->forceFill([
+                'estimated_minutes' => (int) round($approved['estimated_hours'] * 60),
+                'assignee_id' => $assigneeMembership->user_id,
+            ])->save();
         }
 
         $transition->handle($featureRequest, $decision, $request->user(), $request->input('decision_note'));
@@ -132,7 +157,6 @@ class ApprovalController extends Controller
             $featureRequest->forceFill([
                 'scheduled_start' => $request->date('scheduled_start'),
                 'scheduled_due' => $request->date('scheduled_due'),
-                'assignee_id' => $featureRequest->assignee_id ?? $featureRequest->system->pic()?->id,
             ])->save();
 
             $transition->handle($featureRequest->fresh(), FeatureRequestStatus::SCHEDULED, $request->user());

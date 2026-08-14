@@ -39,8 +39,7 @@ class FeatureRequestController extends Controller
             ->whereNull('archived_at')
             ->with('members:id,public_id,first_name,last_name,avatar_path')
             ->orderBy('name')
-            ->get()
-            ->filter(fn (Project $system) => $system->pic() !== null);
+            ->get();
 
         return view('desk.requests.create', [
             'workspace' => $workspace,

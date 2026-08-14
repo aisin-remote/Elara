@@ -16,16 +16,26 @@ class ItTimelineController extends Controller
         DepartmentWorkspaceService $departmentWorkspaces,
         RequesterItTimeline $timeline,
     ): View {
-        abort_unless($request->user()->workspaceMemberships()
+        $requesterMembership = $request->user()->workspaceMemberships()
             ->active()
             ->where('role', WorkspaceRole::REQUESTER->value)
-            ->exists(), 403);
+            ->with('workspace:id,organization_department_id')
+            ->first();
+
+        abort_unless($requesterMembership, 403);
+
+        $departmentId = $requesterMembership->workspace?->organization_department_id;
+        abort_if(config('organization.required') && ! $departmentId, 403);
 
         $deliveryWorkspace = $departmentWorkspaces->deliveryWorkspace();
 
         return view('desk.it-timeline', [
             'deliveryWorkspace' => $deliveryWorkspace,
-            ...$timeline->build($deliveryWorkspace, $request->string('scale')->toString()),
+            ...$timeline->build(
+                $deliveryWorkspace,
+                $departmentId,
+                $request->string('scale')->toString(),
+            ),
         ]);
     }
 }

@@ -30,9 +30,8 @@ class RequestSlaService
         return [
             'state' => $state,
             'label' => match ($state) {
-                'breached' => 'SLA breached by '.$dueAt->diffForHumans(now(), true),
-                'warning' => 'SLA due '.$dueAt->diffForHumans(),
-                default => 'SLA due '.$dueAt->diffForHumans(),
+                'breached' => 'Overdue '.$dueAt->diffForHumans(now(), true),
+                default => 'Due '.$dueAt->diffForHumans(),
             },
             'tone' => match ($state) {
                 'breached' => 'danger',

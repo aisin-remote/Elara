@@ -12,7 +12,9 @@
             <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ $request->title }}</h2>
             <p class="mt-2 text-sm text-slate-500">
                 Raised by {{ $request->requester->name }} · {{ $request->created_at->format('M j, Y') }}
-                @if ($pic = $request->system->pic()) · PIC {{ $pic->name }} @endif
+                @if ($request->assignee) · PIC {{ $request->assignee->name }}
+                @elseif ($pic = $request->system->pic()) · Suggested PIC {{ $pic->name }}
+                @endif
             </p>
         </div>
         <div class="flex shrink-0 items-center gap-2">

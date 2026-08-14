@@ -13,19 +13,6 @@
 
     <x-auth-errors class="mt-6" />
 
-    @if ($organizationProfile)
-        <x-alert variant="info" :dismissible="false" class="mt-6 max-w-none" title="Your approval path">
-            {{ $organizationProfile['department_name'] }} · {{ $organizationProfile['rank_code'] }}.
-            {{ $needsDepartmentApproval
-                ? 'This proposal goes to your department manager/coordinator first, followed by an ITD scoping meeting, ITD supervisor approval, and ITD manager approval.'
-                : 'This proposal goes directly to an ITD scoping meeting, followed by ITD supervisor approval and ITD manager approval.' }}
-        </x-alert>
-    @else
-        <x-alert variant="warning" :dismissible="false" class="mt-6 max-w-none" title="Organization profile not connected">
-            Make sure your email, job rank, and department are available in the company directory before submitting a proposal.
-        </x-alert>
-    @endif
-
     @include('desk._how-it-works', [
         'steps' => [
             ['Build the business case', 'Describe the background, pain point, objectives, before-and-after process, benefits, and expected cost and return.', 'You'],

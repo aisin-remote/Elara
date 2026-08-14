@@ -41,7 +41,14 @@
                                         {{ $row->requester->name }}{{ $isProject ? '' : ' · '.$row->system->name }}
                                     </span>
                                 </span>
-                                <span class="whitespace-nowrap text-right text-xs text-slate-400">{{ $slaByRequest[$row->public_id]['age'] ?? $row->created_at->diffForHumans() }}@if($slaByRequest[$row->public_id] ?? null)<span class="mt-1 block font-semibold {{ $slaByRequest[$row->public_id]['state'] === 'breached' ? 'text-rose-600' : ($slaByRequest[$row->public_id]['state'] === 'warning' ? 'text-amber-600' : 'text-emerald-600') }}">{{ $slaByRequest[$row->public_id]['label'] }}</span><span class="mt-1 block">{{ $slaByRequest[$row->public_id]['owner'] }}</span>@endif</span>
+                                <span class="whitespace-nowrap text-right text-xs text-slate-400">
+                                    @if ($sla = $slaByRequest[$row->public_id] ?? null)
+                                        <span class="block font-semibold {{ $sla['state'] === 'breached' ? 'text-rose-600' : ($sla['state'] === 'warning' ? 'text-amber-600' : 'text-emerald-600') }}">{{ $sla['label'] }}</span>
+                                        <span class="mt-1 block">{{ $sla['owner'] }}</span>
+                                    @else
+                                        {{ $row->created_at->diffForHumans() }}
+                                    @endif
+                                </span>
                                 <x-icon name="chevron-right" class="size-4 shrink-0 text-slate-400" />
                             </a>
                         @endforeach

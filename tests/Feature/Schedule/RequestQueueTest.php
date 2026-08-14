@@ -91,6 +91,17 @@ class RequestQueueTest extends TestCase
         $this->assertEquals($start, $request->fresh()->scheduled_start);
     }
 
+    public function test_the_scheduler_keeps_the_pic_chosen_during_approval(): void
+    {
+        [$workspace, $systemPic, $system] = $this->system();
+        $chosenPic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $request = $this->approved($workspace, $system, $systemPic, 6 * 60, '2026-07-30 09:00:00');
+        $request->forceFill(['assignee_id' => $chosenPic->id])->save();
+
+        $this->assertSame(1, app(ScheduleApprovedRequests::class)->handle($workspace));
+        $this->assertSame($chosenPic->id, $request->fresh()->assignee_id);
+    }
+
     public function test_the_approval_flow_actually_records_an_estimate(): void
     {
         [$workspace, $pic, $system] = $this->system();
@@ -112,10 +123,12 @@ class RequestQueueTest extends TestCase
             ->post(route('app.approvals.decide', [$workspace, $request]), [
                 'decision' => FeatureRequestStatus::APPROVED->value,
                 'estimated_hours' => 7.5,
+                'assignee_public_id' => $pic->public_id,
             ])
             ->assertSessionHasNoErrors();
 
         $this->assertSame(450, $request->fresh()->estimated_minutes);
+        $this->assertSame($pic->id, $request->fresh()->assignee_id);
     }
 
     private function system(): array

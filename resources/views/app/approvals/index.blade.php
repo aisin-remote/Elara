@@ -70,7 +70,14 @@
                                 </td>
                                 <td class="px-4 py-3 text-slate-500">{{ $request->system->name }}</td>
                                 <td class="px-4 py-3 text-slate-500">{{ $request->requester->name }}</td>
-                                <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ $slaByRequest[$request->public_id]['age'] ?? $request->created_at->diffForHumans(syntax: true) }}@if($slaByRequest[$request->public_id] ?? null)<div class="mt-1"><x-badge :tone="$slaByRequest[$request->public_id]['tone']">{{ $slaByRequest[$request->public_id]['label'] }}</x-badge><p class="mt-1 text-[11px]">Owner: {{ $slaByRequest[$request->public_id]['owner'] }}</p></div>@endif</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-slate-500">
+                                    @if ($sla = $slaByRequest[$request->public_id] ?? null)
+                                        <x-badge :tone="$sla['tone']">{{ $sla['label'] }}</x-badge>
+                                        <p class="mt-1 text-[11px]">{{ $sla['owner'] }}</p>
+                                    @else
+                                        {{ $request->created_at->diffForHumans(syntax: true) }}
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-right">
                                     <span class="text-xs font-semibold text-orbit-600 dark:text-orbit-400">Review</span>
                                 </td>
@@ -108,7 +115,14 @@
                                         <p class="mt-1 text-xs text-slate-400">Signed by {{ $projectRequest->supervisor?->name }}</p>
                                     @endif
                                 </td>
-                                <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ $slaByRequest[$projectRequest->public_id]['age'] ?? $projectRequest->created_at->diffForHumans(syntax: true) }}@if($slaByRequest[$projectRequest->public_id] ?? null)<div class="mt-1"><x-badge :tone="$slaByRequest[$projectRequest->public_id]['tone']">{{ $slaByRequest[$projectRequest->public_id]['label'] }}</x-badge><p class="mt-1 text-[11px]">Owner: {{ $slaByRequest[$projectRequest->public_id]['owner'] }}</p></div>@endif</td>
+                                <td class="whitespace-nowrap px-4 py-3 text-slate-500">
+                                    @if ($sla = $slaByRequest[$projectRequest->public_id] ?? null)
+                                        <x-badge :tone="$sla['tone']">{{ $sla['label'] }}</x-badge>
+                                        <p class="mt-1 text-[11px]">{{ $sla['owner'] }}</p>
+                                    @else
+                                        {{ $projectRequest->created_at->diffForHumans(syntax: true) }}
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-right">
                                     {{-- No inline decision: a project request needs the meeting gate and
                                          two distinct signatures, and a one-click approve in a list

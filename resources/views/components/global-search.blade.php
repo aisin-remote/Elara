@@ -25,14 +25,38 @@
                 type="search"
                 autocomplete="off"
                 spellcheck="false"
-                placeholder="Search projects, tasks, files, members, or messages..."
+                placeholder="Search all accessible work..."
                 class="min-w-0 flex-1 border-0 bg-transparent p-0 text-base font-medium placeholder:text-slate-400 focus:ring-0 dark:placeholder:text-slate-500">
             <button type="button" x-on:click="close()" class="rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white" aria-label="Close global search">ESC</button>
         </div>
 
         <div x-ref="results" class="max-h-[min(65vh,520px)] min-h-32 overflow-y-auto p-2" aria-live="polite">
-            <div x-show="query.trim().length < 2" class="grid min-h-28 place-items-center px-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                Type at least 2 characters to search this workspace.
+            <div x-show="query.trim().length === 0" data-search-quick-routes class="p-2">
+                <p class="px-2 pb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Quick access</p>
+                <div class="grid gap-1 sm:grid-cols-2">
+                    @foreach ([
+                        ['label' => 'Home', 'description' => 'Workspace dashboard', 'icon' => 'dashboard', 'url' => route('app.workspaces.show', $workspace)],
+                        ['label' => 'My tasks', 'description' => 'Personal and assigned work', 'icon' => 'tasks', 'url' => route('app.tasks.index', $workspace)],
+                        ['label' => 'All projects', 'description' => 'Browse delivery projects', 'icon' => 'projects', 'url' => route('app.projects.index', $workspace)],
+                        ['label' => 'Features', 'description' => 'Systems and feature work', 'icon' => 'board', 'url' => route('app.features.index', $workspace)],
+                        ['label' => 'Supporting', 'description' => 'Independent support work', 'icon' => 'supporting', 'url' => route('app.supporting.index', $workspace)],
+                        ['label' => 'Schedule', 'description' => 'Meetings and planned activity', 'icon' => 'calendar', 'url' => route('app.schedule.index', $workspace)],
+                    ] as $quickRoute)
+                        <a href="{{ $quickRoute['url'] }}" class="group flex items-center gap-3 rounded-xl px-3 py-3 text-slate-700 transition-colors hover:bg-orbit-50 hover:text-orbit-900 focus-visible:bg-orbit-50 dark:text-slate-200 dark:hover:bg-orbit-950/60 dark:hover:text-orbit-100 dark:focus-visible:bg-orbit-950/60">
+                            <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500 transition-colors group-hover:bg-white group-hover:text-orbit-600 dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-slate-900 dark:group-hover:text-orbit-300">
+                                <x-icon :name="$quickRoute['icon']" class="size-4" />
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-sm font-semibold">{{ $quickRoute['label'] }}</span>
+                                <span class="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">{{ $quickRoute['description'] }}</span>
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+
+            <div x-cloak x-show="query.trim().length === 1 && ! loading" class="grid min-h-28 place-items-center px-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                Type one more character to search this workspace.
             </div>
 
             <div x-cloak x-show="loading" class="flex min-h-28 items-center justify-center gap-3 text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -45,7 +69,7 @@
             <div x-cloak x-show="searched && ! loading && ! error && results.length === 0" class="grid min-h-28 place-items-center px-6 text-center">
                 <div>
                     <p class="font-semibold">No results found</p>
-                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Try a project, task, file, member, or conversation name.</p>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Try a project, feature, request, task, supporting item, file, member, or conversation.</p>
                 </div>
             </div>
 

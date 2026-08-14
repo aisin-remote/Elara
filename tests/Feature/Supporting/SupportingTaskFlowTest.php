@@ -98,7 +98,7 @@ class SupportingTaskFlowTest extends TestCase
         $this->actingAs($requester)->get(route('desk.supporting.create', $workspace))
             ->assertOk()
             ->assertSee('Request operational support')
-            ->assertSee('Sent directly to ITD')
+            ->assertDontSee('Sent directly to ITD')
             ->assertSee('How it works')
             ->assertSee('Request details');
         $this->actingAs($requester)->post(route('desk.supporting.store', $workspace), [

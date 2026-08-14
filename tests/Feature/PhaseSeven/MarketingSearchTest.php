@@ -3,18 +3,31 @@
 namespace Tests\Feature\PhaseSeven;
 
 use App\Actions\Project\CreateProject;
+use App\Actions\Project\CreateSystem;
 use App\Actions\Task\CreateTask;
 use App\Actions\Workspace\CreateWorkspace;
 use App\Enums\ConversationType;
+use App\Enums\FeatureRequestStatus;
 use App\Enums\ProjectMemberRole;
+use App\Enums\ProjectRequestStatus;
 use App\Enums\ProjectStatus;
+use App\Enums\RequestUrgency;
+use App\Enums\SupportingTaskCategory;
+use App\Enums\SupportingTaskStatus;
 use App\Enums\TaskPriority;
+use App\Enums\TaskPropertyType;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Conversation;
+use App\Models\Feature;
+use App\Models\FeatureRequest;
 use App\Models\Project;
 use App\Models\ProjectFile;
+use App\Models\ProjectRequest;
+use App\Models\SupportingTask;
+use App\Models\TaskProperty;
+use App\Models\TaskPropertyValue;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -86,6 +99,13 @@ class MarketingSearchTest extends TestCase
         $this->actingAs($owner)->get(route('app.workspaces.show', $workspace))
             ->assertOk()
             ->assertSee('data-global-search-dialog', false)
+            ->assertSee('data-search-quick-routes', false)
+            ->assertSee('Quick access')
+            ->assertSee(route('app.tasks.index', $workspace), false)
+            ->assertSee(route('app.projects.index', $workspace), false)
+            ->assertSee(route('app.features.index', $workspace), false)
+            ->assertSee(route('app.supporting.index', $workspace), false)
+            ->assertSee(route('app.schedule.index', $workspace), false)
             ->assertSee('aria-label="Open global search"', false)
             ->assertSee('Ctrl K')
             ->assertDontSee('Search workspace…');
@@ -124,6 +144,97 @@ class MarketingSearchTest extends TestCase
         $this->actingAs($owner)->get(route('app.search', [$workspace, 'q' => 'Orbitra', 'page' => 2]))
             ->assertOk()->assertSee('Page 2 of 2');
         $this->actingAs(User::factory()->create())->get(route('app.search', [$workspace, 'q' => 'Orbitra']))->assertNotFound();
+    }
+
+    public function test_global_search_includes_features_requests_supporting_and_custom_property_values(): void
+    {
+        [$owner, $workspace, $project] = $this->project('Search Coverage');
+        $system = app(CreateSystem::class)->handle($workspace, $owner, [
+            'name' => 'Operations Hub',
+            'description' => null,
+            'color' => '#8b5cf6',
+            'pic_id' => $owner->id,
+        ]);
+        $feature = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $system->id,
+            'name' => 'Nebula dashboard',
+            'description' => 'A consolidated operational dashboard.',
+        ]);
+        $featureRequest = FeatureRequest::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $system->id,
+            'requester_id' => $owner->id,
+            'title' => 'Nebula export request',
+            'problem' => 'Reports must currently be exported one at a time.',
+            'desired_outcome' => 'Users can export the consolidated report.',
+            'benefit' => 'Saves repetitive administrative work.',
+            'urgency' => RequestUrgency::NORMAL,
+            'status' => FeatureRequestStatus::PENDING_REVIEW,
+        ]);
+        $projectRequest = ProjectRequest::create([
+            'workspace_id' => $workspace->id,
+            'requester_id' => $owner->id,
+            'title' => 'Nebula rollout proposal',
+            'benefit' => 'Makes rollout progress visible.',
+            'concept' => 'A structured rollout workspace.',
+            'business_process' => 'Rollout updates are currently shared by email.',
+            'flow' => 'Plan, execute, and validate.',
+            'status' => ProjectRequestStatus::PENDING_MEETING,
+        ]);
+        SupportingTask::create([
+            'workspace_id' => $workspace->id,
+            'creator_id' => $owner->id,
+            'assignee_id' => $owner->id,
+            'title' => 'Nebula printer setup',
+            'description' => 'Configure the meeting-room printer.',
+            'category' => SupportingTaskCategory::HARDWARE,
+            'priority' => TaskPriority::LOW,
+            'status' => SupportingTaskStatus::TODO,
+        ]);
+
+        $status = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        $task = app(CreateTask::class)->handle($project, $owner, [
+            'title' => 'Plain task title',
+            'description' => null,
+            'status_public_id' => $status->public_id,
+            'category_public_id' => null,
+            'priority' => TaskPriority::MEDIUM->value,
+            'start_at' => null,
+            'due_at' => null,
+            'estimate_minutes' => null,
+            'assignee_public_ids' => [],
+        ]);
+        $property = TaskProperty::create([
+            'project_id' => $project->id,
+            'name' => 'Client reference',
+            'type' => TaskPropertyType::TEXT,
+            'position' => 1024,
+        ]);
+        TaskPropertyValue::create([
+            'task_property_id' => $property->id,
+            'task_id' => $task->id,
+            'value_json' => 'Nebula-2048',
+        ]);
+
+        $this->actingAs($owner)->getJson(route('app.search', [$workspace, 'q' => 'Nebula']))
+            ->assertOk()
+            ->assertJsonPath('total', 5)
+            ->assertJsonCount(5, 'results')
+            ->assertJsonFragment(['type' => 'feature', 'label' => $feature->name, 'description' => 'Feature in Operations Hub'])
+            ->assertJsonFragment(['type' => 'feature request', 'label' => $featureRequest->title, 'description' => 'Feature request for Operations Hub'])
+            ->assertJsonFragment(['type' => 'project request', 'label' => $projectRequest->title, 'description' => 'Project request · Pending Meeting'])
+            ->assertJsonFragment(['type' => 'supporting', 'label' => 'Nebula printer setup', 'description' => 'Supporting task · Todo'])
+            ->assertJsonFragment(['type' => 'task', 'label' => $task->title, 'description' => 'Task in Search Coverage']);
+
+        $this->actingAs($owner)->get(route('app.search', [$workspace, 'q' => 'Nebula']))
+            ->assertOk()
+            ->assertSee('5 results')
+            ->assertSee('Feature in Operations Hub')
+            ->assertSee('Feature request for Operations Hub')
+            ->assertSee('Project request · Pending Meeting')
+            ->assertSee('Supporting task · Todo')
+            ->assertSee('Plain task title');
     }
 
     public function test_team_filters_workload_and_permission_aware_member_details_work(): void

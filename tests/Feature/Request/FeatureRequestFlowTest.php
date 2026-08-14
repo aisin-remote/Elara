@@ -61,7 +61,7 @@ class FeatureRequestFlowTest extends TestCase
         $this->assertSame(0, FeatureRequest::count());
     }
 
-    public function test_a_system_without_a_pic_cannot_receive_requests(): void
+    public function test_a_system_without_a_pic_can_receive_requests(): void
     {
         [$owner, $workspace] = $this->workspace();
         $orphan = app(CreateSystem::class)->handle($workspace, $owner, [
@@ -72,8 +72,13 @@ class FeatureRequestFlowTest extends TestCase
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
 
         $this->actingAs($requester)
+            ->get(route('desk.requests.create', $workspace))
+            ->assertOk()
+            ->assertSee('Orphan');
+        $this->actingAs($requester)
             ->post(route('desk.requests.store', $workspace), $this->payload($orphan))
-            ->assertSessionHasErrors('system_public_id');
+            ->assertRedirect();
+        $this->assertSame($orphan->id, FeatureRequest::firstOrFail()->project_id);
     }
 
     public function test_supervisor_approves_and_the_requester_hears_about_it(): void
@@ -85,15 +90,38 @@ class FeatureRequestFlowTest extends TestCase
         $request = $this->submit($workspace, $system, $requester);
 
         $this->actingAs($supervisor)
-            ->post(route('app.approvals.decide', [$workspace, $request]), ['decision' => 'approved', 'estimated_hours' => 8])
+            ->post(route('app.approvals.decide', [$workspace, $request]), ['decision' => 'approved', 'estimated_hours' => 8, 'assignee_public_id' => $supervisor->public_id])
             ->assertRedirect(route('app.approvals.index', $workspace));
 
         $request->refresh();
         $this->assertSame(FeatureRequestStatus::APPROVED, $request->status);
         $this->assertSame($supervisor->id, $request->reviewed_by);
+        $this->assertSame($supervisor->id, $request->assignee_id);
         $this->assertNotNull($request->reviewed_at);
         Notification::assertSentTo($requester, OrbitraNotification::class);
         $this->assertDatabaseHas('activity_logs', ['action' => 'feature_request.approved']);
+    }
+
+    public function test_approval_requires_an_active_it_pic(): void
+    {
+        [, $workspace, $system] = $this->system();
+        $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $supervisor = $this->member($workspace, WorkspaceRole::SUPERVISOR);
+        $viewer = $this->member($workspace, WorkspaceRole::VIEWER);
+        $request = $this->submit($workspace, $system, $requester);
+
+        $this->actingAs($supervisor)->post(route('app.approvals.decide', [$workspace, $request]), [
+            'decision' => 'approved',
+            'estimated_hours' => 8,
+        ])->assertSessionHasErrors('assignee_public_id');
+
+        $this->actingAs($supervisor)->post(route('app.approvals.decide', [$workspace, $request]), [
+            'decision' => 'approved',
+            'estimated_hours' => 8,
+            'assignee_public_id' => $viewer->public_id,
+        ])->assertSessionHasErrors('assignee_public_id');
+
+        $this->assertSame(FeatureRequestStatus::PENDING_REVIEW, $request->fresh()->status);
     }
 
     public function test_rejecting_without_a_reason_is_refused(): void
@@ -150,10 +178,28 @@ class FeatureRequestFlowTest extends TestCase
             ->post(route('app.approvals.decide', [$workspace, $request]), [
                 'decision' => 'approved',
                 'estimated_hours' => 8,
+                'assignee_public_id' => $manager->public_id,
             ])
             ->assertRedirect();
 
         $this->assertSame(FeatureRequestStatus::APPROVED, $request->fresh()->status);
+    }
+
+    public function test_the_approval_queue_uses_compact_sla_copy(): void
+    {
+        [, $workspace, $system] = $this->system();
+        $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $manager = $this->member($workspace, WorkspaceRole::MANAGER);
+        $request = $this->submit($workspace, $system, $requester);
+        $request->forceFill(['created_at' => now()->subDays(3)])->save();
+
+        $this->actingAs($manager)
+            ->get(route('app.approvals.index', $workspace))
+            ->assertOk()
+            ->assertSee('Overdue')
+            ->assertSee('ITD supervisor')
+            ->assertDontSee('SLA breached by')
+            ->assertDontSee('Owner: ITD supervisor');
     }
 
     public function test_an_approver_can_pin_the_dates_instead_of_leaving_them_to_the_planner(): void
@@ -166,6 +212,7 @@ class FeatureRequestFlowTest extends TestCase
             ->post(route('app.approvals.decide', [$workspace, $request]), [
                 'decision' => 'approved',
                 'estimated_hours' => 8,
+                'assignee_public_id' => $owner->public_id,
                 'scheduled_start' => '2026-09-01',
                 'scheduled_due' => '2026-09-03',
             ])
@@ -186,6 +233,7 @@ class FeatureRequestFlowTest extends TestCase
             ->post(route('app.approvals.decide', [$workspace, $second]), [
                 'decision' => 'approved',
                 'estimated_hours' => 8,
+                'assignee_public_id' => $owner->public_id,
                 'scheduled_due' => '2026-09-03',
             ])
             ->assertSessionHasErrors('scheduled_start');

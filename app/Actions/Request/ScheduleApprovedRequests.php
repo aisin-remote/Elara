@@ -39,13 +39,19 @@ class ScheduleApprovedRequests
         $queue = FeatureRequest::where('workspace_id', $workspace->id)
             ->where('status', FeatureRequestStatus::APPROVED->value)
             ->whereNotNull('estimated_minutes')
-            ->with('system')
+            ->with(['system', 'assignee'])
             ->orderBy('reviewed_at')
             ->orderBy('id')
             ->get();
 
         foreach ($queue as $request) {
-            $assignment = $this->planner->assign($workspace, $request->system, (int) $request->estimated_minutes);
+            if ($request->assignee) {
+                $slot = $this->planner->availableFrom($workspace, $request->assignee, (int) $request->estimated_minutes);
+                $assignment = $slot ? ['user' => $request->assignee, 'pic_deferred' => false, ...$slot] : null;
+            } else {
+                // Legacy approved rows may predate approval-time PIC selection.
+                $assignment = $this->planner->assign($workspace, $request->system, (int) $request->estimated_minutes);
+            }
 
             if ($assignment === null) {
                 // No capacity inside the horizon: it stays approved and keeps its place

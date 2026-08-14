@@ -20,10 +20,24 @@
     <div @class(['grid gap-4', 'sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end' => ! $compact])>
         <div>
             <div x-show="decision === 'approved'" x-cloak>
+                <x-label :for="'assignee_public_id_'.$request->public_id">IT PIC</x-label>
+                <x-select :id="'assignee_public_id_'.$request->public_id" name="assignee_public_id" x-bind:required="decision === 'approved'">
+                    <option value="">Choose an IT PIC</option>
+                    @foreach ($picCandidates as $candidate)
+                        <option value="{{ $candidate->user->public_id }}" @selected(old('assignee_public_id', $request->assignee?->public_id ?? $request->system->pic()?->public_id) === $candidate->user->public_id)>
+                            {{ $candidate->user->name }} · {{ $candidate->role->label() }}
+                        </option>
+                    @endforeach
+                </x-select>
+                <x-field-error name="assignee_public_id" />
+                <p class="mt-2 text-xs text-slate-500">This person owns the request and its proposed task plan. The scheduler uses their real capacity.</p>
+
+                <div class="mt-4">
                 <x-label :for="'estimated_hours_'.$request->public_id">How many working hours will this take?</x-label>
                 <x-input :id="'estimated_hours_'.$request->public_id" type="number" step="0.5" min="0.5" name="estimated_hours" value="{{ old('estimated_hours') }}" placeholder="e.g. 16" />
                 <x-field-error name="estimated_hours" />
                 <p class="mt-2 text-xs text-slate-500">Total hours of work, not a deadline. Orbitra picks the start and due dates from this and the assignee's free capacity — a rough number is fine, it can be corrected later.</p>
+                </div>
 
                 <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
                     <div @class(['grid gap-3', 'sm:grid-cols-2' => ! $compact])>

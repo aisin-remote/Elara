@@ -50,6 +50,35 @@ class RequesterGuidanceTest extends TestCase
             ->assertSee('same person cannot supply both signatures', false);
     }
 
+    public function test_the_feature_request_uses_the_same_searchable_selector_as_master_system(): void
+    {
+        [$workspace, $requester] = $this->workspace();
+
+        $this->actingAs($requester)
+            ->get(route('desk.requests.create', $workspace))
+            ->assertOk()
+            ->assertSee('Search systems…')
+            ->assertSee('aria-haspopup="listbox"', false);
+    }
+
+    public function test_request_forms_do_not_repeat_the_approval_path_banner(): void
+    {
+        [$workspace, $requester] = $this->workspace();
+
+        foreach ([
+            route('desk.requests.create', $workspace),
+            route('desk.project-requests.create', $workspace),
+            route('desk.supporting.create', $workspace),
+        ] as $url) {
+            $this->actingAs($requester)
+                ->get($url)
+                ->assertOk()
+                ->assertDontSee('Your approval path')
+                ->assertDontSee('Organization profile not connected')
+                ->assertDontSee('Sent directly to ITD');
+        }
+    }
+
     public function test_the_validation_window_shown_is_the_workspace_setting_not_a_hard_coded_seven(): void
     {
         [$workspace, $requester] = $this->workspace();

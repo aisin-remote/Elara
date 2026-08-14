@@ -14,19 +14,6 @@
 
     <x-auth-errors class="mt-6" />
 
-    @if ($organizationProfile)
-        <x-alert variant="info" :dismissible="false" class="mt-6 max-w-none" title="Your approval path">
-            {{ $organizationProfile['department_name'] }} · {{ $organizationProfile['rank_code'] }}.
-            {{ $needsDepartmentApproval
-                ? 'This request goes to your department manager/coordinator first, then to an ITD supervisor.'
-                : 'This request goes directly to an ITD supervisor.' }}
-        </x-alert>
-    @else
-        <x-alert variant="warning" :dismissible="false" class="mt-6 max-w-none" title="Organization profile not connected">
-            Make sure your email, job rank, and department are available in the company directory before submitting a request.
-        </x-alert>
-    @endif
-
     @include('desk._how-it-works', [
         'steps' => [
             ['Describe the need', 'Explain the current condition, the target condition, and the benefit. Focus on the need, not how to build it.', 'You'],
@@ -54,16 +41,21 @@
 
             <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
                 <x-label for="system_public_id">Which system?</x-label>
-                <x-select id="system_public_id" name="system_public_id" required>
-                    <option value="">Select a system</option>
-                    @foreach ($systems as $system)
-                        <option value="{{ $system->public_id }}" @selected(old('system_public_id') === $system->public_id)>
-                            {{ $system->name }}{{ ($queueDepth[$system->public_id] ?? 0) > 0 ? ' — '.$queueDepth[$system->public_id].' ahead of you' : '' }}
-                        </option>
-                    @endforeach
-                </x-select>
+                <x-searchable-select
+                    id="system_public_id"
+                    name="system_public_id"
+                    :selected="old('system_public_id')"
+                    placeholder="Select a system"
+                    search-placeholder="Search systems…"
+                    :options="$systems->map(fn ($system) => [
+                        'value' => $system->public_id,
+                        'label' => $system->name.(($queueDepth[$system->public_id] ?? 0) > 0
+                            ? ' — '.$queueDepth[$system->public_id].' ahead of you'
+                            : ''),
+                    ])->values()"
+                />
                 <x-field-error name="system_public_id" />
-                <p class="mt-2 text-xs text-slate-500">Each system has an accountable owner; your request is routed there first.</p>
+                <p class="mt-2 text-xs text-slate-500">ITD assigns the PIC when the request is approved, based on the work and available capacity.</p>
             </section>
 
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">

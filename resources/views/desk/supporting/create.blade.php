@@ -14,11 +14,6 @@
 
     <x-auth-errors class="mt-6" />
 
-    <x-alert variant="info" :dismissible="false" class="mt-6 max-w-none" title="Sent directly to ITD">
-        Supporting requests do not require department or project approval. ITD receives the request,
-        assigns the right person, and updates its status as the work progresses.
-    </x-alert>
-
     @include('desk._how-it-works', [
         'steps' => [
             ['Describe the support needed', 'Explain the expected result and include the relevant device, file, account, or location.', 'You'],

@@ -26,8 +26,8 @@ class StoreFeatureRequestRequest extends FormRequest
         }
 
         return [
-            // Only an active system, and only one that has a PIC — nobody can be assigned
-            // work on a system with no owner (PRD-02).
+            // The requester chooses the system; ITD chooses the accountable person while
+            // approving, after it has read the actual need.
             'system_public_id' => ['required', 'string', Rule::in($this->eligibleSystemIds($workspace))],
             'title' => ['required', 'string', 'max:200'],
             'problem' => ['required', 'string', 'min:20', 'max:4000'],
@@ -53,8 +53,6 @@ class StoreFeatureRequestRequest extends FormRequest
             ? $workspace->projects()
                 ->where('type', ProjectType::SYSTEM->value)
                 ->whereNull('archived_at')
-                ->get()
-                ->filter(fn ($system) => $system->pic() !== null)
                 ->pluck('public_id')
                 ->all()
             : [];
