@@ -90,6 +90,26 @@ class SupportingTaskFlowTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('assignee_public_id');
     }
 
+    public function test_requester_can_send_a_quick_support_request(): void
+    {
+        [, $workspace] = $this->workspace();
+        $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
+
+        $this->actingAs($requester)->get(route('desk.supporting.create', $workspace))
+            ->assertOk()->assertSee('Ask ITD for operational support');
+        $this->actingAs($requester)->post(route('desk.supporting.store', $workspace), [
+            'title' => 'Repair meeting room printer',
+            'description' => 'The printer is online but every print job remains queued.',
+            'category' => SupportingTaskCategory::HARDWARE->value,
+            'priority' => TaskPriority::MEDIUM->value,
+        ])->assertRedirect();
+
+        $task = SupportingTask::where('creator_id', $requester->id)->firstOrFail();
+        $this->assertSame(SupportingTaskStatus::TODO, $task->status);
+        $this->actingAs($requester)->get(route('desk.supporting.show', $task))
+            ->assertOk()->assertSee('Waiting for ITD assignment');
+    }
+
     private function workspace(): array
     {
         $owner = User::factory()->create();

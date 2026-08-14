@@ -17,7 +17,7 @@ class SupportingTaskPolicy
 
     public function view(User $user, SupportingTask $task): bool
     {
-        return $this->viewAny($user, $task->workspace);
+        return $task->creator_id === $user->id || $this->viewAny($user, $task->workspace);
     }
 
     public function create(User $user, Workspace $workspace): bool

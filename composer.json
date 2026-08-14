@@ -10,7 +10,6 @@
         "endroid/qr-code": "^5.0",
         "guzzlehttp/guzzle": "^7.2",
         "laravel-notification-channels/webpush": "^9.0",
-        "laravel/cashier": "^15.0",
         "laravel/framework": "^10.10",
         "laravel/socialite": "^5.10",
         "laravel/tinker": "^2.8",

@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceInvitation;
 use App\Notifications\WorkspaceInvitationNotification;
-use App\Services\PlanEntitlementService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -15,24 +14,12 @@ use Illuminate\Validation\ValidationException;
 
 class InviteWorkspaceMember
 {
-    public function __construct(private readonly PlanEntitlementService $entitlements) {}
-
     public function handle(Workspace $workspace, User $inviter, string $email, string $role, ?string $ipAddress = null): WorkspaceInvitation
     {
         $email = Str::lower(trim($email));
 
         if ($workspace->memberships()->active()->whereHas('user', fn ($query) => $query->where('email', $email))->exists()) {
             throw ValidationException::withMessages(['email' => 'This person is already an active workspace member.']);
-        }
-
-        $hasPendingInvitation = $workspace->invitations()
-            ->where('email', $email)
-            ->whereNull('accepted_at')
-            ->whereNull('rejected_at')
-            ->where('expires_at', '>', now())
-            ->exists();
-        if (! $hasPendingInvitation) {
-            $this->entitlements->assertCanInviteMember($workspace);
         }
 
         $token = Str::random(64);

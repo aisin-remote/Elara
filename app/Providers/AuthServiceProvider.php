@@ -20,7 +20,6 @@ use App\Models\ValidationCheckpoint;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use App\Policies\AiConversationPolicy;
-use App\Policies\BillingPolicy;
 use App\Policies\ConversationPolicy;
 use App\Policies\FeatureRequestPolicy;
 use App\Policies\FilePolicy;
@@ -74,7 +73,5 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('viewReport', [ReportPolicy::class, 'view']);
-        Gate::define('viewBilling', [BillingPolicy::class, 'view']);
-        Gate::define('manageBilling', [BillingPolicy::class, 'manage']);
     }
 }

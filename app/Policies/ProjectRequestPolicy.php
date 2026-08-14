@@ -8,11 +8,12 @@ use App\Enums\WorkspaceRole;
 use App\Models\ProjectRequest;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\ApprovalDelegationService;
 use App\Services\OrganizationDirectory;
 
 class ProjectRequestPolicy
 {
-    public function __construct(private readonly OrganizationDirectory $organization) {}
+    public function __construct(private readonly OrganizationDirectory $organization, private readonly ApprovalDelegationService $delegation) {}
 
     /** Requesters only — same reasoning as FeatureRequestPolicy::create. */
     public function create(User $user, Workspace $workspace): bool
@@ -22,12 +23,15 @@ class ProjectRequestPolicy
 
     public function viewAny(User $user, Workspace $workspace): bool
     {
-        return in_array($this->role($user, $workspace), [
+        $roles = [
             WorkspaceRole::SUPERVISOR,
             WorkspaceRole::MANAGER,
             WorkspaceRole::ADMIN,
             WorkspaceRole::OWNER,
-        ], true);
+        ];
+
+        return in_array($this->role($user, $workspace), $roles, true)
+            || $this->delegation->fromRoles($user, $workspace, 'project', $roles);
     }
 
     public function view(User $user, ProjectRequest $request): bool
@@ -45,11 +49,14 @@ class ProjectRequestPolicy
     /** Scheduling and closing the scoping meeting is the supervisor's job. */
     public function runMeeting(User $user, ProjectRequest $request): bool
     {
-        return in_array($this->role($user, $request->workspace), [
+        $roles = [
             WorkspaceRole::SUPERVISOR,
             WorkspaceRole::ADMIN,
             WorkspaceRole::OWNER,
-        ], true);
+        ];
+
+        return in_array($this->role($user, $request->workspace), $roles, true)
+            || $this->delegation->fromRoles($user, $request->workspace, 'project', $roles);
     }
 
     /** First signature. Unavailable until the meeting is recorded as held. */
@@ -68,11 +75,11 @@ class ProjectRequestPolicy
     {
         return $request->status === ProjectRequestStatus::PENDING_MANAGER
             && $request->spv_id !== $user->id
-            && in_array($this->role($user, $request->workspace), [
+            && (in_array($this->role($user, $request->workspace), [
                 WorkspaceRole::MANAGER,
                 WorkspaceRole::ADMIN,
                 WorkspaceRole::OWNER,
-            ], true);
+            ], true) || $this->delegation->fromRoles($user, $request->workspace, 'project', [WorkspaceRole::MANAGER, WorkspaceRole::ADMIN, WorkspaceRole::OWNER]));
     }
 
     public function viewDepartmentApprovals(User $user, Workspace $workspace): bool
@@ -81,14 +88,16 @@ class ProjectRequestPolicy
 
         return $this->role($user, $workspace)?->canUseRequestDesk() === true
             && $profile !== null
-            && $this->organization->canApproveDepartment($user, $profile['department_id']);
+            && ($this->organization->canApproveDepartment($user, $profile['department_id'])
+                || $this->delegation->forDepartment($user, $workspace, $profile['department_id'], $this->organization));
     }
 
     public function departmentDecide(User $user, ProjectRequest $request): bool
     {
         return $request->status === ProjectRequestStatus::PENDING_DEPARTMENT
             && $request->requester_department_external_id !== null
-            && $this->organization->canApproveDepartment($user, $request->requester_department_external_id);
+            && ($this->organization->canApproveDepartment($user, $request->requester_department_external_id)
+                || $this->delegation->forDepartment($user, $request->workspace, $request->requester_department_external_id, $this->organization));
     }
 
     public function withdraw(User $user, ProjectRequest $request): bool

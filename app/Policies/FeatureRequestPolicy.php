@@ -8,11 +8,12 @@ use App\Enums\WorkspaceRole;
 use App\Models\FeatureRequest;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\ApprovalDelegationService;
 use App\Services\OrganizationDirectory;
 
 class FeatureRequestPolicy
 {
-    public function __construct(private readonly OrganizationDirectory $organization) {}
+    public function __construct(private readonly OrganizationDirectory $organization, private readonly ApprovalDelegationService $delegation) {}
 
     /**
      * Requesters only. The delivery team does not file requests to itself — it creates work
@@ -27,12 +28,16 @@ class FeatureRequestPolicy
     /** The approvals queue: everyone who can act on it, plus managers who watch it. */
     public function viewAny(User $user, Workspace $workspace): bool
     {
-        return in_array($this->role($user, $workspace), [
+        $roles = [
             WorkspaceRole::SUPERVISOR,
             WorkspaceRole::MANAGER,
             WorkspaceRole::ADMIN,
             WorkspaceRole::OWNER,
-        ], true);
+        ];
+
+        return in_array($this->role($user, $workspace), $roles, true)
+            || $this->delegation->fromRoles($user, $workspace, 'feature', $roles)
+            || $this->delegation->fromRoles($user, $workspace, 'project', $roles);
     }
 
     public function view(User $user, FeatureRequest $request): bool
@@ -57,12 +62,15 @@ class FeatureRequestPolicy
      */
     public function decide(User $user, FeatureRequest $request): bool
     {
-        return in_array($this->role($user, $request->workspace), [
+        $roles = [
             WorkspaceRole::SUPERVISOR,
             WorkspaceRole::MANAGER,
             WorkspaceRole::ADMIN,
             WorkspaceRole::OWNER,
-        ], true);
+        ];
+
+        return in_array($this->role($user, $request->workspace), $roles, true)
+            || $this->delegation->fromRoles($user, $request->workspace, 'feature', $roles);
     }
 
     public function viewDepartmentApprovals(User $user, Workspace $workspace): bool
@@ -71,14 +79,16 @@ class FeatureRequestPolicy
 
         return $this->role($user, $workspace)?->canUseRequestDesk() === true
             && $profile !== null
-            && $this->organization->canApproveDepartment($user, $profile['department_id']);
+            && ($this->organization->canApproveDepartment($user, $profile['department_id'])
+                || $this->delegation->forDepartment($user, $workspace, $profile['department_id'], $this->organization));
     }
 
     public function departmentDecide(User $user, FeatureRequest $request): bool
     {
         return $request->status === FeatureRequestStatus::PENDING_DEPARTMENT
             && $request->requester_department_external_id !== null
-            && $this->organization->canApproveDepartment($user, $request->requester_department_external_id);
+            && ($this->organization->canApproveDepartment($user, $request->requester_department_external_id)
+                || $this->delegation->forDepartment($user, $request->workspace, $request->requester_department_external_id, $this->organization));
     }
 
     /** The requester may pull it back while nobody has acted on it. */

@@ -8,7 +8,6 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use Laravel\Cashier\Cashier;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,8 +16,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        Cashier::ignoreRoutes();
-
         $this->app->bind(TaskBreakdownGenerator::class, OpenAiTaskBreakdown::class);
     }
 

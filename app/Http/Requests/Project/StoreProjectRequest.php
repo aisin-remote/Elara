@@ -33,6 +33,9 @@ class StoreProjectRequest extends FormRequest
             'member_public_ids' => ['nullable', 'array'],
             'member_public_ids.*' => ['string', 'size:26', 'distinct'],
             'generate_with_ai' => ['sometimes', 'boolean'],
+            'template_public_id' => ['nullable', 'string', 'size:26', Rule::exists('project_templates', 'public_id')->where(
+                fn ($query) => $query->where('workspace_id', $this->route('workspace')->id),
+            )],
         ];
     }
 

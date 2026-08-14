@@ -46,6 +46,13 @@
             <form method="POST" action="{{ route('internal.projects.store', $workspace) }}" class="mt-6 space-y-5" x-data="descriptionDraft({ endpoint: @js(route('internal.ai.descriptions.store', $workspace)), kind: 'project', initialDescription: @js(old('description', '')), aiEnabled: @js((bool) old('generate_with_ai', true)) })">
                 @csrf
                 <div><x-label for="name">Project name</x-label><x-input id="name" name="name" value="{{ old('name') }}" required autofocus /><x-field-error name="name" /></div>
+                @if ($projectTemplates->isNotEmpty())
+                    <div>
+                        <x-label for="template_public_id">Workflow template</x-label>
+                        <x-select id="template_public_id" name="template_public_id"><option value="">Workspace workflow defaults</option>@foreach($projectTemplates as $template)<option value="{{ $template->public_id }}" @selected(old('template_public_id') === $template->public_id)>{{ $template->name }}</option>@endforeach</x-select>
+                        <p class="mt-1 text-xs text-slate-500">Copies the saved groups, properties, and visible columns into this project.</p>
+                    </div>
+                @endif
                 <div>
                     <x-label for="description" class="mb-2 block">Description</x-label>
                     <div class="relative">

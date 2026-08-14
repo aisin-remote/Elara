@@ -7,7 +7,6 @@ use App\Models\ProjectFile;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
-use App\Services\PlanEntitlementService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -16,15 +15,11 @@ use Throwable;
 
 class StorePrivateFile
 {
-    public function __construct(private readonly PlanEntitlementService $entitlements) {}
-
     public function handle(Workspace $workspace, User $uploader, UploadedFile $upload, ?Project $project = null, ?Task $task = null): ProjectFile
     {
         if (($project && $project->workspace_id !== $workspace->id) || ($task && $task->workspace_id !== $workspace->id)) {
             throw new InvalidArgumentException('The file target must belong to the workspace.');
         }
-
-        $this->entitlements->assertCanStoreBytes($workspace, (int) $upload->getSize());
 
         $disk = config('filesystems.default', 'local');
         $directory = "workspaces/{$workspace->public_id}/".now()->format('Y/m');

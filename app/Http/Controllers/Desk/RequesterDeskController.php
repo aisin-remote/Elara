@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Desk;
 use App\Http\Controllers\Controller;
 use App\Models\FeatureRequest;
 use App\Models\ProjectRequest;
+use App\Models\SupportingTask;
 use App\Models\Workspace;
 use App\Services\OrganizationDirectory;
 use Illuminate\Http\Request;
@@ -42,9 +43,17 @@ class RequesterDeskController extends Controller
             ->sortByDesc('created_at')
             ->values();
 
+        $supporting = $organizationProfile
+            ? SupportingTask::query()
+                ->where('creator_id', $request->user()->id)
+                ->with(['creator', 'assignee'])
+                ->latest('created_at')->get()
+            : collect();
+
         $counts = [
             'feature' => $openFeatures->count(),
             'project' => $openProjects->count(),
+            'supporting' => $supporting->count(),
             'history' => $history->count(),
         ];
 
@@ -53,6 +62,7 @@ class RequesterDeskController extends Controller
 
         $rows = match ($tab) {
             'project' => $openProjects,
+            'supporting' => $supporting,
             'history' => $history,
             default => $openFeatures,
         };

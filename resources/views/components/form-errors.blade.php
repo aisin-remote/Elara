@@ -2,7 +2,7 @@
 
 @php
     // Everything the surrounding form does not already show next to a field. Without this a
-    // rule thrown from an Action — a plan limit, an illegal status transition — lands on a key
+    // rule thrown from an Action — an illegal status transition, for example — lands on a key
     // no field is bound to, and the page silently reloads as if the button were broken.
     $unattached = collect($errors->keys())
         ->reject(fn (string $key) => in_array($key, (array) $except, true))

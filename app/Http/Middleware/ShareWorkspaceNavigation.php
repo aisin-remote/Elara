@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Enums\BreakdownStatus;
-use App\Enums\OrganizationRankGroup;
 use App\Models\FeatureRequest;
 use App\Models\Project;
 use App\Models\ProjectRequest;
@@ -104,8 +103,8 @@ class ShareWorkspaceNavigation
         if ($activeWorkspace && str_starts_with($request->path(), 'desk')) {
             $organizationProfile = $this->organization->profile($request->user());
             $canApproveDepartmentRequests = $organizationProfile !== null
-                && $organizationProfile['rank_group'] === OrganizationRankGroup::MANAGEMENT
-                && strcasecmp($organizationProfile['department_code'], config('organization.it_department_code')) !== 0;
+                && strcasecmp($organizationProfile['department_code'], config('organization.it_department_code')) !== 0
+                && $request->user()->can('viewDepartmentApprovals', [FeatureRequest::class, $activeWorkspace]);
 
             if ($canApproveDepartmentRequests) {
                 $departmentApprovalCount = FeatureRequest::query()

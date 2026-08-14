@@ -27,6 +27,7 @@ use App\Http\Controllers\Desk\FeatureRequestController as DeskFeatureRequestCont
 use App\Http\Controllers\Desk\ItTimelineController;
 use App\Http\Controllers\Desk\ProjectRequestController as DeskProjectRequestController;
 use App\Http\Controllers\Desk\RequesterDeskController;
+use App\Http\Controllers\Desk\SupportingRequestController;
 use App\Http\Controllers\Desk\ValidationController as DeskValidationController;
 use App\Http\Middleware\EnsureDeliveryDeskAccess;
 use App\Http\Middleware\EnsureRequestDeskAccess;
@@ -68,6 +69,9 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::get('/desk/project-requests/{projectRequest}', [DeskProjectRequestController::class, 'show'])->name('desk.project-requests.show');
     Route::post('/desk/project-requests/{projectRequest}/resubmit', [DeskProjectRequestController::class, 'resubmit'])->name('desk.project-requests.resubmit');
     Route::post('/desk/project-requests/{projectRequest}/withdraw', [DeskProjectRequestController::class, 'withdraw'])->name('desk.project-requests.withdraw');
+    Route::get('/desk/workspaces/{workspace}/supporting/new', [SupportingRequestController::class, 'create'])->name('desk.supporting.create');
+    Route::post('/desk/workspaces/{workspace}/supporting', [SupportingRequestController::class, 'store'])->name('desk.supporting.store');
+    Route::get('/desk/supporting/{supportingTask}', [SupportingRequestController::class, 'show'])->name('desk.supporting.show');
     Route::get('/desk/validations', [DeskValidationController::class, 'index'])->name('desk.validations.index');
     Route::post('/desk/validations/{checkpoint}', [DeskValidationController::class, 'respond'])->name('desk.validations.respond');
 });

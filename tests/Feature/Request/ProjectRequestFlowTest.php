@@ -136,25 +136,6 @@ class ProjectRequestFlowTest extends TestCase
         Notification::assertSentTo($requester, OrbitraNotification::class);
     }
 
-    public function test_legacy_plan_configuration_cannot_block_project_creation(): void
-    {
-        [$owner, $workspace] = $this->workspace();
-        $supervisor = $this->member($workspace, WorkspaceRole::SUPERVISOR);
-        $manager = $this->member($workspace, WorkspaceRole::MANAGER);
-        $request = $this->submit($workspace);
-        $this->holdMeeting($workspace, $request, $supervisor);
-        $this->actingAs($supervisor)->post(route('app.approvals.projects.decide', [$workspace, $request]), ['decision' => 'approve']);
-
-        // Legacy package settings no longer affect delivery.
-        config()->set('plans.plans.starter.limits.active_projects', 0);
-
-        $this->actingAs($manager)
-            ->post(route('app.approvals.projects.decide', [$workspace, $request]), ['decision' => 'approve', 'estimated_hours' => 40])
-            ->assertRedirect();
-
-        $this->assertNotNull($request->fresh()->project_id);
-    }
-
     public function test_one_person_cannot_supply_both_signatures(): void
     {
         [$owner, $workspace] = $this->workspace();

@@ -36,7 +36,7 @@
     <form method="GET" class="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900" aria-label="Dashboard date range">
         <label class="min-w-40 flex-1 sm:flex-none"><span class="mb-1 block text-xs font-semibold text-slate-500">From</span><x-input type="date" name="from" value="{{ $dashboard['period']['from'] }}" /></label>
         <label class="min-w-40 flex-1 sm:flex-none"><span class="mb-1 block text-xs font-semibold text-slate-500">To</span><x-input type="date" name="to" value="{{ $dashboard['period']['to'] }}" /></label>
-        <input type="hidden" name="distribution" value="{{ $dashboard['distribution']['type'] }}">
+        <input type="hidden" name="distribution" value="{{ request('distribution', 'status') }}">
         <input type="hidden" name="gantt_view" value="{{ $dashboard['gantt']['view'] }}">
         <input type="hidden" name="gantt_scale" value="{{ $dashboard['gantt']['scale'] }}">
         <x-button variant="secondary">Update range</x-button>
@@ -188,34 +188,8 @@
     </section>
     </div>
 
-    <div class="mt-5 grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,.65fr)]">
-        <section class="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/[.02] dark:border-slate-800 dark:bg-slate-900 sm:p-4" aria-labelledby="task-performance-title">
-            <h3 id="task-performance-title" class="px-1 pb-4 text-lg font-bold">Task Performance</h3>
-            <div class="rounded-2xl border border-slate-200 p-4 shadow-sm shadow-slate-950/[.03] dark:border-slate-700 sm:p-5">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-300" aria-label="Task performance legend">
-                        <span class="flex items-center gap-1.5"><span class="size-2 rounded-full bg-emerald-500"></span>Complete</span>
-                        <span class="flex items-center gap-1.5"><span class="size-2 rounded-full border border-slate-300 bg-slate-50 dark:border-slate-500 dark:bg-slate-700"></span>New Task</span>
-                        <span class="flex items-center gap-1.5"><span class="size-2 rounded-full bg-rose-500"></span>Overdue</span>
-                    </div>
-                    <span class="inline-flex min-h-10 w-fit shrink-0 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-300">
-                        <x-icon name="calendar" class="size-4" />{{ $dashboard['period']['label'] }}
-                    </span>
-                </div>
-                <div class="mt-4 h-64 sm:h-72"><canvas data-orbitra-chart="performance" data-chart-source="dashboard-trend" aria-label="Task performance chart for {{ $dashboard['period']['label'] }}" role="img">Task performance chart</canvas></div>
-            </div>
-            <script id="dashboard-trend" type="application/json">@json($dashboard['trend'])</script>
-        </section>
-
-        <section class="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="member-task-title">
-            <div class="flex items-center justify-between gap-3"><div><h3 id="member-task-title" class="text-lg font-bold">Member task workload</h3><p class="mt-1 text-xs text-slate-500">Open vs completed tasks by member</p></div><span class="shrink-0 rounded-full bg-orbit-50 px-3 py-1 text-xs font-bold text-orbit-700 dark:bg-orbit-950 dark:text-orbit-300">{{ $dashboard['member_task_heatmap']['total_tasks'] }} tasks</span></div>
-            @if(count($dashboard['member_task_heatmap']['members']) > 0)
-                <div class="mt-5 h-64"><canvas data-orbitra-chart="workload" data-chart-source="dashboard-member-task" aria-label="Member task workload chart" role="img">Member task workload chart</canvas></div>
-                <script id="dashboard-member-task" type="application/json">@json($dashboard['member_task_heatmap']['members'])</script>
-            @else
-                <p class="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800">No active members in this workspace.</p>
-            @endif
-        </section>
+    <div data-lazy-widget="{{ route('internal.dashboard.widgets.insights', ['workspace' => $workspace, ...request()->only('from', 'to', 'distribution')]) }}" class="mt-5 min-h-80" aria-live="polite">
+        <div class="grid min-h-80 gap-5 xl:grid-cols-2"><div class="grid place-items-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><span class="text-sm font-semibold text-slate-400">Task Performance · New Task data loading…</span></div><div class="grid place-items-center rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><span class="text-sm font-semibold text-slate-400">Member task workload loading…</span></div></div>
     </div>
 
     <div class="mt-5 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
@@ -272,29 +246,16 @@
         <section class="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-2 dark:border-slate-800 dark:bg-slate-900 xl:col-span-1" aria-labelledby="distribution-title">
             <div class="flex items-center justify-between gap-3"><h3 id="distribution-title" class="text-lg font-bold">Task distribution</h3><div class="flex rounded-lg bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800"><a href="{{ request()->fullUrlWithQuery(['distribution' => 'status']) }}" class="rounded-md px-2.5 py-1.5 {{ $dashboard['distribution']['type'] === 'status' ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-500' }}">Status</a><a href="{{ request()->fullUrlWithQuery(['distribution' => 'priority']) }}" class="rounded-md px-2.5 py-1.5 {{ $dashboard['distribution']['type'] === 'priority' ? 'bg-white shadow-sm dark:bg-slate-700' : 'text-slate-500' }}">Priority</a></div></div>
             @if ($dashboard['distribution']['total'] > 0)
-                <p class="mt-4 text-sm text-slate-500">
-                    <span class="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{{ number_format($dashboard['distribution']['total']) }}</span>
-                    tasks · mostly <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $dashboard['distribution']['rows'][0]['label'] }}</span>
-                </p>
+                <p class="mt-4 text-sm text-slate-500"><span class="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">{{ number_format($dashboard['distribution']['total']) }}</span> tasks · mostly <span class="font-semibold text-slate-700 dark:text-slate-200">{{ $dashboard['distribution']['rows'][0]['label'] }}</span></p>
                 <ul class="mt-5 space-y-3">
                     @foreach ($dashboard['distribution']['rows'] as $row)
-                        <li>
-                            <div class="flex items-baseline justify-between gap-3 text-sm">
-                                <span class="flex min-w-0 items-center gap-2">
-                                    <span class="size-2.5 shrink-0 rounded-full" style="background-color: {{ $row['color'] }}"></span>
-                                    <span class="truncate font-medium">{{ $row['label'] }}</span>
-                                </span>
-                                <span class="shrink-0 tabular-nums"><span class="font-bold">{{ $row['value'] }}</span> <span class="text-xs text-slate-400">{{ $row['share'] }}%</span></span>
-                            </div>
-                            <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                <div class="h-full rounded-full" style="width: {{ $row['share'] }}%; background-color: {{ $row['color'] }}"></div>
-                            </div>
-                        </li>
+                        <li><div class="flex items-baseline justify-between gap-3 text-sm"><span class="flex min-w-0 items-center gap-2"><span class="size-2.5 shrink-0 rounded-full" style="background-color: {{ $row['color'] }}"></span><span class="truncate font-medium">{{ $row['label'] }}</span></span><span class="shrink-0 tabular-nums"><span class="font-bold">{{ $row['value'] }}</span> <span class="text-xs text-slate-400">{{ $row['share'] }}%</span></span></div><div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-full rounded-full" style="width: {{ $row['share'] }}%; background-color: {{ $row['color'] }}"></div></div></li>
                     @endforeach
                 </ul>
             @else
                 <x-empty-state icon="tasks" title="No tasks in this range" description="Widen the date range, or create a task, to see how work is spread across statuses." class="mt-4 p-8" />
             @endif
         </section>
+
     </div>
 @endsection

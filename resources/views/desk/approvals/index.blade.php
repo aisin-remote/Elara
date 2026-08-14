@@ -15,6 +15,8 @@
         <x-badge tone="slate">{{ $profile['rank_code'] }} · {{ $profile['rank_name'] }}</x-badge>
     </div>
 
+    <x-approval-delegation :workspace="$workspace" :delegations="$delegations" :incoming-delegations="$incomingDelegations" :delegation-members="$delegationMembers" :delegation-scopes="$delegationScopes" />
+
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
         @foreach ([['Feature requests', $features, false], ['Project proposals', $projects, true]] as [$title, $rows, $isProject])
             <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
@@ -39,7 +41,7 @@
                                         {{ $row->requester->name }}{{ $isProject ? '' : ' · '.$row->system->name }}
                                     </span>
                                 </span>
-                                <span class="whitespace-nowrap text-xs text-slate-400">{{ $row->created_at->diffForHumans() }}</span>
+                                <span class="whitespace-nowrap text-right text-xs text-slate-400">{{ $slaByRequest[$row->public_id]['age'] ?? $row->created_at->diffForHumans() }}@if($slaByRequest[$row->public_id] ?? null)<span class="mt-1 block font-semibold {{ $slaByRequest[$row->public_id]['state'] === 'breached' ? 'text-rose-600' : ($slaByRequest[$row->public_id]['state'] === 'warning' ? 'text-amber-600' : 'text-emerald-600') }}">{{ $slaByRequest[$row->public_id]['label'] }}</span><span class="mt-1 block">{{ $slaByRequest[$row->public_id]['owner'] }}</span>@endif</span>
                                 <x-icon name="chevron-right" class="size-4 shrink-0 text-slate-400" />
                             </a>
                         @endforeach

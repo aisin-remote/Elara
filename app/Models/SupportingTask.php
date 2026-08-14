@@ -19,7 +19,8 @@ class SupportingTask extends Model
     use GeneratesPublicId, SoftDeletes;
 
     protected $fillable = [
-        'workspace_id', 'creator_id', 'assignee_id', 'title', 'description', 'category', 'priority', 'status', 'due_date', 'completed_at',
+        'workspace_id', 'creator_id', 'requester_department_id', 'requester_department_code', 'requester_department_name',
+        'assignee_id', 'title', 'description', 'category', 'priority', 'status', 'due_date', 'completed_at',
     ];
 
     protected $casts = [
@@ -62,9 +63,11 @@ class SupportingTask extends Model
         $query = parent::resolveRouteBindingQuery($query, $value, $field);
 
         if (Auth::check()) {
-            $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-                ->where('user_id', Auth::id())
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+            $query->where(fn (Builder $access) => $access
+                ->where('creator_id', Auth::id())
+                ->orWhereHas('workspace.memberships', fn (Builder $membership) => $membership
+                    ->where('user_id', Auth::id())
+                    ->where('status', WorkspaceMemberStatus::ACTIVE->value)));
         }
 
         return $query;

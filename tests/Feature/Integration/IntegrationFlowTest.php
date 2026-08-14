@@ -31,7 +31,6 @@ class IntegrationFlowTest extends TestCase
         $this->actingAs($owner)->getJson(route('internal.integrations.callback', ['provider' => 'github', 'code' => 'secret-code', 'state' => 'tampered']))
             ->assertUnprocessable()->assertJsonValidationErrors('state');
 
-        config(['plans.plans.starter.limits.integrations' => 4]);
         $connection = app(ConnectIntegration::class)->handle($workspace, $owner, IntegrationProvider::GITHUB, [
             'external_account_id' => 'github-42', 'account_name' => 'orbitra', 'access_token' => 'plain-access-token',
             'refresh_token' => 'plain-refresh-token', 'scopes' => ['read:user'],

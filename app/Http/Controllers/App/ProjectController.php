@@ -60,6 +60,7 @@ class ProjectController extends Controller
                 ->with('members:id,public_id,first_name,last_name,avatar_path')
                 ->orderBy('name')
                 ->get(),
+            'projectTemplates' => $workspace->projectTemplates()->orderBy('name')->get(),
         ]);
     }
 

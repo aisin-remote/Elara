@@ -31,7 +31,7 @@ class DashboardController extends Controller
 
         return view('app.dashboard', [
             'workspace' => $workspace,
-            'dashboard' => $dashboard->forWorkspace($workspace, $request->user(), $filters),
+            'dashboard' => $dashboard->summary($workspace, $request->user(), $filters),
             'projects' => $projects,
             'creatableProjects' => $projects->filter(fn (Project $project) => $request->user()->can('create', [Task::class, $project])),
             'canCreateProject' => $request->user()->can('create', [Project::class, $workspace]),

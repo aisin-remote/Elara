@@ -15,9 +15,11 @@ use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Feature;
 use App\Models\Project;
+use App\Models\ProjectTemplate;
 use App\Models\Task;
 use App\Models\TaskProperty;
 use App\Models\TaskPropertyValue;
+use App\Models\TaskView;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -411,6 +413,35 @@ class TaskPropertyFlowTest extends TestCase
             'value' => TaskPriority::LOW->value,
             'version' => 2,
         ])->assertForbidden();
+    }
+
+    public function test_saved_views_and_project_templates_reuse_task_database_configuration(): void
+    {
+        [$owner, $workspace, $project] = $this->task();
+        $stage = $this->property($owner, $project, 'Delivery lane', TaskPropertyType::SELECT, ['Ready', 'Released']);
+
+        $this->actingAs($owner)->post(route('internal.task-views.store', $project), [
+            'name' => 'Ready work',
+            'group_by' => 'property:'.$stage->public_id,
+            'sort' => 'title',
+            'direction' => 'asc',
+            'fields' => ['title', $stage->public_id],
+        ])->assertRedirect();
+        $view = TaskView::firstOrFail();
+        $this->actingAs($owner)->get(route('app.projects.tasks', [$workspace, $project, 'saved_view' => $view->public_id]))
+            ->assertOk()->assertSee('Ready work')->assertSee('data-task-group-name="Ready"', false);
+
+        $this->actingAs($owner)->post(route('internal.project-templates.store', $project), ['name' => 'Delivery workflow'])
+            ->assertRedirect();
+        $template = ProjectTemplate::firstOrFail();
+        $copy = app(CreateProject::class)->handle($workspace, $owner, [
+            'name' => 'Templated project', 'description' => null, 'color' => '#6366f1',
+            'status' => ProjectStatus::PLANNED->value, 'start_date' => null, 'due_date' => null,
+            'template_public_id' => $template->public_id,
+        ]);
+
+        $this->assertSame($project->taskStatuses()->count(), $copy->taskStatuses()->count());
+        $this->assertDatabaseHas('task_properties', ['project_id' => $copy->id, 'name' => 'Delivery lane']);
     }
 
     private function property(User $owner, Project $project, string $name, TaskPropertyType $type, array $options = []): TaskProperty

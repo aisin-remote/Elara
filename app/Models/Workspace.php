@@ -60,6 +60,11 @@ class Workspace extends Model
         return $this->hasMany(Project::class);
     }
 
+    public function projectTemplates(): HasMany
+    {
+        return $this->hasMany(ProjectTemplate::class);
+    }
+
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class);

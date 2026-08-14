@@ -24,6 +24,11 @@ class DashboardService
 {
     public function forWorkspace(Workspace $workspace, User $user, array $filters = []): array
     {
+        return [...$this->summary($workspace, $user, $filters), ...$this->insights($workspace, $user, $filters)];
+    }
+
+    public function summary(Workspace $workspace, User $user, array $filters = []): array
+    {
         $period = $this->period($workspace, $filters);
         $current = $this->snapshot($workspace, $user, $filters, $period['from_utc'], $period['to_utc']);
         $previous = $this->snapshot($workspace, $user, $filters, $period['previous_from_utc'], $period['previous_to_utc']);
@@ -35,14 +40,23 @@ class DashboardService
                 'previous' => $previous[$key],
                 'delta' => $value - $previous[$key],
             ])->all(),
-            'trend' => $this->trend($workspace, $user, $filters, $period),
-            'distribution' => $this->distribution($workspace, $user, $filters, $period),
-            'member_task_heatmap' => $this->memberTaskHeatmap($workspace, $user, $filters, $period),
             'recent_activity' => $this->recentActivity($workspace, $user, $filters, $period),
             'meetings' => $this->meetings($workspace, $user, $period['timezone']),
             'members' => $this->members($workspace),
+            'distribution' => $this->distribution($workspace, $user, $filters, $period),
             'gantt' => $this->gantt($workspace, $user, $filters, $period['timezone']),
             'today_tasks' => $this->todayTasks($workspace, $user, $period['timezone']),
+        ];
+    }
+
+    public function insights(Workspace $workspace, User $user, array $filters = []): array
+    {
+        $period = $this->period($workspace, $filters);
+
+        return [
+            'period' => $this->serializePeriod($period),
+            'trend' => $this->trend($workspace, $user, $filters, $period),
+            'member_task_heatmap' => $this->memberTaskHeatmap($workspace, $user, $filters, $period),
         ];
     }
 

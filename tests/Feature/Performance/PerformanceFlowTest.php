@@ -214,6 +214,7 @@ class PerformanceFlowTest extends TestCase
             ->assertSee('Task Performance')
             ->assertSee('New Task')
             ->assertSee('Member task workload')
+            ->assertSee('Task distribution')
             ->assertSee('Project timeline')
             ->assertSee('Add task')
             ->assertSee('aria-label="Timeline view"', false)
@@ -221,11 +222,18 @@ class PerformanceFlowTest extends TestCase
             ->assertSee('gantt_view=tasks&amp;gantt_scale=weekly', false)
             ->assertSee('gantt_view=projects&amp;gantt_scale=monthly', false)
             ->assertSee(route('app.projects.index', $workspace))
+            ->assertSee('xl:grid-cols-3', false)
             ->assertSee('href="'.route('app.projects.show', $project).'" class="sticky left-0', false);
         $this->assertLessThan(
             strpos($dashboardResponse->getContent(), 'id="dashboard-timeline-card"'),
             strpos($dashboardResponse->getContent(), 'data-timeline-tabs'),
         );
+        $this->assertLessThan(
+            strpos($dashboardResponse->getContent(), 'aria-labelledby="distribution-title"'),
+            strpos($dashboardResponse->getContent(), 'aria-labelledby="members-title"'),
+        );
+        $this->actingAs($owner)->get(route('internal.dashboard.widgets.insights', $workspace))
+            ->assertOk()->assertSee('Task Performance')->assertSee('Member task workload')->assertDontSee('Task distribution');
         $this->actingAs($owner)->get(route('app.workspaces.show', ['workspace' => $workspace, 'gantt_view' => 'tasks']))
             ->assertOk()
             ->assertSee('data-gantt-view="tasks"', false)
@@ -237,7 +245,6 @@ class PerformanceFlowTest extends TestCase
 
     public function test_csv_and_pdf_exports_use_authorized_filtered_data(): void
     {
-        config(['plans.plans.starter.limits.exports' => true]);
 
         [$owner, $workspace, $project] = $this->project();
         $status = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();

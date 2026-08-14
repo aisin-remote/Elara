@@ -12,13 +12,15 @@ use App\Models\FeatureRequest;
 use App\Models\ProjectRequest;
 use App\Models\TaskBreakdown;
 use App\Models\Workspace;
+use App\Services\ApprovalDelegationService;
+use App\Services\RequestSlaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ApprovalController extends Controller
 {
-    public function index(Request $request, Workspace $workspace): View
+    public function index(Request $request, Workspace $workspace, RequestSlaService $sla, ApprovalDelegationService $delegation): View
     {
         $this->authorize('viewAny', [FeatureRequest::class, $workspace]);
 
@@ -54,6 +56,9 @@ class ApprovalController extends Controller
             'pendingProjects' => $pendingProjects,
             'awaitingAcceptance' => $awaitingAcceptance,
             'counts' => $counts,
+            'slaByRequest' => $pending->concat($pendingProjects)->mapWithKeys(fn ($row) => [$row->public_id => $sla->for($row)]),
+            ...$delegation->viewData($request->user(), $workspace),
+            'delegationScopes' => ['all' => 'All approvals', 'feature' => 'Feature approvals', 'project' => 'Project approvals'],
             // Landing on an empty tab while another one has work is the page failing at its
             // only job, so the default follows the work rather than a fixed order.
             'tab' => $this->activeTab($request->string('tab')->toString(), $counts),

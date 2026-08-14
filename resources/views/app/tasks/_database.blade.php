@@ -41,8 +41,21 @@
         @endif
     @endif
 
+    @if ($savedViews->isNotEmpty())
+        <nav class="mt-5 flex flex-wrap items-center gap-2" aria-label="Saved task views">
+            <span class="text-xs font-bold uppercase tracking-wide text-slate-400">Saved views</span>
+            @foreach($savedViews as $savedView)
+                <a href="{{ request()->fullUrlWithQuery(['saved_view' => $savedView->public_id]) }}" class="rounded-full border px-3 py-1.5 text-xs font-semibold {{ $selectedSavedView?->is($savedView) ? 'border-orbit-500 bg-orbit-50 text-orbit-800 dark:bg-orbit-950/50 dark:text-orbit-200' : 'border-slate-200 text-slate-500 dark:border-slate-700' }}">{{ $savedView->name }}</a>
+            @endforeach
+            @if($selectedSavedView)
+                <form method="POST" action="{{ route('internal.task-views.destroy', $selectedSavedView) }}">@csrf @method('DELETE')<button class="text-xs font-semibold text-rose-600">Delete current</button></form>
+            @endif
+        </nav>
+    @endif
+
     <form method="GET" class="mt-5 flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
         @if($selectedFeature)<input type="hidden" name="feature" value="{{ $selectedFeature->public_id }}">@endif
+        @if($selectedSavedView)<input type="hidden" name="saved_view" value="{{ $selectedSavedView->public_id }}">@endif
         <div class="relative min-w-64 flex-1"><x-icon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><x-input name="search" value="{{ request('search') }}" placeholder="Search task" class="pl-9" /></div>
         <div class="min-w-48">
             <label for="group-by" class="sr-only">Group by</label>
@@ -54,8 +67,29 @@
         </div>
         <x-select name="priority" class="sm:max-w-44"><option value="">All priorities</option>@foreach($priorities as $priority)<option value="{{ $priority->value }}" @selected(request('priority') === $priority->value)>{{ $priority->label() }}</option>@endforeach</x-select>
         <x-select name="blocked" class="sm:max-w-44"><option value="">All readiness</option><option value="1" @selected(request()->boolean('blocked'))>Blocked only</option></x-select>
+        <x-select name="sort" class="sm:max-w-40"><option value="position">Default order</option><option value="title" @selected(request('sort') === 'title')>Name</option><option value="due_at" @selected(request('sort') === 'due_at')>Due date</option><option value="updated_at" @selected(request('sort') === 'updated_at')>Recently updated</option></x-select>
+        <x-select name="direction" class="sm:max-w-32"><option value="asc">Ascending</option><option value="desc" @selected(request('direction') === 'desc')>Descending</option></x-select>
         <x-button variant="secondary">Filter</x-button>
     </form>
+
+    <div class="mt-3 flex flex-wrap gap-2">
+        <details class="relative">
+            <summary class="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">Save current view</summary>
+            <form method="POST" action="{{ route('internal.task-views.store', $project) }}" class="absolute left-0 z-30 mt-2 w-[min(92vw,420px)] space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                @csrf
+                <div><x-label for="saved-view-name-{{ $project->public_id }}">View name</x-label><x-input id="saved-view-name-{{ $project->public_id }}" name="name" required maxlength="80" placeholder="e.g. Urgent work" /></div>
+                @foreach(['search','group_by','priority','blocked','sort','direction'] as $parameter)<input type="hidden" name="{{ $parameter }}" value="{{ request($parameter) }}">@endforeach
+                <fieldset><legend class="text-xs font-bold uppercase tracking-wide text-slate-400">Visible columns</legend><div class="mt-2 grid grid-cols-2 gap-2">@foreach($allTaskFields as $field)<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="fields[]" value="{{ $field['key'] }}" class="rounded border-slate-300" @checked(!request()->has('fields') || in_array($field['key'], (array)request('fields')))>{{ $field['name'] }}</label>@endforeach</div></fieldset>
+                <x-button class="w-full">Save view</x-button>
+            </form>
+        </details>
+        @if($canManageWorkflow && !$isPersonalDatabase)
+            <details class="relative">
+                <summary class="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">Save as project template</summary>
+                <form method="POST" action="{{ route('internal.project-templates.store', $project) }}" class="absolute left-0 z-30 mt-2 w-[min(92vw,340px)] space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900">@csrf<div><x-label for="template-name-{{ $project->public_id }}">Template name</x-label><x-input id="template-name-{{ $project->public_id }}" name="name" required maxlength="100" /></div><p class="text-xs text-slate-500">Copies groups, custom properties, and visible columns. Tasks are not copied.</p><x-button class="w-full">Save template</x-button></form>
+            </details>
+        @endif
+    </div>
 
     <div class="mt-4">
         @if ($canBulkEdit)

@@ -93,6 +93,11 @@ class Project extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function taskViews(): HasMany
+    {
+        return $this->hasMany(TaskView::class);
+    }
+
     public function breakdowns(): MorphMany
     {
         return $this->morphMany(TaskBreakdown::class, 'subject');

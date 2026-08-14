@@ -187,6 +187,7 @@ function workloadConfig(data) {
 
 export function initCharts() {
     document.querySelectorAll('[data-orbitra-chart]').forEach((canvas) => {
+        if (canvas.dataset.chartReady) return;
         const data = sourceFor(canvas);
         if (!data) return;
 
@@ -198,5 +199,6 @@ export function initCharts() {
                 : trendConfig(data, type);
 
         new Chart(canvas, config);
+        canvas.dataset.chartReady = 'true';
     });
 }

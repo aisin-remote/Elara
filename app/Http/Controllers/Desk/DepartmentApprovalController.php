@@ -11,34 +11,36 @@ use App\Http\Requests\Request\DecideDepartmentRequest;
 use App\Models\FeatureRequest;
 use App\Models\ProjectRequest;
 use App\Models\Workspace;
+use App\Services\ApprovalDelegationService;
 use App\Services\OrganizationDirectory;
+use App\Services\RequestSlaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DepartmentApprovalController extends Controller
 {
-    public function index(Request $request, Workspace $workspace, OrganizationDirectory $organization): View
+    public function index(Request $request, Workspace $workspace, OrganizationDirectory $organization, RequestSlaService $sla, ApprovalDelegationService $delegation): View
     {
         $this->authorize('viewDepartmentApprovals', [FeatureRequest::class, $workspace]);
         $this->authorize('viewDepartmentApprovals', [ProjectRequest::class, $workspace]);
         $profile = $organization->requireProfile($request->user());
 
+        $features = FeatureRequest::query()
+            ->where('requester_department_external_id', $profile['department_id'])
+            ->awaitingDepartment()->with(['requester', 'system'])->oldest('created_at')->get();
+        $projects = ProjectRequest::query()
+            ->where('requester_department_external_id', $profile['department_id'])
+            ->awaitingDepartment()->with('requester')->oldest('created_at')->get();
+
         return view('desk.approvals.index', [
             'workspace' => $workspace,
             'profile' => $profile,
-            'features' => FeatureRequest::query()
-                ->where('requester_department_external_id', $profile['department_id'])
-                ->awaitingDepartment()
-                ->with(['requester', 'system'])
-                ->oldest('created_at')
-                ->get(),
-            'projects' => ProjectRequest::query()
-                ->where('requester_department_external_id', $profile['department_id'])
-                ->awaitingDepartment()
-                ->with('requester')
-                ->oldest('created_at')
-                ->get(),
+            'features' => $features,
+            'projects' => $projects,
+            'slaByRequest' => $features->concat($projects)->mapWithKeys(fn ($row) => [$row->public_id => $sla->for($row)]),
+            ...$delegation->viewData($request->user(), $workspace),
+            'delegationScopes' => ['department' => 'Department approvals'],
         ]);
     }
 

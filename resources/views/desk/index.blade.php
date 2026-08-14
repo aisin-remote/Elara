@@ -7,6 +7,7 @@
     $tabs = [
         'feature' => ['Feature', $counts['feature']],
         'project' => ['Project', $counts['project']],
+        'supporting' => ['Supporting', $counts['supporting']],
         'history' => ['History', $counts['history']],
     ];
     $link = fn (array $params) => route('desk.index', array_filter($params, fn ($value) => $value !== '' && $value !== null));
@@ -25,6 +26,7 @@
             <div class="flex flex-wrap gap-2">
                 <x-link-button href="{{ route('desk.requests.create', $workspace) }}" variant="secondary"><x-icon name="plus" />Feature</x-link-button>
                 <x-link-button href="{{ route('desk.project-requests.create', $workspace) }}"><x-icon name="plus" />Project</x-link-button>
+                <x-link-button href="{{ route('desk.supporting.create', $workspace) }}" variant="secondary"><x-icon name="plus" />Supporting</x-link-button>
             </div>
         @endif
     </div>
@@ -59,6 +61,7 @@
                 icon="list"
                 :title="$status !== '' ? 'No requests with that status' : match ($tab) {
                     'project' => 'No project proposals yet',
+                    'supporting' => 'No support requests yet',
                     'history' => 'No completed requests yet',
                     default => 'No feature requests yet',
                 }"
@@ -66,6 +69,7 @@
                     ? 'Clear the filter to see the remaining requests.'
                     : match ($tab) {
                         'project' => 'Propose something new and track every stage and signature here.',
+                        'supporting' => 'Ask ITD for operational help outside a feature or project.',
                         'history' => 'Completed, rejected, and withdrawn requests are kept here.',
                         default => 'Request a change to a system you use and track its progress here.',
                     }" />
@@ -75,7 +79,7 @@
             <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
                 <tr>
                     <th scope="col" class="px-4 py-3 font-semibold">Request</th>
-                    <th scope="col" class="px-4 py-3 font-semibold">{{ $tab === 'project' ? 'Type' : 'System' }}</th>
+                    <th scope="col" class="px-4 py-3 font-semibold">{{ $tab === 'feature' ? 'System' : 'Type' }}</th>
                     <th scope="col" class="px-4 py-3 font-semibold">Status</th>
                     <th scope="col" class="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
                     <th scope="col" class="px-4 py-3"><span class="sr-only">Open</span></th>
@@ -84,13 +88,15 @@
             <tbody>
                 @foreach ($rows as $row)
                     @php($isProject = $row instanceof App\Models\ProjectRequest)
-                    @php($needsYou = (! $isProject && $row->requester_id === auth()->id() && $row->status === App\Enums\FeatureRequestStatus::NEEDS_INFO))
+                    @php($isSupporting = $row instanceof App\Models\SupportingTask)
+                    @php($rowUrl = $isSupporting ? route('desk.supporting.show', $row) : ($isProject ? route('desk.project-requests.show', $row) : route('desk.requests.show', $row)))
+                    @php($needsYou = (! $isProject && ! $isSupporting && $row->requester_id === auth()->id() && $row->status === App\Enums\FeatureRequestStatus::NEEDS_INFO))
                     <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/60">
                         <td class="max-w-xs px-4 py-3">
-                            <a href="{{ $isProject ? route('desk.project-requests.show', $row) : route('desk.requests.show', $row) }}"
+                            <a href="{{ $rowUrl }}"
                                 class="block font-semibold hover:underline">{{ $row->title }}</a>
-                            @if (! $isProject && $row->requester_id !== auth()->id())
-                                <p class="mt-1 text-xs text-slate-500">Submitted by {{ $row->requester->name }} · {{ $row->requester_department_code }}</p>
+                            @if (! $isProject && (($isSupporting && $row->creator_id !== auth()->id()) || (!$isSupporting && $row->requester_id !== auth()->id())))
+                                <p class="mt-1 text-xs text-slate-500">Submitted by {{ $isSupporting ? $row->creator?->name : $row->requester->name }} · {{ $isSupporting ? $row->requester_department_code : $row->requester_department_code }}</p>
                             @endif
                             {{-- Only the line that asks something of the reader survives into the
                                  table; the rest of the description is one click away. --}}
@@ -100,21 +106,21 @@
                                 <p class="mt-1 text-xs text-slate-500">Waiting for ITD to arrange the scoping meeting.</p>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-slate-500">{{ $isProject ? 'Project' : $row->system->name }}</td>
+                        <td class="px-4 py-3 text-slate-500">{{ $isSupporting ? $row->category->label() : ($isProject ? 'Project' : $row->system->name) }}</td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap items-center gap-1.5">
-                                <x-badge :tone="$row->status->tone()">{{ $row->status->label() }}</x-badge>
-                                @if (! $isProject && $row->urgency->value === 'high')
+                                @if($isSupporting)<span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $row->status->badgeClasses() }}">{{ $row->status->label() }}</span>@else<x-badge :tone="$row->status->tone()">{{ $row->status->label() }}</x-badge>@endif
+                                @if (! $isProject && ! $isSupporting && $row->urgency->value === 'high')
                                     <x-badge tone="danger">Mendesak</x-badge>
                                 @endif
-                                @if (! $isProject && $row->requester_id !== auth()->id())
+                                @if (! $isProject && (($isSupporting && $row->creator_id !== auth()->id()) || (!$isSupporting && $row->requester_id !== auth()->id())))
                                     <x-badge tone="slate">Department</x-badge>
                                 @endif
                             </div>
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ $row->created_at->diffForHumans() }}</td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{{ $isProject ? route('desk.project-requests.show', $row) : route('desk.requests.show', $row) }}"
+                            <a href="{{ $rowUrl }}"
                                 class="inline-grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
                                 aria-label="Buka {{ $row->title }}"><x-icon name="chevron-right" class="size-4" /></a>
                         </td>

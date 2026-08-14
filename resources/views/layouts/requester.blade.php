@@ -80,6 +80,7 @@
                                 <a href="{{ route('desk.project-requests.create', $deskWorkspace) }}" class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('desk.project-requests.create') ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
                                     <x-icon name="projects" />Project
                                 </a>
+                                <a href="{{ route('desk.supporting.create', $deskWorkspace) }}" class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('desk.supporting.*') ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}"><x-icon name="help" />Supporting</a>
                             </div>
                             {{-- The labels are now the two nouns, so the sentence carries the part
                                  the nouns no longer say: which approval path each one takes. --}}

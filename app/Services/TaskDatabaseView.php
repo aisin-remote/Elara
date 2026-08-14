@@ -28,6 +28,17 @@ class TaskDatabaseView
         User $viewer,
         ?Feature $selectedFeature = null,
     ): array {
+        $savedViews = $project->taskViews()->where('user_id', $viewer->id)->orderBy('name')->get();
+        $selectedView = $savedViews->firstWhere('public_id', $request->string('saved_view')->toString());
+
+        if ($selectedView) {
+            foreach ($selectedView->parameters_json as $key => $value) {
+                if (! $request->has($key)) {
+                    $request->merge([$key => $value]);
+                }
+            }
+        }
+
         $statuses = $project->taskStatuses()
             ->active()
             ->withCount(['tasks' => fn (Builder $tasks) => $tasks->withTrashed()])
@@ -42,13 +53,23 @@ class TaskDatabaseView
             ->when($request->string('search')->toString(), fn (Builder $query, string $search) => $query->where('title', 'like', '%'.$search.'%'))
             ->when($request->string('priority')->toString(), fn (Builder $query, string $priority) => $query->where('priority', $priority))
             ->when($request->boolean('blocked'), fn (Builder $query) => $query->blocked())
-            ->orderBy('position')
+            ->orderBy(
+                in_array($request->string('sort')->toString(), ['position', 'title', 'due_at', 'updated_at'], true)
+                    ? $request->string('sort')->toString()
+                    : 'position',
+                $request->string('direction')->toString() === 'desc' ? 'desc' : 'asc',
+            )
             ->paginate(50)
             ->withQueryString();
 
         $properties = $project->taskProperties()->active()->get();
         $systemFields = $this->fieldSchema->systemFields($project);
         $taskFields = $this->fieldSchema->visibleFields($project, $properties);
+        $allTaskFields = $taskFields;
+        $requestedFields = collect($request->input('fields', []))->filter()->values();
+        if ($requestedFields->isNotEmpty()) {
+            $taskFields = $taskFields->filter(fn (array $field) => $requestedFields->contains($field['key']))->values();
+        }
         $groupByOptions = collect([['key' => 'status', 'name' => 'Workflow status']])
             ->concat($taskFields
                 ->where('type', TaskPropertyType::SELECT->value)
@@ -73,6 +94,7 @@ class TaskDatabaseView
             'properties' => $properties,
             'systemFields' => $systemFields,
             'taskFields' => $taskFields,
+            'allTaskFields' => $allTaskFields,
             'archivedTasks' => $project->tasks()->onlyTrashed()
                 ->visibleTo($viewer)
                 ->when($selectedFeature, fn (Builder $query, Feature $feature) => $query->where('feature_id', $feature->id))
@@ -83,6 +105,8 @@ class TaskDatabaseView
             'priorities' => TaskPriority::cases(),
             'milestones' => $project->milestones()->get(),
             'features' => $project->features()->active()->orderBy('name')->get(),
+            'savedViews' => $savedViews,
+            'selectedSavedView' => $selectedView,
         ];
     }
 

@@ -528,6 +528,35 @@ function initSubmitStates() {
     }));
 }
 
+function initLazyWidgets() {
+    const widgets = [...document.querySelectorAll('[data-lazy-widget]')];
+    if (! widgets.length) return;
+
+    const load = async (widget) => {
+        if (widget.dataset.loading) return;
+        widget.dataset.loading = 'true';
+        try {
+            const response = await fetch(widget.dataset.lazyWidget, { headers: { Accept: 'text/html' }, credentials: 'same-origin' });
+            if (! response.ok) throw new Error(response.statusText);
+            widget.innerHTML = await response.text();
+            initCharts();
+        } catch {
+            widget.innerHTML = '<div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">This dashboard section could not be loaded. Refresh to try again.</div>';
+        }
+    };
+
+    if (! ('IntersectionObserver' in window)) {
+        widgets.forEach(load);
+        return;
+    }
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {
+        if (! entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        load(entry.target);
+    }), { rootMargin: '240px' });
+    widgets.forEach((widget) => observer.observe(widget));
+}
+
 Alpine.start();
 initCalendars();
 initSchedules();
@@ -538,3 +567,4 @@ initNotifications();
 initNotificationSettings();
 initConnectivity();
 initSubmitStates();
+initLazyWidgets();
