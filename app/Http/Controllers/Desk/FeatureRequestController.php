@@ -123,7 +123,7 @@ class FeatureRequestController extends Controller
 
         return view('desk.requests.show', [
             'request' => $featureRequest->load(['system', 'requester', 'reviewer', 'departmentReviewer']),
-            'monitoring' => $progress->build($featureRequest),
+            'monitoring' => $progress->build($featureRequest, $request->user()),
             'timeline' => ActivityLog::where('subject_type', $featureRequest->getMorphClass())
                 ->where('subject_id', $featureRequest->id)
                 ->with('actor')

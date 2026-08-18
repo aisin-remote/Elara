@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\SecurityEvent;
+use App\Services\DepartmentPreference;
 use App\Services\OrganizationDirectory;
 use App\Services\OrganizationLogin;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,7 @@ class AuthenticatedSessionController extends Controller
         LoginRequest $request,
         OrganizationDirectory $organization,
         OrganizationLogin $organizationLogin,
+        DepartmentPreference $departments,
     ): RedirectResponse {
         $request->authenticate($organizationLogin, $organization);
         $user = $request->user();
@@ -44,9 +46,15 @@ class AuthenticatedSessionController extends Controller
         SecurityEvent::record($user, 'login.succeeded', $request->ip(), $request->userAgent(), ['two_factor' => false]);
 
         // Requesters skip intended(): a stored /app URL would land them on a 403.
-        return $user->isRequester()
+        $response = $user->isRequester()
             ? redirect()->to($user->homePath())
             : redirect()->intended(route('app.dashboard', absolute: false));
+
+        if (($profile = $organization->profile($user)) && ($cookie = $departments->remember($profile))) {
+            $response->withCookie($cookie);
+        }
+
+        return $response;
     }
 
     public function destroy(Request $request): RedirectResponse

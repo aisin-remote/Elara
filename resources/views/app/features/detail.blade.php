@@ -30,28 +30,69 @@
         </div>
     @endif
 
-    <div class="mt-6 grid gap-4 lg:grid-cols-2">
-        <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="feature-progress-title">
-            <h3 id="feature-progress-title" class="font-bold">Progress</h3>
-            <div class="mt-4 flex items-center gap-3" role="progressbar" aria-valuenow="{{ $progress['percentage'] }}" aria-valuemin="0" aria-valuemax="100" aria-label="Feature progress">
-                <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-full rounded-full bg-orbit-500" style="width: {{ $progress['percentage'] }}%"></div></div>
-                <span class="text-sm font-bold tabular-nums">{{ $progress['percentage'] }}%</span>
-            </div>
-            <dl class="mt-5 grid grid-cols-3 gap-2 text-center">
-                <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="text-[11px] text-slate-500">Tasks</dt><dd class="mt-1 font-bold">{{ $progress['total'] }}</dd></div>
-                <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="text-[11px] text-slate-500">Done</dt><dd class="mt-1 font-bold text-emerald-600">{{ $progress['completed'] }}</dd></div>
-                <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="text-[11px] text-slate-500">Overdue</dt><dd class="mt-1 font-bold text-rose-600">{{ $overdueTaskCount }}</dd></div>
-            </dl>
-        </section>
+    <section class="mt-6 rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="feature-overview-title">
+        <h2 id="feature-overview-title" class="text-lg font-bold">Overview</h2>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="feature-details-title">
-            <h3 id="feature-details-title" class="font-bold">Details</h3>
-            <dl class="mt-4 space-y-4 text-sm">
-                <div><dt class="text-xs text-slate-500">System</dt><dd class="mt-1 font-semibold">{{ $system->name }}</dd></div>
-                <div class="grid grid-cols-2 gap-3"><div><dt class="text-xs text-slate-500">Start date</dt><dd class="mt-1 font-semibold">{{ $feature->starts_at?->format('M j, Y') ?? 'Not set' }}</dd></div><div><dt class="text-xs text-slate-500">Due date</dt><dd class="mt-1 font-semibold">{{ $feature->due_at?->format('M j, Y') ?? 'Not set' }}</dd></div></div>
-                <div><dt class="text-xs text-slate-500">Team</dt><dd class="mt-2 flex -space-x-1.5">@forelse ($assignees->take(6) as $assignee)<x-avatar :src="filled($assignee->avatar_path) ? route('internal.users.avatar', $assignee) : null" :name="$assignee->name" size="size-8" class="border-2 border-white dark:border-slate-900" />@empty<span class="text-sm text-slate-400">Nobody assigned yet</span>@endforelse</dd></div>
-            </dl>
-        </section>
-    </div>
+        <dl class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
+                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">System</dt>
+                <dd class="mt-1 truncate text-sm font-semibold"><a href="{{ route('app.features.show', [$workspace, $system]) }}" class="hover:text-orbit-700 dark:hover:text-orbit-300">{{ $system->name }}</a></dd>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
+                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Members</dt>
+                <dd class="mt-1 flex h-5 items-center gap-2">
+                    @if ($assignees->isEmpty())
+                        <span class="truncate text-sm font-semibold text-slate-400">Unassigned</span>
+                    @else
+                        <span class="flex -space-x-1.5">
+                            @foreach ($assignees->take(5) as $assignee)
+                                <x-avatar :src="filled($assignee->avatar_path) ? route('internal.users.avatar', $assignee) : null" :name="$assignee->name" size="size-6" class="border-2 border-white dark:border-slate-900" />
+                            @endforeach
+                        </span>
+                        @if ($assignees->count() > 5)
+                            <span class="text-xs font-semibold text-slate-500">+{{ $assignees->count() - 5 }}</span>
+                        @endif
+                    @endif
+                </dd>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
+                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Start date</dt>
+                <dd class="mt-1 truncate text-sm font-semibold">{{ $feature->starts_at?->format('M j, Y') ?? 'Not set' }}</dd>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/60">
+                <dt class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Due date</dt>
+                <dd class="mt-1 truncate text-sm font-semibold">{{ $feature->due_at?->format('M j, Y') ?? 'Not set' }}</dd>
+            </div>
+        </dl>
+
+        <div class="mt-8 rounded-2xl border border-slate-200 p-5 dark:border-slate-700">
+            <h3 class="font-bold">Task progress</h3>
+            @if ($progress['total'] === 0)
+                <div class="mt-3 rounded-2xl bg-slate-50 p-8 text-center dark:bg-slate-800/60">
+                    <span class="mx-auto grid size-12 place-items-center rounded-2xl bg-white text-slate-400 dark:bg-slate-900"><x-icon name="tasks" /></span>
+                    <p class="mt-3 font-semibold">No tasks yet</p>
+                    <p class="mt-1 text-sm text-slate-500">Progress starts counting as soon as this feature has work in it.</p>
+                    @can('create', [App\Models\Task::class, $system])
+                        <x-link-button href="{{ route('app.projects.tasks', ['workspace' => $workspace, 'project' => $system, 'create' => 1, 'feature' => $feature->public_id]) }}" class="mt-4"><x-icon name="plus" />Add first task</x-link-button>
+                    @endcan
+                </div>
+            @else
+                <div class="mt-3 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/60" role="progressbar" aria-valuenow="{{ $progress['percentage'] }}" aria-valuemin="0" aria-valuemax="100" aria-label="Feature progress">
+                    <div class="relative h-7 flex-1 text-slate-200 dark:text-slate-600" style="background-image: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 7px)">
+                        <div class="absolute inset-y-0 left-0 text-orbit-500 dark:text-orbit-400" style="width: {{ $progress['percentage'] }}%; background-image: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 7px)"></div>
+                    </div>
+                    <p class="shrink-0 text-lg font-bold tabular-nums">{{ $progress['percentage'] }}<span class="ml-0.5 text-xs font-semibold text-slate-400">%</span></p>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ $progress['total'] - $progress['completed'] }} remaining</span>
+                    <span class="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">{{ $progress['completed'] }} done</span>
+                    @if ($overdueTaskCount > 0)
+                        <span class="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">{{ $overdueTaskCount }} overdue</span>
+                    @endif
+                </div>
+                <p class="mt-4 text-sm text-slate-500">{{ $progress['completed'] }} of {{ $progress['total'] }} eligible tasks completed.</p>
+            @endif
+        </div>
+    </section>
 
 @endsection

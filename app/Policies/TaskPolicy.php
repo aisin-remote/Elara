@@ -10,6 +10,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\WorkspaceMember;
 use App\Services\OrganizationDirectory;
+use App\Services\RequestTaskAccess;
 
 class TaskPolicy
 {
@@ -49,6 +50,17 @@ class TaskPolicy
     public function update(User $user, Task $task): bool
     {
         return $this->view($user, $task) && $this->canMutateProject($user, $task->project);
+    }
+
+    public function attachRequestDocument(User $user, Task $task): bool
+    {
+        return $this->update($user, $task)
+            || app(RequestTaskAccess::class)->ownedRequest($user, $task) !== null;
+    }
+
+    public function viewRequestDocument(User $user, Task $task): bool
+    {
+        return app(RequestTaskAccess::class)->visibleRequest($user, $task) !== null;
     }
 
     public function delete(User $user, Task $task): bool

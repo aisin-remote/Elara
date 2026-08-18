@@ -79,13 +79,13 @@ class ProjectRequestController extends Controller
                 : 'Request submitted. ITD will arrange a scoping meeting with you.');
     }
 
-    public function show(ProjectRequest $projectRequest, RequestProgressService $progress): View
+    public function show(Request $request, ProjectRequest $projectRequest, RequestProgressService $progress): View
     {
         $this->authorize('view', $projectRequest);
 
         return view('desk.project-requests.show', [
             'request' => $projectRequest->load(['requester', 'departmentReviewer', 'supervisor', 'manager', 'meeting.attendees']),
-            'monitoring' => $progress->build($projectRequest),
+            'monitoring' => $progress->build($projectRequest, $request->user()),
             'timeline' => ActivityLog::where('subject_type', $projectRequest->getMorphClass())
                 ->where('subject_id', $projectRequest->id)
                 ->with('actor')

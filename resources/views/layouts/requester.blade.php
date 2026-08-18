@@ -44,7 +44,7 @@
 
                     <nav class="mt-7 space-y-1" aria-label="Main navigation">
                         @php($items = [
-                            ['desk.it-timeline', 'IT timeline', 'calendar', null],
+                            ['desk.it-timeline', 'Timeline', 'calendar', null],
                             ['desk.index', 'My requests', 'list', null],
                             ['desk.validations.index', 'Waiting on me', 'hourglass', $waitingOnMe],
                         ])

@@ -88,7 +88,11 @@ class PlanningFoundationTest extends TestCase
             ->assertOk()
             ->assertSee('Blocked');
 
-        $this->actingAs($owner)->get(route('app.projects.timeline', [$workspace, $project]))
+        $this->actingAs($owner)->get(route('app.projects.timeline', [
+            'workspace' => $workspace,
+            'project' => $project,
+            'scale' => 'monthly',
+        ]))
             ->assertOk()
             ->assertSee('data-dependency-lines', false)
             ->assertSee('waits for Approve design');

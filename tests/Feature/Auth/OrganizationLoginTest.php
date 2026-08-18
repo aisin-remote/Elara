@@ -12,6 +12,7 @@ use App\Models\FeatureRequest;
 use App\Models\ProjectRequest;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\DepartmentPreference;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -59,11 +60,12 @@ class OrganizationLoginTest extends TestCase
     {
         $organizationId = $this->addOrganizationUser('New Requester', 'new.requester@example.com', 'STF', 'FIN');
 
-        $this->post(route('login'), [
+        $response = $this->post(route('login'), [
             'email' => 'NEW.REQUESTER@EXAMPLE.COM',
             'password' => 'CompanyPass!123',
             'remember' => '1',
-        ])->assertRedirect('/desk');
+        ])->assertRedirect('/desk')
+            ->assertCookie(DepartmentPreference::COOKIE);
 
         $user = User::where('email', 'new.requester@example.com')->firstOrFail();
         $departmentWorkspace = Workspace::where('organization_department_code', 'FIN')->firstOrFail();

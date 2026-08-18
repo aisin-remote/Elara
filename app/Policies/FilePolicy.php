@@ -24,7 +24,9 @@ class FilePolicy
         }
 
         if ($file->task) {
-            return app(TaskPolicy::class)->view($user, $file->task);
+            return app(TaskPolicy::class)->view($user, $file->task)
+                || ((bool) data_get($file->metadata_json, 'request_shared')
+                    && app(TaskPolicy::class)->viewRequestDocument($user, $file->task));
         }
 
         return $file->project

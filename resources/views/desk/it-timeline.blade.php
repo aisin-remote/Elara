@@ -1,18 +1,21 @@
 @extends('layouts.requester')
 
-@section('title', 'IT Timeline')
-@section('page-title', 'IT Timeline')
+@section('title', 'Timeline')
+@section('page-title', 'Timeline')
 
 @section('content')
     @php($ticks = $timeline->ticks())
     @php($todayPosition = $timeline->todayPosition())
+    @php($showingFeatures = $view === 'features')
+    @php($itemLabel = $showingFeatures ? 'Feature' : 'Project')
+    @php($itemLabelLower = strtolower($itemLabel))
 
     <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div>
             <p class="text-sm font-semibold text-orbit-700 dark:text-orbit-300">{{ $deliveryWorkspace->name }}</p>
             <h2 class="mt-1 text-2xl font-bold tracking-tight">Yang sedang dikerjakan tim IT</h2>
             <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                Ringkasan project department Anda. Klik project untuk melihat jadwal task-nya tanpa membuka detail internal seperti description, comment, file, dan dependency.
+                Ringkasan {{ $itemLabelLower }} department Anda. Klik {{ $itemLabelLower }} untuk melihat jadwal task-nya tanpa membuka detail internal seperti description, comment, file, dan dependency.
             </p>
         </div>
         <nav class="inline-flex w-fit rounded-xl bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800" aria-label="Timeline scale">
@@ -25,7 +28,7 @@
 
     <div class="mt-6 grid gap-4 sm:grid-cols-3">
         @foreach ([
-            ['Current projects', $projectCount, 'projects'],
+            ['Current '.strtolower($itemLabel).'s', $itemCount, $showingFeatures ? 'sparkles' : 'projects'],
             ['Scheduled tasks', $scheduledTaskCount, 'tasks'],
             ['Last refreshed', $updatedAt->format('H:i'), 'refresh'],
         ] as [$label, $value, $icon])
@@ -38,27 +41,34 @@
         @endforeach
     </div>
 
-    <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="project-timeline-title">
+    <nav class="relative z-10 mt-6 flex w-fit items-end" aria-label="Timeline view" role="tablist" data-timeline-tabs>
+        @foreach (['projects' => 'Projects', 'features' => 'Features'] as $timelineView => $label)
+            <a href="{{ request()->fullUrlWithQuery(['view' => $timelineView]) }}" role="tab" aria-selected="{{ $view === $timelineView ? 'true' : 'false' }}" aria-controls="requester-timeline-card"
+                class="-mb-px -mr-px min-w-28 border px-5 py-3 text-center text-sm font-semibold transition first:rounded-tl-xl last:rounded-tr-xl {{ $view === $timelineView ? 'border-slate-200 border-b-white bg-white text-slate-950 dark:border-slate-800 dark:border-b-slate-900 dark:bg-slate-900 dark:text-white' : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">{{ $label }}</a>
+        @endforeach
+    </nav>
+
+    <section id="requester-timeline-card" class="overflow-hidden rounded-b-2xl rounded-tr-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="project-timeline-title">
         <div class="border-b border-slate-200 p-5 dark:border-slate-800">
-            <h3 id="project-timeline-title" class="text-lg font-bold">Project timeline</h3>
-            <p class="mt-1 text-xs text-slate-500">Klik project untuk melihat task terjadwal · progress berasal dari task selesai · timezone {{ $deliveryWorkspace->timezone }}</p>
+            <h3 id="project-timeline-title" class="text-lg font-bold">{{ $itemLabel }} timeline</h3>
+            <p class="mt-1 text-xs text-slate-500">Klik {{ $itemLabelLower }} untuk melihat task terjadwal · progress berasal dari task selesai · timezone {{ $deliveryWorkspace->timezone }}</p>
         </div>
 
-        @if ($projectRows->isEmpty())
-            <div class="p-5"><x-empty-state icon="calendar" title="Tidak ada project pada periode ini" description="Pilih skala yang lebih lebar untuk melihat jadwal project lainnya." /></div>
+        @if ($timelineRows->isEmpty())
+            <div class="p-5"><x-empty-state icon="calendar" title="Tidak ada {{ $itemLabelLower }} pada periode ini" description="Pilih skala yang lebih lebar untuk melihat jadwal {{ $itemLabelLower }} lainnya." /></div>
         @else
-            <div class="max-h-[440px] overflow-auto" tabindex="0" role="region" aria-label="Scrollable IT project timeline">
+            <div class="max-h-[440px] overflow-auto" tabindex="0" role="region" aria-label="Scrollable {{ $itemLabelLower }} timeline">
                 <div x-data="{ openProject: null }" class="relative grid grid-cols-[minmax(210px,260px)_minmax(0,1fr)]" style="min-width: {{ $timeline->minWidth() }}px">
-                    <div class="sticky left-0 top-0 z-30 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">Project</div>
+                    <div class="sticky left-0 top-0 z-30 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">{{ $itemLabel }}</div>
                     <div class="sticky top-0 z-20 h-14 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-hidden="true">
                         @foreach ($ticks as $tick)<span class="absolute inset-y-0 border-l border-slate-200 dark:border-slate-800" style="left: {{ $tick['left'] }}%"><span class="absolute left-1 top-3 whitespace-nowrap text-[10px] text-slate-400">{{ $tick['label'] }}</span></span>@endforeach
                         @if ($todayPosition !== null)<span class="absolute inset-y-0 z-10 border-l-2 border-slate-900 dark:border-orbit-300" style="left: {{ $todayPosition }}%"><span class="absolute left-1 top-8 text-[10px] font-bold">Today</span></span>@endif
                     </div>
-                    @foreach ($projectRows as $project)
+                    @foreach ($timelineRows as $project)
                         <button type="button" @click="openProject = openProject === '{{ $project['public_id'] }}' ? null : '{{ $project['public_id'] }}'" :aria-expanded="openProject === '{{ $project['public_id'] }}'" class="sticky left-0 z-20 flex min-w-0 items-center gap-3 border-b border-r border-slate-200 bg-white px-5 py-3 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orbit-500 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
                             <svg class="size-4 shrink-0 text-slate-400 transition-transform" :class="openProject === '{{ $project['public_id'] }}' && 'rotate-90'" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m7.5 5 5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
                             <span class="size-2.5 shrink-0 rounded-full" style="background-color: {{ $project['color'] }}"></span>
-                            <span class="min-w-0"><span class="block truncate text-sm font-semibold">{{ $project['name'] }}</span><span class="mt-1 block truncate text-[10px] text-slate-400">{{ $project['status'] }} · {{ $project['date_label'] }} · {{ $project['tasks']->count() }} task</span></span>
+                            <span class="min-w-0"><span class="block truncate text-sm font-semibold">{{ $project['name'] }}</span><span class="mt-1 block truncate text-[10px] text-slate-400">@if($project['context']){{ $project['context'] }} · @endif{{ $project['status'] }} · {{ $project['date_label'] }} · {{ $project['tasks']->count() }} task</span></span>
                         </button>
                         <button type="button" @click="openProject = openProject === '{{ $project['public_id'] }}' ? null : '{{ $project['public_id'] }}'" :aria-expanded="openProject === '{{ $project['public_id'] }}'" class="relative h-16 border-b border-slate-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-orbit-500 dark:border-slate-800" aria-label="Toggle {{ $project['name'] }} tasks">
                             @foreach ($ticks as $tick)<span class="absolute inset-y-0 border-l border-slate-100 dark:border-slate-800/80" style="left: {{ $tick['left'] }}%" aria-hidden="true"></span>@endforeach

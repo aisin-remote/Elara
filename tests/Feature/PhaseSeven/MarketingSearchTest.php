@@ -38,19 +38,16 @@ class MarketingSearchTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_complete_marketing_and_legal_pages_are_public(): void
+    public function test_delivery_home_and_legal_pages_are_public(): void
     {
         $this->get(route('home'))->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
-            ->assertSee('Make progress visible')
-            ->assertSee('Task Management')
-            ->assertSee('How it works')
-            ->assertSee('Slack')
-            ->assertSee('Unlimited access')
-            ->assertSee('No package limits')
-            ->assertSee('Frequently asked questions')
-            ->assertSee('Get started');
+            ->assertSee('See how company initiatives are moving forward')
+            ->assertSee('Company projects')
+            ->assertSee('No department remembered on this device')
+            ->assertSee('Login to personalize')
+            ->assertSee('A timeline is public. The work behind it is not.');
 
         $this->get(route('legal.privacy'))->assertOk()->assertSee('Privacy notice');
         $this->get(route('legal.terms'))->assertOk()->assertSee('Terms of use');

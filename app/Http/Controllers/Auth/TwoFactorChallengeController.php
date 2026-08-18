@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TwoFactorChallengeRequest;
 use App\Models\SecurityEvent;
 use App\Models\User;
+use App\Services\DepartmentPreference;
 use App\Services\OrganizationDirectory;
 use App\Services\TwoFactorService;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +30,7 @@ class TwoFactorChallengeController extends Controller
         TwoFactorChallengeRequest $request,
         TwoFactorService $twoFactor,
         OrganizationDirectory $organization,
+        DepartmentPreference $departments,
     ): RedirectResponse {
         $key = 'two-factor:'.$request->session()->getId().'|'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
@@ -50,8 +52,14 @@ class TwoFactorChallengeController extends Controller
         $request->session()->put('organization_role_synced', true);
         SecurityEvent::record($user, 'login.succeeded', $request->ip(), $request->userAgent(), ['two_factor' => true]);
 
-        return $user->isRequester()
+        $response = $user->isRequester()
             ? redirect()->to($user->homePath())
             : redirect()->intended(route('app.dashboard', absolute: false));
+
+        if (($profile = $organization->profile($user)) && ($cookie = $departments->remember($profile))) {
+            $response->withCookie($cookie);
+        }
+
+        return $response;
     }
 }

@@ -16,19 +16,22 @@ use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Feature;
 use App\Models\FeatureRequest;
+use App\Models\ProjectFile;
 use App\Models\ProjectRequest;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\ValidationCheckpoint;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RequesterMonitoringTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_feature_monitoring_uses_checklists_and_dependencies_without_exposing_task_titles(): void
+    public function test_feature_monitoring_shows_task_timeline_with_checklist_progress_and_dependencies(): void
     {
         [$workspace, $owner, $system, $requester] = $this->featureSystem();
         $feature = Feature::create([
@@ -56,7 +59,8 @@ class RequesterMonitoringTest extends TestCase
             ->assertOk()
             ->assertSee('Request progress')
             ->assertSee('Updates automatically every 10 seconds')
-            ->assertDontSee('Secret backend implementation');
+            ->assertSee('Delivery task timeline')
+            ->assertSee('Secret backend implementation');
 
         $this->actingAs($requester)
             ->getJson(route('internal.requests.monitoring', $request))
@@ -67,7 +71,51 @@ class RequesterMonitoringTest extends TestCase
             ->assertJsonPath('tasks.total', 2)
             ->assertJsonPath('tasks.blocked', 1)
             ->assertJsonPath('stages.4.state', 'current')
-            ->assertDontSee('Secret backend implementation');
+            ->assertJsonPath('task_timeline.0.title', 'Secret backend implementation')
+            ->assertJsonPath('task_timeline.0.progress', 50)
+            ->assertJsonPath('task_timeline.1.blocked', true)
+            ->assertJsonPath('task_timeline.0.upload_url', route('internal.task-attachments.store', $first));
+    }
+
+    public function test_requester_and_it_can_share_private_documents_on_a_delivery_task(): void
+    {
+        Storage::fake('local');
+        [$workspace, $owner, $system, $requester] = $this->featureSystem();
+        $otherRequester = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $feature = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $system->id,
+            'name' => 'Monthly stock export',
+            'status' => 'in_progress',
+        ]);
+        $request = $this->featureRequest($workspace, $system, $requester, $feature, $owner);
+        $status = $system->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        $task = $this->task($request, $status->id, $owner, 'Review export requirements');
+        $task->assignees()->attach($owner->id, ['assigned_by' => $owner->id, 'assigned_at' => now()]);
+
+        $this->actingAs($requester)->post(route('internal.task-attachments.store', $task), [
+            'attachment' => UploadedFile::fake()->create('requester-mom.pdf', 24, 'application/pdf'),
+            'share_with_requester' => 1,
+        ])->assertRedirect(route('desk.requests.show', $request));
+
+        $requesterFile = ProjectFile::firstOrFail();
+        $this->assertTrue((bool) data_get($requesterFile->metadata_json, 'request_shared'));
+        $this->actingAs($requester)->get(route('internal.files.download', $requesterFile))->assertOk();
+        $this->actingAs($otherRequester)->get(route('internal.files.download', $requesterFile))->assertForbidden();
+
+        $this->actingAs($owner)->get(route('app.tasks.show', $task))
+            ->assertOk()
+            ->assertSee('Share with requester');
+        $this->actingAs($owner)->post(route('internal.task-attachments.store', $task), [
+            'attachment' => UploadedFile::fake()->create('it-mom.docx', 18, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+            'share_with_requester' => 1,
+        ])->assertRedirect(route('app.tasks.show', $task));
+
+        $this->actingAs($requester)
+            ->getJson(route('internal.requests.monitoring', $request))
+            ->assertOk()
+            ->assertJsonPath('task_timeline.0.attachments.0.name', 'requester-mom.pdf')
+            ->assertJsonPath('task_timeline.0.attachments.1.name', 'it-mom.docx');
     }
 
     public function test_open_validation_becomes_the_live_stage_and_links_to_the_requesters_action(): void
@@ -143,6 +191,25 @@ class RequesterMonitoringTest extends TestCase
             ->assertJsonPath('current_stage', 'Manager approval')
             ->assertJsonPath('stages.2.state', 'completed')
             ->assertJsonPath('stages.3.state', 'current');
+
+        $status = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        $task = Task::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $project->id,
+            'status_id' => $status->id,
+            'creator_id' => $owner->id,
+            'title' => 'Prepare supplier onboarding',
+            'priority' => TaskPriority::MEDIUM,
+            'position' => 1024,
+        ]);
+        $request->forceFill(['status' => ProjectRequestStatus::IN_PROGRESS])->save();
+
+        $this->actingAs($requester)
+            ->getJson(route('internal.project-requests.monitoring', $request->fresh()))
+            ->assertOk()
+            ->assertJsonPath('current_stage', 'Delivery')
+            ->assertJsonPath('task_timeline.0.title', $task->title)
+            ->assertJsonPath('task_timeline.0.upload_url', route('internal.task-attachments.store', $task));
 
         $this->actingAs($otherRequester)
             ->getJson(route('internal.project-requests.monitoring', $request))

@@ -13,13 +13,14 @@ use App\Models\FeatureRequest;
 use App\Models\ProjectRequest;
 use App\Models\Task;
 use App\Models\TaskBreakdown;
+use App\Models\User;
 use App\Models\ValidationCheckpoint;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class RequestProgressService
 {
-    public function build(FeatureRequest|ProjectRequest $request): array
+    public function build(FeatureRequest|ProjectRequest $request, User $viewer): array
     {
         $tasks = $this->tasks($request);
         $checkpoints = ValidationCheckpoint::query()
@@ -65,6 +66,7 @@ class RequestProgressService
             'status' => $request->status->value,
             'progress' => $progress,
             'tasks' => ['completed' => $completed, 'total' => $tasks->count(), 'blocked' => $blocked],
+            'task_timeline' => $this->taskTimeline($request, $tasks, $viewer, $timezone),
             'validations' => [
                 'open' => $openCheckpoints->count(),
                 'deadline' => $openCheckpoints->sortBy('expires_at')->first()?->countdown(),
@@ -107,12 +109,54 @@ class RequestProgressService
             ->where($request instanceof FeatureRequest ? 'feature_id' : 'project_id', $request instanceof FeatureRequest ? $request->feature_id : $request->project_id)
             ->whereNull('archived_at')
             ->whereHas('status', fn ($status) => $status->where('category', '!=', TaskStatusCategory::CANCELLED->value))
-            ->with('dependencies:id,completed_at')
+            ->with([
+                'dependencies:id,completed_at',
+                'status:id,name,color,category',
+                'assignees:id,public_id,first_name,last_name,avatar_path',
+                'files.uploader:id,public_id,first_name,last_name',
+            ])
             ->withCount([
                 'checklistItems as checklist_total',
                 'checklistItems as checklist_completed' => fn ($items) => $items->where('is_completed', true),
             ])
             ->get();
+    }
+
+    private function taskTimeline(FeatureRequest|ProjectRequest $request, Collection $tasks, User $viewer, string $timezone): array
+    {
+        return $tasks->sortBy(fn (Task $task) => $task->start_at?->getTimestamp() ?? $task->due_at?->getTimestamp() ?? PHP_INT_MAX)
+            ->values()
+            ->map(function (Task $task) use ($request, $viewer, $timezone): array {
+                $progress = $task->checklist_total > 0
+                    ? (int) round($task->checklist_completed / $task->checklist_total * 100)
+                    : ($task->completed_at ? 100 : 0);
+                $attachments = $task->files
+                    ->filter(fn ($file) => (bool) data_get($file->metadata_json, 'request_shared'))
+                    ->map(fn ($file) => [
+                        'name' => $file->original_name,
+                        'size_label' => number_format($file->size / 1024, 1).' KB',
+                        'uploader' => $file->uploader->name,
+                        'url' => route('internal.files.download', $file),
+                    ])->values()->all();
+
+                return [
+                    'public_id' => $task->public_id,
+                    'title' => $task->title,
+                    'status' => ['name' => $task->status->name, 'color' => $task->status->color],
+                    'progress' => $progress,
+                    'blocked' => $task->completed_at === null && $task->isBlocked(),
+                    'completed' => $task->completed_at !== null,
+                    'start_at' => $task->start_at?->toIso8601String(),
+                    'start_label' => $task->start_at?->copy()->setTimezone($timezone)->format('j M Y'),
+                    'due_at' => $task->due_at?->toIso8601String(),
+                    'due_label' => $task->due_at?->copy()->setTimezone($timezone)->format('j M Y'),
+                    'assignees' => $task->assignees->map(fn (User $assignee) => $assignee->name)->values()->all(),
+                    'attachments' => $attachments,
+                    'upload_url' => $request->requester_id === $viewer->id || $viewer->can('update', $task)
+                        ? route('internal.task-attachments.store', $task)
+                        : null,
+                ];
+            })->all();
     }
 
     private function featureStage(FeatureRequest $request, Collection $tasks, Collection $checkpoints, Collection $open): int

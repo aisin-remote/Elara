@@ -6,20 +6,21 @@ use App\Models\FeatureRequest;
 use App\Models\ProjectRequest;
 use App\Services\RequestProgressService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class RequestMonitoringController extends Controller
 {
-    public function feature(FeatureRequest $featureRequest, RequestProgressService $progress): JsonResponse
+    public function feature(Request $request, FeatureRequest $featureRequest, RequestProgressService $progress): JsonResponse
     {
         $this->authorize('view', $featureRequest);
 
-        return response()->json($progress->build($featureRequest));
+        return response()->json($progress->build($featureRequest, $request->user()));
     }
 
-    public function project(ProjectRequest $projectRequest, RequestProgressService $progress): JsonResponse
+    public function project(Request $request, ProjectRequest $projectRequest, RequestProgressService $progress): JsonResponse
     {
         $this->authorize('view', $projectRequest);
 
-        return response()->json($progress->build($projectRequest));
+        return response()->json($progress->build($projectRequest, $request->user()));
     }
 }

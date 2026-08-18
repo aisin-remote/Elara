@@ -15,7 +15,7 @@ use Throwable;
 
 class StorePrivateFile
 {
-    public function handle(Workspace $workspace, User $uploader, UploadedFile $upload, ?Project $project = null, ?Task $task = null): ProjectFile
+    public function handle(Workspace $workspace, User $uploader, UploadedFile $upload, ?Project $project = null, ?Task $task = null, array $metadata = []): ProjectFile
     {
         if (($project && $project->workspace_id !== $workspace->id) || ($task && $task->workspace_id !== $workspace->id)) {
             throw new InvalidArgumentException('The file target must belong to the workspace.');
@@ -37,6 +37,7 @@ class StorePrivateFile
                 'original_name' => $originalName,
                 'mime_type' => $upload->getMimeType() ?: 'application/octet-stream',
                 'size' => $upload->getSize(),
+                'metadata_json' => $metadata ?: null,
             ]);
         } catch (Throwable $exception) {
             Storage::disk($disk)->delete($path);

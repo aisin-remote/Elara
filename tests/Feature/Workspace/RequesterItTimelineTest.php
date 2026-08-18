@@ -25,7 +25,7 @@ class RequesterItTimelineTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_requester_can_expand_department_projects_into_task_timelines_without_internal_details(): void
+    public function test_requester_can_switch_between_department_project_and_feature_timelines_without_internal_details(): void
     {
         $owner = User::factory()->create();
         $delivery = app(CreateWorkspace::class)->handle($owner, [
@@ -133,6 +133,37 @@ class RequesterItTimelineTest extends TestCase
         ]);
         $featureTask->assignees()->attach($itMember->id, ['assigned_by' => $owner->id, 'assigned_at' => now()]);
 
+        $otherDepartmentFeature = Feature::create([
+            'workspace_id' => $delivery->id,
+            'project_id' => $system->id,
+            'name' => 'HR payroll export',
+        ]);
+        FeatureRequest::create([
+            'workspace_id' => $delivery->id,
+            'project_id' => $system->id,
+            'requester_id' => $requester->id,
+            'title' => 'HR payroll export',
+            'problem' => 'Payroll is exported manually.',
+            'desired_outcome' => 'Payroll can be exported automatically.',
+            'benefit' => 'Reduces repetitive HR work.',
+            'urgency' => RequestUrgency::NORMAL,
+            'status' => FeatureRequestStatus::IN_PROGRESS,
+            'feature_id' => $otherDepartmentFeature->id,
+            'requester_department_external_id' => 20,
+            'requester_department_code' => 'HR',
+        ]);
+        $system->tasks()->create([
+            'workspace_id' => $delivery->id,
+            'feature_id' => $otherDepartmentFeature->id,
+            'status_id' => $featureStatus->id,
+            'creator_id' => $owner->id,
+            'title' => 'Build hidden HR payroll export',
+            'priority' => TaskPriority::MEDIUM,
+            'start_at' => now(),
+            'due_at' => now()->addDays(7),
+            'position' => 2048,
+        ]);
+
         $otherDepartmentProject = app(CreateProject::class)->handle($delivery, $owner, [
             'name' => 'Human Resources Portal',
             'description' => null,
@@ -170,7 +201,11 @@ class RequesterItTimelineTest extends TestCase
         $this->actingAs($requester)
             ->get(route('desk.it-timeline'))
             ->assertOk()
-            ->assertSee('IT timeline')
+            ->assertSee('Timeline')
+            ->assertDontSee('IT timeline')
+            ->assertSee('Projects')
+            ->assertSee('Features')
+            ->assertSee('Project timeline')
             ->assertSee('Inventory Modernization')
             ->assertSee('Build stock reconciliation flow')
             ->assertSee('Toggle Inventory Modernization tasks')
@@ -182,6 +217,22 @@ class RequesterItTimelineTest extends TestCase
             ->assertDontSee('Human Resources Portal')
             ->assertDontSee('Build employee onboarding form')
             ->assertDontSee(route('app.tasks.show', $task), false);
+
+        $this->actingAs($requester)
+            ->get(route('desk.it-timeline', ['view' => 'features']))
+            ->assertOk()
+            ->assertSee('Feature timeline')
+            ->assertSee('Finance Core')
+            ->assertSee('Automated journal export')
+            ->assertSee('Build automated journal export')
+            ->assertSee('Toggle Automated journal export tasks')
+            ->assertDontSee('Inventory Modernization')
+            ->assertDontSee('Build stock reconciliation flow')
+            ->assertDontSee('Human Resources Portal')
+            ->assertDontSee('HR payroll export')
+            ->assertDontSee('Build hidden HR payroll export')
+            ->assertDontSee('Nadia Putri')
+            ->assertDontSee(route('app.tasks.show', $featureTask), false);
 
         app(ArchiveProject::class)->archive($project, $owner);
 

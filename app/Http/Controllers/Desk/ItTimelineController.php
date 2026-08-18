@@ -35,6 +35,7 @@ class ItTimelineController extends Controller
                 $deliveryWorkspace,
                 $departmentId,
                 $request->string('scale')->toString(),
+                $request->string('view')->toString(),
             ),
         ]);
     }

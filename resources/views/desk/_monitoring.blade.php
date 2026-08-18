@@ -87,6 +87,67 @@
             </ol>
         </div>
 
+        <section x-cloak x-show="data.task_timeline?.length" class="mt-6 border-t border-slate-100 pt-6 dark:border-slate-800" aria-labelledby="delivery-task-timeline-title">
+            <div>
+                <h3 id="delivery-task-timeline-title" class="font-bold">Delivery task timeline</h3>
+                <p class="mt-1 text-xs text-slate-500">Task details appear here after IT starts the work. Meeting notes and shared documents stay attached to the relevant task.</p>
+            </div>
+
+            <ol class="relative mt-5 space-y-4 before:absolute before:bottom-5 before:left-[11px] before:top-5 before:w-px before:bg-slate-200 dark:before:bg-slate-700">
+                <template x-for="task in data.task_timeline" :key="task.public_id">
+                    <li class="relative pl-9">
+                        <span class="absolute left-0 top-5 z-10 size-6 rounded-full border-4 border-white dark:border-slate-900" :style="{ backgroundColor: task.status.color || '#64748b' }"></span>
+                        <article class="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h4 class="font-bold" x-text="task.title"></h4>
+                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold dark:bg-slate-800" x-text="task.status.name"></span>
+                                        <span x-show="task.blocked" class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">Blocked</span>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        <span x-text="task.assignees.length ? task.assignees.join(', ') : 'Unassigned'"></span>
+                                        <span x-show="task.start_label || task.due_label"> · </span>
+                                        <span x-show="task.start_label" x-text="task.start_label"></span>
+                                        <span x-show="task.start_label && task.due_label"> – </span>
+                                        <span x-show="task.due_label" x-text="task.due_label"></span>
+                                    </p>
+                                </div>
+                                <span class="text-sm font-bold tabular-nums" x-text="`${task.progress}%`"></span>
+                            </div>
+
+                            <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" role="progressbar" aria-label="Task progress" :aria-valuenow="task.progress" aria-valuemin="0" aria-valuemax="100">
+                                <div class="h-full rounded-full bg-orbit-500 transition-[width]" :style="`width: ${task.progress}%`"></div>
+                            </div>
+
+                            <div class="mt-4 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+                                <div class="flex items-center gap-2 text-xs font-bold"><x-icon name="files" class="size-4 text-slate-400" />Shared documents</div>
+                                <div x-show="task.attachments.length" class="mt-2 space-y-2">
+                                    <template x-for="file in task.attachments" :key="file.url">
+                                        <a :href="file.url" class="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-xs hover:text-orbit-700 dark:bg-slate-900 dark:hover:text-orbit-300">
+                                            <span class="min-w-0 truncate font-semibold" x-text="file.name"></span>
+                                            <span class="shrink-0 text-slate-400" x-text="`${file.size_label} · ${file.uploader}`"></span>
+                                        </a>
+                                    </template>
+                                </div>
+                                <p x-show="! task.attachments.length" class="mt-2 text-xs text-slate-500">No shared documents yet.</p>
+
+                                <form x-show="task.upload_url" :action="task.upload_url" method="POST" enctype="multipart/form-data" class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                    @csrf
+                                    <input type="hidden" name="share_with_requester" value="1">
+                                    <label class="min-w-0 flex-1">
+                                        <span class="sr-only">Choose a meeting document for this task</span>
+                                        <input type="file" name="attachment" required class="block w-full text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-slate-700 dark:file:bg-slate-900 dark:file:text-slate-200">
+                                    </label>
+                                    <x-button variant="secondary" class="shrink-0">Upload document</x-button>
+                                </form>
+                            </div>
+                        </article>
+                    </li>
+                </template>
+            </ol>
+        </section>
+
         <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400" aria-live="polite">
             <span x-text="data.updated_label ? `Last change ${data.updated_label}` : 'No new changes yet'"></span>
             <span x-show="error" class="font-semibold text-amber-600 dark:text-amber-300">Live updates are unavailable; the latest saved data is still shown.</span>

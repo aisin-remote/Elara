@@ -1,71 +1,141 @@
 @extends('layouts.marketing')
 
-@section('title', 'Project clarity for focused teams')
+@section('title', 'Department delivery overview')
 
 @section('content')
-    <section class="relative overflow-hidden">
-        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,_rgba(46,176,251,0.18),_transparent_30%),radial-gradient(circle_at_85%_20%,_rgba(99,102,241,0.16),_transparent_28%)]"></div>
-        <div class="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-14 px-5 py-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-8 lg:py-28">
-            <div class="min-w-0">
-                <p class="inline-flex rounded-full border border-orbit-200 bg-orbit-50 px-3 py-1 text-sm font-semibold text-orbit-800 dark:border-orbit-900 dark:bg-orbit-950/60 dark:text-orbit-200">Project work, in one orbit</p>
-                <h1 class="mt-6 text-5xl font-bold tracking-[-0.05em] text-slate-950 sm:text-6xl lg:text-7xl dark:text-white">Make progress visible. Keep everyone aligned.</h1>
-                <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">Plan projects, move work forward, coordinate schedules, share files, and understand team performance from one secure workspace.</p>
-                <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-                    <x-link-button href="{{ route(config('organization.jit_auth') ? 'login' : 'register') }}" class="w-full sm:w-auto">Get started</x-link-button>
-                    <x-link-button href="{{ auth()->check() ? route('app.dashboard') : route('login') }}" variant="secondary" class="w-full sm:w-auto">View dashboard</x-link-button>
+    @php($ticks = $timeline->ticks())
+    @php($todayPosition = $timeline->todayPosition())
+    @php($showingFeatures = $view === 'features')
+    @php($itemLabel = $showingFeatures ? 'Feature' : 'Project')
+    @php($itemLabelLower = strtolower($itemLabel))
+
+    <section id="delivery" class="relative overflow-hidden border-b border-slate-200 dark:border-slate-800">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,_rgba(46,176,251,0.16),_transparent_32%),radial-gradient(circle_at_85%_20%,_rgba(99,102,241,0.14),_transparent_30%)]"></div>
+        <div class="relative mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-20">
+            <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+                <div class="max-w-3xl">
+                    <p class="inline-flex items-center gap-2 rounded-full border border-orbit-200 bg-orbit-50 px-3 py-1 text-sm font-semibold text-orbit-800 dark:border-orbit-900 dark:bg-orbit-950/60 dark:text-orbit-200">
+                        <span class="size-2 rounded-full bg-emerald-500"></span>Live delivery overview
+                    </p>
+                    <h1 class="mt-5 text-4xl font-bold tracking-[-0.04em] text-slate-950 sm:text-5xl dark:text-white">
+                        @if ($department)
+                            {{ $department['code'] }} delivery, at a glance.
+                        @else
+                            See how company initiatives are moving forward.
+                        @endif
+                    </h1>
+                    <p class="mt-5 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
+                        @if ($department)
+                            This device remembers the last signed-in department. Only public schedule, status, and progress information is shown here.
+                        @else
+                            This device has not been personalized yet. Sign in once and Orbitra will remember the department timeline for future guest visits.
+                        @endif
+                    </p>
                 </div>
-                <p class="mt-4 text-sm text-slate-500">No package selection or payment step.</p>
+                <div class="flex flex-wrap gap-3">
+                    @auth
+                        <x-link-button href="{{ auth()->user()->homePath() }}">Open workspace</x-link-button>
+                    @else
+                        <x-link-button href="{{ route('login') }}">Log in to Orbitra</x-link-button>
+                        @if ($department)
+                            <form method="POST" action="{{ route('home.forget-department') }}">
+                                @csrf
+                                <x-button variant="secondary">Forget this device</x-button>
+                            </form>
+                        @endif
+                    @endauth
+                </div>
             </div>
 
-            <div id="product" class="relative min-w-0 max-w-full rounded-[2rem] border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/15 dark:border-slate-700 dark:bg-slate-900" aria-label="Orbitra dashboard preview">
-                <div class="grid min-h-[480px] grid-cols-[72px_1fr] overflow-hidden rounded-[1.5rem] bg-[#f7f8fb] dark:bg-slate-950">
-                    <div class="border-r border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"><span class="mx-auto grid size-10 place-items-center rounded-xl bg-orbit-600 font-black text-white">O</span>@foreach(range(1, 6) as $item)<span class="mx-auto mt-5 block size-8 rounded-lg {{ $item === 1 ? 'bg-orbit-100 dark:bg-orbit-950' : 'bg-slate-100 dark:bg-slate-800' }}"></span>@endforeach</div>
-                    <div class="min-w-0 p-5 sm:p-7"><div class="flex items-center justify-between"><div><p class="text-xs font-semibold text-slate-400">PRODUCT STUDIO</p><p class="mt-1 text-xl font-bold">Good morning, Maya</p></div><span class="size-10 rounded-full bg-gradient-to-br from-amber-300 to-rose-400"></span></div><div class="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">@foreach([['32','Total tasks'],['11','In progress'],['04','Overdue'],['17','Completed']] as [$metric,$label])<div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><strong class="text-2xl">{{ $metric }}</strong><span class="mt-1 block text-[11px] text-slate-500">{{ $label }}</span></div>@endforeach</div><div class="mt-4 grid gap-4 sm:grid-cols-[1.2fr_0.8fr]"><div class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><div class="flex items-center justify-between"><strong class="text-sm">Project progress</strong><span class="text-xs text-emerald-600">+18%</span></div><div class="mt-8 flex h-28 items-end gap-2">@foreach([35,58,48,76,62,88,72,94] as $height)<span class="flex-1 rounded-t bg-gradient-to-t from-orbit-600 to-cyan-300" style="height: {{ $height }}%"></span>@endforeach</div></div><div class="rounded-2xl bg-slate-950 p-5 text-white dark:bg-slate-800"><p class="text-xs font-semibold text-slate-400">NEXT MEETING</p><p class="mt-3 font-bold">Launch review</p><p class="mt-1 text-sm text-slate-400">Today · 14:30</p><div class="mt-8 flex -space-x-2">@foreach(['bg-amber-300','bg-cyan-300','bg-violet-300'] as $color)<span class="size-9 rounded-full border-2 border-slate-950 {{ $color }} dark:border-slate-800"></span>@endforeach</div></div></div><div class="mt-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><div class="flex justify-between text-sm"><strong>Website redesign</strong><span class="font-semibold text-orbit-600">72%</span></div><div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-full w-[72%] rounded-full bg-orbit-500"></div></div></div></div>
-                </div>
+            <div class="mt-10 grid gap-4 sm:grid-cols-3">
+                @foreach ([
+                    [($department ? 'Department ' : 'Company ').strtolower($itemLabel).'s', $itemCount, $showingFeatures ? 'sparkles' : 'projects'],
+                    ['Scheduled work', $scheduledTaskCount, 'tasks'],
+                    ['Average progress', $averageProgress.'%', 'performance'],
+                ] as [$label, $value, $icon])
+                    <article class="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+                        <div class="flex items-center justify-between gap-4">
+                            <div><p class="text-xs font-semibold uppercase tracking-[.12em] text-slate-400">{{ $label }}</p><p class="mt-2 text-3xl font-bold tabular-nums">{{ $value }}</p></div>
+                            <span class="grid size-11 place-items-center rounded-xl bg-orbit-50 text-orbit-700 dark:bg-orbit-950 dark:text-orbit-300"><x-icon :name="$icon" /></span>
+                        </div>
+                    </article>
+                @endforeach
             </div>
         </div>
     </section>
 
-    <section class="border-y border-slate-200 bg-slate-50 py-10 dark:border-slate-800 dark:bg-slate-900/40" aria-labelledby="trusted-title">
-        <div class="mx-auto max-w-7xl px-5 text-center lg:px-8"><h2 id="trusted-title" class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Workflows designed for every discipline</h2><div class="mt-7 grid grid-cols-2 gap-5 text-lg font-black tracking-tight text-slate-400 sm:grid-cols-5">@foreach(['Product','Design','Engineering','Operations','Leadership'] as $team)<span>{{ $team }}</span>@endforeach</div></div>
-    </section>
+    <section id="timeline" class="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-20" aria-labelledby="public-timeline-title">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-[.14em] text-orbit-600">{{ $itemLabel }} roadmap</p>
+                <h2 id="public-timeline-title" class="mt-2 text-3xl font-bold tracking-tight">{{ $department ? $department['code'].' timeline' : 'Personalize this device' }}</h2>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                    @if ($department)
+                        Monthly schedule with public {{ $itemLabelLower }} status and completion progress. Task details, people, requests, and documents remain private.
+                    @else
+                        Login once on this browser to show the sanitized department timeline on future visits.
+                    @endif
+                </p>
+            </div>
+            <p class="text-xs font-semibold text-slate-400">Updated {{ $updatedAt->format('d M Y, H:i') }}</p>
+        </div>
 
-    <section id="features" class="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
-        <div class="max-w-3xl"><p class="text-sm font-bold uppercase tracking-[0.16em] text-orbit-600">One connected workspace</p><h2 class="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Every view tells the same story.</h2><p class="mt-5 text-lg leading-8 text-slate-600 dark:text-slate-300">No duplicated status spreadsheets or disconnected reports. Orbitra keeps each update consistent wherever your team works.</p></div>
-        <div class="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            @foreach ([
-                ['Task Management', 'Shape flexible workflows, prioritize tasks, and move work safely across list, board, and calendar views.', 'tasks'],
-                ['Team Collaboration', 'Keep conversations, reactions, files, notifications, and ownership beside the work they describe.', 'messages'],
-                ['Project Tracking', 'See real progress, due dates, members, private files, and project health without manual rollups.', 'projects'],
-                ['Performance Insights', 'Measure workload, completion pace, overdue work, trends, and bottlenecks from actual task data.', 'performance'],
-                ['Smart Scheduling', 'Coordinate weekly events and meetings in each workspace timezone with mobile-friendly agendas.', 'calendar'],
-                ['Secure Operations', 'Use workspace policies, private delivery, two-factor authentication, session controls, and audit trails.', 'settings'],
-            ] as [$title, $copy, $icon])
-                <article class="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900"><span class="grid size-12 place-items-center rounded-2xl bg-orbit-50 text-orbit-700 dark:bg-orbit-950 dark:text-orbit-300"><x-icon :name="$icon" /></span><h3 class="mt-6 text-xl font-bold">{{ $title }}</h3><p class="mt-3 text-sm leading-7 text-slate-500 dark:text-slate-400">{{ $copy }}</p></article>
+        <nav class="relative z-10 mt-8 flex w-fit items-end" aria-label="Timeline view" role="tablist" data-timeline-tabs>
+            @foreach (['projects' => 'Projects', 'features' => 'Features'] as $timelineView => $label)
+                <a href="{{ request()->fullUrlWithQuery(['view' => $timelineView]) }}" role="tab" aria-selected="{{ $view === $timelineView ? 'true' : 'false' }}" aria-controls="public-timeline-card"
+                    class="-mb-px -mr-px min-w-28 border px-5 py-3 text-center text-sm font-semibold transition first:rounded-tl-xl last:rounded-tr-xl {{ $view === $timelineView ? 'border-slate-200 border-b-white bg-white text-slate-950 dark:border-slate-800 dark:border-b-slate-900 dark:bg-slate-900 dark:text-white' : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">{{ $label }}</a>
             @endforeach
+        </nav>
+
+        @if (! $department)
+            <div id="public-timeline-card" class="rounded-b-3xl rounded-tr-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center dark:border-slate-700 dark:bg-slate-900/50">
+                <span class="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-orbit-700 shadow-sm dark:bg-slate-800 dark:text-orbit-300"><x-icon name="calendar" /></span>
+                <h3 class="mt-5 text-lg font-bold">No department remembered on this device</h3>
+                <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">Your first successful login securely stores only a department hint for 30 days. No account or authorization data is stored in this preference.</p>
+                <x-link-button href="{{ route('login') }}" class="mt-5">Login to personalize</x-link-button>
+            </div>
+        @elseif (! $deliveryWorkspace || $timelineRows->isEmpty())
+            <div id="public-timeline-card" class="rounded-b-3xl rounded-tr-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"><x-empty-state icon="calendar" title="No {{ $itemLabelLower }}s in this period" description="There is no public {{ $itemLabelLower }} schedule for this department in the current monthly window." /></div>
+        @else
+            <div id="public-timeline-card" class="overflow-hidden rounded-b-3xl rounded-tr-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="max-h-[430px] overflow-auto" tabindex="0" role="region" aria-label="Scrollable department {{ $itemLabelLower }} timeline">
+                    <div class="relative grid grid-cols-[minmax(210px,260px)_minmax(0,1fr)]" style="min-width: {{ $timeline->minWidth() }}px">
+                        <div class="sticky left-0 top-0 z-30 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">{{ $itemLabel }}</div>
+                        <div class="sticky top-0 z-20 h-14 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-hidden="true">
+                            @foreach ($ticks as $tick)
+                                <span class="absolute inset-y-0 border-l border-slate-200 dark:border-slate-800" style="left: {{ $tick['left'] }}%"><span class="absolute left-1 top-3 whitespace-nowrap text-[10px] text-slate-400">{{ $tick['label'] }}</span></span>
+                            @endforeach
+                            @if ($todayPosition !== null)<span class="absolute inset-y-0 z-10 border-l-2 border-orbit-500" style="left: {{ $todayPosition }}%"><span class="absolute left-1 top-8 text-[10px] font-bold text-orbit-700 dark:text-orbit-300">Today</span></span>@endif
+                        </div>
+
+                        @foreach ($timelineRows as $project)
+                            <div class="sticky left-0 z-20 flex min-w-0 items-center gap-3 border-b border-r border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+                                <span class="size-2.5 shrink-0 rounded-full" style="background-color: {{ $project['color'] }}"></span>
+                                <span class="min-w-0"><span class="block truncate text-sm font-semibold">{{ $project['name'] }}</span><span class="mt-1 block truncate text-[10px] text-slate-400">{{ $project['status'] }} · {{ $project['date_label'] }}</span></span>
+                            </div>
+                            <div class="relative h-16 border-b border-slate-200 dark:border-slate-800">
+                                @foreach ($ticks as $tick)<span class="absolute inset-y-0 border-l border-slate-100 dark:border-slate-800/80" style="left: {{ $tick['left'] }}%" aria-hidden="true"></span>@endforeach
+                                @if ($todayPosition !== null)<span class="absolute inset-y-0 z-10 border-l-2 border-orbit-500" style="left: {{ $todayPosition }}%" aria-hidden="true"></span>@endif
+                                <div class="absolute top-3 z-10 flex h-10 min-w-10 items-center overflow-hidden rounded-xl border px-3 shadow-sm" style="left: {{ $project['left'] }}%; width: {{ $project['width'] }}%; border-color: {{ $project['color'] }}; background-color: color-mix(in srgb, {{ $project['color'] }} 14%, white)" aria-label="{{ $project['name'] }}, {{ $project['progress'] }} percent complete">
+                                    <span class="absolute inset-y-0 left-0 opacity-20" style="width: {{ $project['progress'] }}%; background-color: {{ $project['color'] }}" aria-hidden="true"></span>
+                                    <span class="relative truncate text-[11px] font-semibold text-slate-800">{{ $project['name'] }}</span><span class="relative ml-auto pl-2 text-[10px] font-bold text-slate-800">{{ $project['progress'] }}%</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+                    <span>Showing up to 5 {{ $itemLabelLower }}s · timezone {{ $deliveryWorkspace->timezone }}</span>
+                    @auth<a href="{{ auth()->user()->homePath() }}" class="font-bold text-orbit-700 hover:text-orbit-800 dark:text-orbit-300">Open complete workspace →</a>@else<a href="{{ route('login') }}" class="font-bold text-orbit-700 hover:text-orbit-800 dark:text-orbit-300">Login for full access →</a>@endauth
+                </div>
+            </div>
+        @endif
+    </section>
+
+    <section class="border-t border-slate-200 bg-slate-50 py-12 dark:border-slate-800 dark:bg-slate-900/40" aria-labelledby="privacy-title">
+        <div class="mx-auto flex max-w-7xl flex-col gap-5 px-5 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+            <div><h2 id="privacy-title" class="text-lg font-bold">A timeline is public. The work behind it is not.</h2><p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">This homepage never exposes task titles, member identities, request descriptions, custom properties, files, meeting notes, or internal links.</p></div>
+            <a href="{{ route('legal.privacy') }}" class="shrink-0 text-sm font-bold text-orbit-700 dark:text-orbit-300">Read privacy notice →</a>
         </div>
     </section>
-
-    <section id="how-it-works" class="bg-slate-950 py-20 text-white lg:py-28">
-        <div class="mx-auto max-w-7xl px-5 lg:px-8"><div class="max-w-2xl"><p class="text-sm font-bold uppercase tracking-[0.16em] text-orbit-300">How it works</p><h2 class="mt-3 text-4xl font-bold tracking-tight">From idea to outcome in three clear steps.</h2></div><ol class="mt-12 grid gap-8 md:grid-cols-3">@foreach([['01','Create a project','Choose dates, invite the right teammates, and start with a practical workflow.'],['02','Assign and collaborate','Clarify owners, discuss context, attach files, and coordinate the week.'],['03','Track and achieve','Use live dashboards and performance reports to spot risk and celebrate progress.']] as [$number,$title,$copy])<li class="border-t border-slate-700 pt-6"><span class="text-sm font-black text-orbit-300">{{ $number }}</span><h3 class="mt-5 text-2xl font-bold">{{ $title }}</h3><p class="mt-3 leading-7 text-slate-400">{{ $copy }}</p></li>@endforeach</ol></div>
-    </section>
-
-    <section id="integrations" class="mx-auto grid max-w-7xl items-center gap-14 px-5 py-20 lg:grid-cols-2 lg:px-8 lg:py-28">
-        <div><p class="text-sm font-bold uppercase tracking-[0.16em] text-orbit-600">Integrations</p><h2 class="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Connect the tools your team already trusts.</h2><p class="mt-5 text-lg leading-8 text-slate-600 dark:text-slate-300">Send work updates to Slack, link Google Drive files, connect GitHub commits and pull requests, and create Zoom meetings from the schedule.</p><x-link-button href="{{ route(config('organization.jit_auth') ? 'login' : 'register') }}" class="mt-7">Explore integrations</x-link-button></div>
-        <div class="grid grid-cols-2 gap-4">@foreach([['S','Slack','Send project and task updates'],['G','Google Drive','Link external file metadata'],['GH','GitHub','Connect commits and pull requests'],['Z','Zoom','Create and join meetings']] as [$mark,$name,$copy])<article class="rounded-3xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-900"><span class="grid size-12 place-items-center rounded-2xl bg-white text-sm font-black text-orbit-700 shadow-sm dark:bg-slate-800 dark:text-orbit-300">{{ $mark }}</span><h3 class="mt-5 font-bold">{{ $name }}</h3><p class="mt-2 text-sm leading-6 text-slate-500">{{ $copy }}</p></article>@endforeach</div>
-    </section>
-
-    <section id="access" class="border-y border-slate-200 bg-slate-50 py-20 dark:border-slate-800 dark:bg-slate-900/40 lg:py-28">
-        <div class="mx-auto max-w-5xl px-5 text-center lg:px-8"><p class="text-sm font-bold uppercase tracking-[0.16em] text-orbit-600">Unlimited access</p><h2 class="mt-3 text-4xl font-bold tracking-tight">One workspace experience. No package limits.</h2><p class="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-600 dark:text-slate-300">Invite every team member, run as many projects as needed, connect every available integration, and export reports without artificial quotas.</p><div class="mx-auto mt-10 grid max-w-4xl gap-4 text-left sm:grid-cols-2 lg:grid-cols-3">@foreach(['Unlimited members', 'Unlimited projects', 'Unlimited application storage', 'All integrations', 'CSV and PDF exports'] as $feature)<div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 font-semibold dark:border-slate-800 dark:bg-slate-900"><span class="text-emerald-500">✓</span><span>{{ $feature }}</span></div>@endforeach</div></div>
-    </section>
-
-    <section class="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28" aria-labelledby="stories-title">
-        <div class="max-w-2xl"><p class="text-sm font-bold uppercase tracking-[0.16em] text-orbit-600">Illustrative outcomes</p><h2 id="stories-title" class="mt-3 text-4xl font-bold tracking-tight">Clarity changes how work feels.</h2></div><div class="mt-10 grid gap-5 md:grid-cols-3">@foreach([['“Launch reviews can start with decisions instead of reconciling status across tools.”','Product leadership scenario'],['“A shared schedule and project board can give design and engineering the same delivery picture.”','Cross-functional delivery scenario'],['“Workload and bottleneck views can help teams rebalance before overdue tasks become surprises.”','Operations planning scenario']] as [$quote,$scenario])<figure class="rounded-3xl border border-slate-200 p-7 dark:border-slate-800"><blockquote class="text-lg font-semibold leading-8">{{ $quote }}</blockquote><figcaption class="mt-6 text-sm text-slate-500">{{ $scenario }}</figcaption></figure>@endforeach</div></div>
-    </section>
-
-    <section id="resources" class="mx-auto max-w-4xl px-5 pb-20 lg:px-8 lg:pb-28">
-        <div class="text-center"><p class="text-sm font-bold uppercase tracking-[0.16em] text-orbit-600">Frequently asked questions</p><h2 class="mt-3 text-4xl font-bold tracking-tight">Answers before you begin.</h2></div><div class="mt-10 space-y-3">@foreach([['Are there member or project limits?','No. Orbitra does not apply package quotas to members, projects, application storage, integrations, or report exports.'],['Does Orbitra keep workspace data isolated?','Yes. Workspace membership and resource policies are applied by the server before records are returned.'],['Can we use our existing tools?','Workspace owners can connect Slack, Google Drive, GitHub, and Zoom using provider OAuth credentials.'],['How are uploaded files protected?','Files are stored on a private disk and streamed only after workspace and resource authorization.'],['Can I export performance reports?','Yes. CSV and PDF exports are available to authorized workspace members without a package restriction.']] as [$question,$answer])<details class="group rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold"><span>{{ $question }}</span><span class="text-xl text-orbit-600 transition group-open:rotate-45" aria-hidden="true">+</span></summary><p class="mt-4 max-w-3xl text-sm leading-7 text-slate-500 dark:text-slate-400">{{ $answer }}</p></details>@endforeach</div>
-    </section>
-
-    <section class="px-5 pb-20 lg:px-8 lg:pb-28"><div class="mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-orbit-600 to-indigo-700 px-6 py-14 text-center text-white sm:px-12 sm:py-20"><h2 class="text-4xl font-bold tracking-tight sm:text-5xl">Bring your next project into focus.</h2><p class="mx-auto mt-5 max-w-2xl text-lg text-orbit-100">Create a secure workspace, invite the team, and turn scattered updates into shared progress.</p><x-link-button href="{{ route(config('organization.jit_auth') ? 'login' : 'register') }}" class="mt-8 bg-white text-orbit-800 hover:bg-orbit-50">Get started</x-link-button></div></section>
 @endsection

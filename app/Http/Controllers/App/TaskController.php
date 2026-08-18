@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Services\OrganizationDirectory;
 use App\Services\PersonalTaskSpace;
+use App\Services\RequestTaskAccess;
 use App\Services\TaskDatabaseView;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -102,7 +103,7 @@ class TaskController extends Controller
         ]);
     }
 
-    public function show(Task $task): View
+    public function show(Task $task, RequestTaskAccess $requestTasks): View
     {
         $this->authorize('view', $task);
         $task->load([
@@ -112,6 +113,7 @@ class TaskController extends Controller
 
         return view('app.tasks.show', [
             'task' => $task,
+            'requestContext' => $requestTasks->visibleRequest(request()->user(), $task),
             ...$this->formData($task->workspace, $task->project, request()->user()),
         ]);
     }

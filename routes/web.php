@@ -29,6 +29,7 @@ use App\Http\Controllers\Desk\ProjectRequestController as DeskProjectRequestCont
 use App\Http\Controllers\Desk\RequesterDeskController;
 use App\Http\Controllers\Desk\SupportingRequestController;
 use App\Http\Controllers\Desk\ValidationController as DeskValidationController;
+use App\Http\Controllers\HomeController;
 use App\Http\Middleware\EnsureDeliveryDeskAccess;
 use App\Http\Middleware\EnsureRequestDeskAccess;
 use App\Http\Middleware\RequireEmailVerificationWhenEnabled;
@@ -47,7 +48,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::post('/forget-department', [HomeController::class, 'forget'])->name('home.forget-department');
 Route::view('/privacy', 'legal', ['document' => 'privacy'])->name('legal.privacy');
 Route::view('/terms', 'legal', ['document' => 'terms'])->name('legal.terms');
 Route::view('/accessibility', 'legal', ['document' => 'accessibility'])->name('legal.accessibility');
