@@ -21,10 +21,16 @@ class ValidationCheckpoint extends Model
 {
     use GeneratesPublicId, HasFactory;
 
+    /** Opened by the system when a flagged task completes. Carries a takedown deadline. */
+    public const KIND_VALIDATION = 'validation';
+
+    /** Opened by ITD to ask the requester for something. No deadline, nothing is taken down. */
+    public const KIND_INFORMATION = 'information';
+
     protected $fillable = [
-        'workspace_id', 'task_id', 'subject_type', 'subject_id', 'requester_id',
-        'reason', 'status', 'opened_at', 'expires_at', 'responded_at', 'response_note',
-        'reminded_at', 'final_warning_at',
+        'workspace_id', 'task_id', 'subject_type', 'subject_id', 'kind', 'requester_id',
+        'opened_by', 'reason', 'status', 'opened_at', 'expires_at', 'responded_at',
+        'response_note', 'reminded_at', 'final_warning_at',
     ];
 
     protected $casts = [
@@ -56,9 +62,26 @@ class ValidationCheckpoint extends Model
         return $this->belongsTo(User::class, 'requester_id');
     }
 
+    /** The ITD member who asked, on an information request. */
+    public function asker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'opened_by');
+    }
+
+    public function isInformationRequest(): bool
+    {
+        return $this->kind === self::KIND_INFORMATION;
+    }
+
     public function scopeOpen(Builder $query): Builder
     {
         return $query->where('status', CheckpointStatus::OPEN->value);
+    }
+
+    /** The automatic kind only: the sweep and its takedown must never touch a question. */
+    public function scopeValidations(Builder $query): Builder
+    {
+        return $query->where('kind', self::KIND_VALIDATION);
     }
 
     /** Whole days, floored, and never negative — "0 days left" reads better than "-1". */
@@ -71,6 +94,10 @@ class ValidationCheckpoint extends Model
     {
         if (! $this->status->isCountingDown()) {
             return $this->status->label();
+        }
+
+        if ($this->expires_at === null) {
+            return 'Waiting for you';
         }
 
         return match ($days = $this->daysLeft()) {
@@ -90,10 +117,15 @@ class ValidationCheckpoint extends Model
     {
         $query = parent::resolveRouteBindingQuery($query, $value, $field);
 
+        // The requester is often a member of their own department workspace, not the delivery
+        // one the checkpoint belongs to, so membership alone would 404 the very person the
+        // checkpoint is addressed to. The policy still decides who may act on it.
         if (Auth::check()) {
-            $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-                ->where('user_id', Auth::id())
-                ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+            $query->where(fn (Builder $scope) => $scope
+                ->where('requester_id', Auth::id())
+                ->orWhereHas('workspace.memberships', fn (Builder $membership) => $membership
+                    ->where('user_id', Auth::id())
+                    ->where('status', WorkspaceMemberStatus::ACTIVE->value)));
         }
 
         return $query;

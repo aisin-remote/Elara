@@ -28,8 +28,9 @@ return new class extends Migration
             $table->string('status', 24)->default('open');
             $table->timestamp('opened_at');
             // Stored, not computed: shortening the window later must not retroactively expire
-            // checkpoints that were opened under the old rule.
-            $table->timestamp('expires_at');
+            // checkpoints that were opened under the old rule. Null on the questions ITD asks
+            // the requester, which carry no deadline at all.
+            $table->timestamp('expires_at')->nullable();
             $table->timestamp('responded_at')->nullable();
             $table->text('response_note')->nullable();
             $table->timestamp('reminded_at')->nullable();

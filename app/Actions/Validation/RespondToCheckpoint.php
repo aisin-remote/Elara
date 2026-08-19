@@ -33,6 +33,17 @@ class RespondToCheckpoint
             ]);
         }
 
+        // An answer to a question is the note itself; there is nothing to approve.
+        if ($checkpoint->isInformationRequest()) {
+            $decision = CheckpointStatus::APPROVED;
+
+            if (blank($note)) {
+                throw ValidationException::withMessages([
+                    'response_note' => 'Write your answer so ITD can carry on.',
+                ]);
+            }
+        }
+
         if ($decision === CheckpointStatus::CHANGES_REQUESTED && blank($note)) {
             throw ValidationException::withMessages([
                 'response_note' => 'Say what needs changing, so the team knows what to do next.',
@@ -46,7 +57,8 @@ class RespondToCheckpoint
                 'response_note' => $note,
             ]);
 
-            if ($decision === CheckpointStatus::CHANGES_REQUESTED) {
+            // A question never touched the board, so answering it must not move the task.
+            if ($decision === CheckpointStatus::CHANGES_REQUESTED && ! $checkpoint->isInformationRequest()) {
                 $this->reopenTask($checkpoint);
             }
 
@@ -88,15 +100,23 @@ class RespondToCheckpoint
 
     private function tellThePic(ValidationCheckpoint $checkpoint, User $actor, CheckpointStatus $decision, ?string $note): void
     {
-        $title = $decision === CheckpointStatus::APPROVED
-            ? 'A checkpoint was approved'
-            : 'Changes requested';
+        if ($checkpoint->isInformationRequest()) {
+            $title = 'The requester answered';
+            $body = $actor->name.' answered on “'.$checkpoint->task->title.'”: '.$note;
+        } else {
+            $title = $decision === CheckpointStatus::APPROVED
+                ? 'A checkpoint was approved'
+                : 'Changes requested';
 
-        $body = $decision === CheckpointStatus::APPROVED
-            ? $actor->name.' confirmed “'.$checkpoint->task->title.'”. Work continues.'
-            : $actor->name.' asked for changes on “'.$checkpoint->task->title.'”: '.$note;
+            $body = $decision === CheckpointStatus::APPROVED
+                ? $actor->name.' confirmed “'.$checkpoint->task->title.'”. Work continues.'
+                : $actor->name.' asked for changes on “'.$checkpoint->task->title.'”: '.$note;
+        }
 
-        foreach ($checkpoint->task->assignees as $assignee) {
+        // The person who asked hears back even when they are not on the task.
+        $audience = $checkpoint->task->assignees->push($checkpoint->asker)->filter()->unique('id');
+
+        foreach ($audience as $assignee) {
             $this->notifications->notify(
                 $assignee,
                 $checkpoint->workspace,

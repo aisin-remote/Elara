@@ -133,6 +133,7 @@ Route::patch('/tasks/{task}/field', [TaskController::class, 'updateField'])->nam
 Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('internal.tasks.destroy');
 Route::post('/tasks/{task}/restore', [TaskController::class, 'restore'])->withTrashed()->name('internal.tasks.restore');
 Route::post('/tasks/{task}/duplicate', [TaskController::class, 'duplicate'])->name('internal.tasks.duplicate');
+Route::post('/tasks/{task}/ask-requester', [TaskController::class, 'askRequester'])->name('internal.tasks.ask-requester');
 Route::post('/tasks/{task}/move', [TaskMoveController::class, 'store'])->name('internal.tasks.move');
 Route::post('/tasks/{task}/dependencies', [TaskDependencyController::class, 'store'])->name('internal.task-dependencies.store');
 Route::delete('/tasks/{task}/dependencies/{dependency}', [TaskDependencyController::class, 'destroy'])->name('internal.task-dependencies.destroy');

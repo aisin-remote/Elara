@@ -22,6 +22,7 @@ use App\Models\Workspace;
 use App\Notifications\OrbitraNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -181,6 +182,96 @@ class CheckpointFlowTest extends TestCase
     }
 
     /** @return array{0: Workspace, 1: User, 2: Project, 3: Task, 4: User} */
+    public function test_itd_asks_the_requester_for_detail_and_the_answer_comes_back(): void
+    {
+        [, $pic, , $task, $requester] = $this->scenario();
+
+        $this->actingAs($pic)
+            ->post(route('internal.tasks.ask-requester', $task), [
+                'question' => 'Which columns should the export carry, and in what order?',
+            ])
+            ->assertRedirect();
+
+        $checkpoint = ValidationCheckpoint::firstOrFail();
+        $this->assertSame(ValidationCheckpoint::KIND_INFORMATION, $checkpoint->kind);
+        $this->assertSame($requester->id, $checkpoint->requester_id);
+        $this->assertSame($pic->id, $checkpoint->opened_by);
+        // A question is not a countdown: nothing gets taken down for a slow answer.
+        $this->assertNull($checkpoint->expires_at);
+
+        Notification::assertSentTo($requester, OrbitraNotification::class);
+
+        $this->actingAs($requester)->get(route('desk.validations.index'))
+            ->assertOk()
+            ->assertSee('Which columns should the export carry');
+
+        $this->actingAs($requester)
+            ->post(route('desk.validations.respond', $checkpoint), [
+                'decision' => 'approved',
+                'response_note' => 'SKU, description, quantity, then value — same order as finance uses.',
+                'attachments' => [UploadedFile::fake()->create('part-numbers.xlsx', 12)],
+            ])
+            ->assertRedirect();
+
+        // The file ITD asked for lands on the task, marked as shared with the requester.
+        $file = $task->files()->firstOrFail();
+        $this->assertSame('part-numbers.xlsx', $file->original_name);
+        $this->assertSame($requester->id, $file->uploader_id);
+        $this->assertTrue((bool) data_get($file->metadata_json, 'request_shared'));
+
+        $checkpoint->refresh();
+        $this->assertSame(CheckpointStatus::APPROVED, $checkpoint->status);
+        $this->assertStringContainsString('same order as finance', $checkpoint->response_note);
+        // The task was never completed, so answering must not have moved it.
+        $this->assertNull($task->fresh()->completed_at);
+    }
+
+    public function test_a_second_question_waits_for_the_first_to_be_answered(): void
+    {
+        [, $pic, , $task] = $this->scenario();
+
+        $this->actingAs($pic)->post(route('internal.tasks.ask-requester', $task), [
+            'question' => 'Which columns should the export carry, and in what order?',
+        ])->assertRedirect();
+
+        $this->actingAs($pic)->post(route('internal.tasks.ask-requester', $task), [
+            'question' => 'And which date range should the first run cover?',
+        ])->assertSessionHasErrors('question');
+
+        $this->assertSame(1, ValidationCheckpoint::count());
+    }
+
+    public function test_a_requester_from_another_workspace_can_still_answer(): void
+    {
+        [, $pic, , $task, $requester] = $this->scenario();
+
+        $this->actingAs($pic)->post(route('internal.tasks.ask-requester', $task), [
+            'question' => 'Which part numbers should the sheet cover?',
+        ])->assertRedirect();
+
+        // Department workspaces: the requester's only active membership is in their own
+        // department, not the delivery workspace the task and checkpoint live in.
+        $department = app(CreateWorkspace::class)->handle(User::factory()->create(), [
+            'name' => 'Maintenance', 'timezone' => 'UTC', 'locale' => 'en', 'week_start' => 1,
+        ]);
+        $requester->workspaceMemberships()->update(['status' => WorkspaceMemberStatus::INACTIVE]);
+        $department->memberships()->create([
+            'user_id' => $requester->id, 'role' => WorkspaceRole::REQUESTER,
+            'status' => WorkspaceMemberStatus::ACTIVE, 'joined_at' => now(),
+        ]);
+
+        $checkpoint = ValidationCheckpoint::firstOrFail();
+
+        $this->actingAs($requester)
+            ->post(route('desk.validations.respond', $checkpoint), [
+                'decision' => 'approved',
+                'response_note' => 'BR-1120 through BR-1180, the export is attached.',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(CheckpointStatus::APPROVED, $checkpoint->fresh()->status);
+    }
+
     private function scenario(): array
     {
         $owner = User::factory()->create();

@@ -7,6 +7,7 @@ use App\Actions\Task\ArchiveTask;
 use App\Actions\Task\CreateTask;
 use App\Actions\Task\DuplicateTask;
 use App\Actions\Task\UpdateTask;
+use App\Actions\Validation\AskRequesterForDetail;
 use App\Http\Requests\Task\DuplicateTaskRequest;
 use App\Http\Requests\Task\StoreTaskRequest;
 use App\Http\Requests\Task\TaskMutationRequest;
@@ -42,6 +43,20 @@ class TaskController extends Controller
         }
 
         return $this->success($request, new TaskResource($task->load(['workspace', 'project', 'status', 'category', 'milestone', 'assignees', 'dependencies', 'propertyValues', 'files'])), 'Task created.', route('app.tasks.show', $task), 201);
+    }
+
+    /** ITD asks the requester for something this task needs. It lands in their "Waiting on me". */
+    public function askRequester(Request $request, Task $task, AskRequesterForDetail $ask): JsonResponse|RedirectResponse
+    {
+        $this->authorize('update', $task);
+
+        $question = $request->validate([
+            'question' => ['required', 'string', 'min:10', 'max:2000'],
+        ])['question'];
+
+        $checkpoint = $ask->handle($task, $request->user(), $question);
+
+        return $this->success($request, ['public_id' => $checkpoint->public_id], 'Sent to the requester.', route('app.tasks.show', $task));
     }
 
     public function show(Request $request, Task $task): JsonResponse

@@ -34,6 +34,8 @@ class SweepValidations extends Command
 
         ValidationCheckpoint::query()
             ->open()
+            // Questions ITD asked have no deadline and never take a request down.
+            ->validations()
             ->with(['task.assignees', 'subject', 'requester', 'workspace'])
             ->orderBy('id')
             ->chunkById(100, function ($checkpoints) use ($notifications, $takedown, &$expired, &$warned, &$reminded): void {

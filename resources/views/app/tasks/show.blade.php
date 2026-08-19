@@ -18,6 +18,38 @@
             </section>
         </div>
         <aside class="space-y-6">
+            @if ($requestContext)
+                @php($openQuestion = App\Models\ValidationCheckpoint::where('task_id', $task->id)->where('kind', App\Models\ValidationCheckpoint::KIND_INFORMATION)->latest('id')->first())
+                <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="ask-requester-title">
+                    <h3 id="ask-requester-title" class="font-bold">Ask the requester</h3>
+                    <p class="mt-1 text-xs text-slate-500">Blocked on something only {{ $requestContext->requester->name }} can give you? Ask here — it lands in their “Waiting on me”.</p>
+
+                    @if ($openQuestion && $openQuestion->status === App\Enums\CheckpointStatus::OPEN)
+                        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-900 dark:bg-amber-950/40">
+                            <p class="font-semibold text-amber-800 dark:text-amber-200">Waiting for an answer</p>
+                            <p class="mt-1 whitespace-pre-line leading-5 text-amber-900 dark:text-amber-100">{{ $openQuestion->reason }}</p>
+                            <p class="mt-2 text-amber-700 dark:text-amber-300">Asked {{ $openQuestion->opened_at->diffForHumans() }}</p>
+                        </div>
+                    @else
+                        @if ($openQuestion?->response_note)
+                            <div class="mt-4 rounded-xl border border-slate-200 p-3 text-xs dark:border-slate-800">
+                                <p class="font-semibold text-slate-500">Last answer · {{ $openQuestion->responded_at?->diffForHumans() }}</p>
+                                <p class="mt-1 whitespace-pre-line leading-5">{{ $openQuestion->response_note }}</p>
+                            </div>
+                        @endif
+
+                        @can('update', $task)
+                            <form method="POST" action="{{ route('internal.tasks.ask-requester', $task) }}" class="mt-4 space-y-2">
+                                @csrf
+                                <x-textarea name="question" rows="3" required minlength="10" maxlength="2000" placeholder="What do you need from them, and what for?">{{ old('question') }}</x-textarea>
+                                <x-field-error name="question" />
+                                <x-button variant="secondary" class="w-full">Send the question</x-button>
+                            </form>
+                        @endcan
+                    @endif
+                </section>
+            @endif
+
             <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 class="font-bold">Checklist</h3><div class="mt-4 space-y-2">@forelse($task->checklistItems as $item)<div class="rounded-xl border border-slate-100 p-3 dark:border-slate-800">@can('update',$task)<form method="POST" action="{{ route('internal.task-checklist.update',$item) }}" class="flex items-center gap-2">@csrf @method('PATCH')<input type="hidden" name="is_completed" value="0"><input type="checkbox" name="is_completed" value="1" class="rounded text-orbit-600" @checked($item->is_completed) onchange="this.form.submit()"><input name="title" value="{{ $item->title }}" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0 {{ $item->is_completed ? 'line-through text-slate-400' : '' }}"><button class="text-xs font-semibold text-orbit-700">Save</button></form><form method="POST" action="{{ route('internal.task-checklist.destroy',$item) }}" class="mt-1 text-right">@csrf @method('DELETE')<button class="text-xs text-rose-600">Remove</button></form>@else<p class="text-sm {{ $item->is_completed ? 'line-through text-slate-400' : '' }}">{{ $item->title }}</p>@endcan</div>@empty<p class="text-sm text-slate-500">No checklist items.</p>@endforelse</div>@can('update',$task)<form method="POST" action="{{ route('internal.task-checklist.store',$task) }}" class="mt-4 flex gap-2">@csrf<x-input name="title" placeholder="Add checklist item" required/><x-button aria-label="Add checklist item"><x-icon name="plus"/></x-button></form>@endcan</section>
             <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"><h3 class="font-bold">Attachments</h3><div class="mt-4 space-y-2">@forelse($task->files as $file)<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-sm dark:border-slate-800"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><a href="{{ route('internal.files.download',$file) }}" class="block truncate font-semibold hover:text-orbit-700">{{ $file->original_name }}</a>@if(data_get($file->metadata_json, 'request_shared'))<span class="rounded-full bg-orbit-50 px-2 py-0.5 text-[10px] font-bold text-orbit-700 dark:bg-orbit-950/60 dark:text-orbit-300">Shared with requester</span>@endif</div><p class="text-xs text-slate-400">{{ number_format($file->size / 1024, 1) }} KB · {{ $file->uploader->name }}</p></div>@can('delete',$file)<form method="POST" action="{{ route('internal.files.destroy',$file) }}">@csrf @method('DELETE')<button class="text-xs font-semibold text-rose-600">Delete</button></form>@endcan</div>@empty<p class="text-sm text-slate-500">No attachments.</p>@endforelse</div>@can('update',$task)<form method="POST" action="{{ route('internal.task-attachments.store',$task) }}" enctype="multipart/form-data" class="mt-4 space-y-2">@csrf<input type="file" name="attachment" required class="block w-full text-xs">@if($requestContext)<label class="flex items-start gap-2 rounded-xl bg-orbit-50 p-3 text-xs text-orbit-900 dark:bg-orbit-950/50 dark:text-orbit-100"><input type="hidden" name="share_with_requester" value="0"><input type="checkbox" name="share_with_requester" value="1" checked class="mt-0.5 rounded text-orbit-600"><span><strong class="block">Share with requester</strong><span class="mt-0.5 block text-orbit-700 dark:text-orbit-300">Use this for meeting minutes and documents the requester should see.</span></span></label>@endif<x-button variant="secondary" class="w-full">Upload attachment</x-button></form>@endcan</section>
             <section class="rounded-2xl border border-slate-200 bg-white p-5 text-sm dark:border-slate-800 dark:bg-slate-900"><h3 class="font-bold">At a glance</h3><dl class="mt-4 space-y-3"><div class="flex justify-between gap-3"><dt class="text-slate-500">Status</dt><dd class="font-semibold">{{ $task->status->name }}</dd></div><div class="flex justify-between gap-3"><dt class="text-slate-500">Milestone</dt><dd class="text-right font-semibold">{{ $task->milestone?->name ?? 'None' }}</dd></div><div class="flex justify-between gap-3"><dt class="text-slate-500">Due</dt><dd class="font-semibold">{{ $task->due_at?->format('M j, Y H:i') ?? 'Not set' }}</dd></div><div class="flex justify-between gap-3"><dt class="text-slate-500">Baseline</dt><dd class="text-right font-semibold">{{ $task->baseline_due_at?->format('M j, Y') ?? 'None' }}</dd></div><div class="flex justify-between gap-3"><dt class="text-slate-500">Estimate</dt><dd class="font-semibold">{{ $task->estimate_minutes ? $task->estimate_minutes.' min' : 'Not set' }}</dd></div><div><dt class="text-slate-500">Assignees</dt><dd class="mt-1 font-semibold">{{ $task->assignees->pluck('name')->join(', ') ?: 'Unassigned' }}</dd></div></dl></section>
