@@ -99,7 +99,7 @@ class SupportingTaskFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Request operational support')
             ->assertDontSee('Sent directly to ITD')
-            ->assertSee('How it works')
+            ->assertSee('Download supporting request guide (PDF)')
             ->assertSee('Request details');
         $this->actingAs($requester)->post(route('desk.supporting.store', $workspace), [
             'title' => 'Repair meeting room printer',

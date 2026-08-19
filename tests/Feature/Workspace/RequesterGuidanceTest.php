@@ -15,39 +15,40 @@ class RequesterGuidanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_both_forms_explain_the_journey_and_the_deadline_that_is_theirs(): void
+    public function test_request_forms_offer_their_process_guide_as_a_pdf_download(): void
     {
         [$workspace, $requester] = $this->workspace();
 
         foreach ([
-            route('desk.requests.create', $workspace),
-            route('desk.project-requests.create', $workspace),
-        ] as $url) {
+            [route('desk.requests.create', $workspace), 'Download feature request guide (PDF)', 'elara-feature-request-guide.pdf'],
+            [route('desk.project-requests.create', $workspace), 'Download project proposal guide (PDF)', 'elara-project-request-guide.pdf'],
+            [route('desk.supporting.create', $workspace), 'Download supporting request guide (PDF)', 'elara-supporting-request-guide.pdf'],
+        ] as [$url, $label, $filename]) {
             $this->actingAs($requester)->get($url)->assertOk()
-                ->assertSee('How it works, from request to delivery')
-                ->assertSee('One deadline belongs to you')
-                ->assertSee('Waiting on me')
-                ->assertSee('How to write a request that is easy to assess');
+                ->assertSee($label)
+                ->assertSee("docs/{$filename}", false)
+                ->assertSee('download', false)
+                ->assertDontSee('How it works, from request to delivery');
+
+            $path = public_path("docs/{$filename}");
+            $this->assertFileExists($path);
+            $this->assertGreaterThan(1_000, filesize($path));
         }
     }
 
-    public function test_the_project_form_names_the_meeting_and_both_signatures(): void
+    public function test_the_project_form_keeps_its_dynamic_business_case_fields(): void
     {
         [$workspace, $requester] = $this->workspace();
 
         $this->actingAs($requester)
             ->get(route('desk.project-requests.create', $workspace))
             ->assertOk()
-            ->assertSee('Scoping meeting')
-            ->assertSee('First ITD signature')
-            ->assertSee('Second ITD signature')
             ->assertSee('Add objective')
             ->assertSee('Add benefit')
             ->assertSee('Add cost item')
             ->assertDontSee('objective-1')
             ->assertDontSee('benefit-1')
-            ->assertDontSee('cost-item-1')
-            ->assertSee('same person cannot supply both signatures', false);
+            ->assertDontSee('cost-item-1');
     }
 
     public function test_the_feature_request_uses_the_same_searchable_selector_as_master_system(): void
@@ -77,18 +78,6 @@ class RequesterGuidanceTest extends TestCase
                 ->assertDontSee('Organization profile not connected')
                 ->assertDontSee('Sent directly to ITD');
         }
-    }
-
-    public function test_the_validation_window_shown_is_the_workspace_setting_not_a_hard_coded_seven(): void
-    {
-        [$workspace, $requester] = $this->workspace();
-        $workspace->update(['settings_json' => ['validation_window_days' => 4]]);
-
-        $this->actingAs($requester)
-            ->get(route('desk.requests.create', $workspace))
-            ->assertOk()
-            ->assertSee('4 days')
-            ->assertDontSee('7 days');
     }
 
     /** @return array{0: Workspace, 1: User} */

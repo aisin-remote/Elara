@@ -30,6 +30,7 @@ class PublicHomeTest extends TestCase
 
         $this->get(route('home'))
             ->assertOk()
+            ->assertSee(asset('elara-favicon.svg'), false)
             ->assertSee('See how company initiatives are moving forward')
             ->assertSee('Company projects')
             ->assertSee('No department remembered on this device')

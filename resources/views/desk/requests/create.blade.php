@@ -14,22 +14,10 @@
 
     <x-auth-errors class="mt-6" />
 
-    @include('desk._how-it-works', [
-        'steps' => [
-            ['Describe the need', 'Explain the current condition, the target condition, and the benefit. Focus on the need, not how to build it.', 'You'],
-            ['Supervisor review', 'The reviewer approves it, rejects it with a reason, or asks you for more information.', 'Supervisor'],
-            ['Capacity scheduling', 'Approved requests are scheduled against real team capacity.', 'Automatic'],
-            ['Work planning', 'ITD breaks the request into estimated tasks and the assignee reviews the plan before work starts.', 'ITD'],
-            ['Validate the result', 'Anything only you can judge pauses until you confirm that it is correct.', 'You'],
-            ['Delivered', 'After the final task and validation are complete, the request moves to History.', 'ITD'],
-        ],
-        'writing' => [
-            'Explain the current condition rather than prescribing a solution. ITD may know a simpler route to the same result.',
-            'Include how often it happens and how much time it consumes.',
-            'Select the system you actually use, even if you are unsure where the change belongs.',
-            'Mark a request urgent only when waiting creates real harm.',
-        ],
-    ])
+    <x-link-button href="{{ asset('docs/elara-feature-request-guide.pdf') }}" variant="secondary" download class="mt-6">
+        <x-icon name="download" />
+        Download Guide
+    </x-link-button>
 
     @if ($systems->isEmpty())
         <x-alert variant="info" :dismissible="false" class="mt-6 max-w-none">

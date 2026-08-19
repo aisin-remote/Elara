@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
         <title>@yield('title', 'Orbitra') · Orbitra</title>
         <script>
             // Dark by default before sign-in, but only when the visitor has expressed no

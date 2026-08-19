@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
         <title>{{ $status }} · {{ $title }} · Orbitra</title>
         @vite(['resources/css/app.css'])
     </head>
