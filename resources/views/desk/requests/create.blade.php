@@ -14,10 +14,16 @@
 
     <x-auth-errors class="mt-6" />
 
-    <x-link-button href="{{ asset('docs/elara-feature-request-guide.pdf') }}" variant="secondary" download class="mt-6">
-        <x-icon name="download" />
-        Download Guide
-    </x-link-button>
+    <div class="mt-6 flex flex-wrap gap-3">
+        <x-link-button href="{{ asset('docs/elara-feature-request-guide.pdf') }}" variant="secondary" download>
+            <x-icon name="download" />
+            Download Guide
+        </x-link-button>
+        <x-link-button href="{{ asset('docs/elara-feature-request-guide-id.pdf') }}" variant="secondary" download>
+            <x-icon name="download" />
+            Unduh Panduan
+        </x-link-button>
+    </div>
 
     @if ($systems->isEmpty())
         <x-alert variant="info" :dismissible="false" class="mt-6 max-w-none">

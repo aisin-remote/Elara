@@ -20,15 +20,29 @@ class RequesterGuidanceTest extends TestCase
         [$workspace, $requester] = $this->workspace();
 
         foreach ([
-            [route('desk.requests.create', $workspace), 'Download feature request guide (PDF)', 'elara-feature-request-guide.pdf'],
-            [route('desk.project-requests.create', $workspace), 'Download project proposal guide (PDF)', 'elara-project-request-guide.pdf'],
-            [route('desk.supporting.create', $workspace), 'Download supporting request guide (PDF)', 'elara-supporting-request-guide.pdf'],
-        ] as [$url, $label, $filename]) {
+            [route('desk.requests.create', $workspace), 'elara-feature-request-guide.pdf'],
+            [route('desk.project-requests.create', $workspace), 'elara-project-request-guide.pdf'],
+            [route('desk.supporting.create', $workspace), 'elara-supporting-request-guide.pdf'],
+        ] as [$url, $filename]) {
             $this->actingAs($requester)->get($url)->assertOk()
-                ->assertSee($label)
+                ->assertSee('Download Guide')
                 ->assertSee("docs/{$filename}", false)
                 ->assertSee('download', false)
                 ->assertDontSee('How it works, from request to delivery');
+
+            $path = public_path("docs/{$filename}");
+            $this->assertFileExists($path);
+            $this->assertGreaterThan(1_000, filesize($path));
+        }
+
+        foreach ([
+            [route('desk.requests.create', $workspace), 'elara-feature-request-guide-id.pdf'],
+            [route('desk.project-requests.create', $workspace), 'elara-project-request-guide-id.pdf'],
+            [route('desk.supporting.create', $workspace), 'elara-supporting-request-guide-id.pdf'],
+        ] as [$url, $filename]) {
+            $this->actingAs($requester)->get($url)->assertOk()
+                ->assertSee('Unduh Panduan')
+                ->assertSee("docs/{$filename}", false);
 
             $path = public_path("docs/{$filename}");
             $this->assertFileExists($path);

@@ -91,7 +91,96 @@ GUIDES = [
         "validation": False,
         "follow": "Monitor assignment, status, and completion from My requests under the Supporting tab.",
     },
+    {
+        "locale": "id",
+        "filename": "elara-feature-request-guide-id.pdf",
+        "title": "Panduan Permintaan Fitur",
+        "subtitle": "Alur perubahan sistem dari permintaan hingga selesai",
+        "use_when": "Gunakan Fitur untuk meminta perubahan, peningkatan, atau tambahan pada sistem yang sudah tersedia.",
+        "steps": [
+            ("Jelaskan kebutuhan", "Tuliskan kondisi saat ini, kondisi yang diharapkan, dan manfaatnya. Fokus pada kebutuhan, bukan cara ITD harus membangunnya.", "Anda"),
+            ("Tinjauan supervisor", "Peninjau menyetujui, menolak dengan alasan, atau meminta informasi tambahan.", "Supervisor"),
+            ("Penjadwalan kapasitas", "Permintaan yang disetujui ditempatkan pada jadwal berdasarkan kapasitas tim yang tersedia.", "Otomatis"),
+            ("Perencanaan pekerjaan", "ITD memecah permintaan menjadi task beserta estimasinya dan meninjau rencana sebelum pekerjaan dimulai.", "ITD"),
+            ("Validasi hasil", "Pekerjaan yang hanya dapat Anda nilai menunggu sampai Anda memastikan hasilnya sudah benar.", "Anda"),
+            ("Selesai", "Setelah task terakhir dan validasi selesai, permintaan dipindahkan ke History.", "ITD"),
+        ],
+        "tips": [
+            "Jelaskan kondisi saat ini, bukan langsung menentukan solusi teknis.",
+            "Sertakan frekuensi masalah dan waktu yang terbuang karenanya.",
+            "Pilih sistem yang benar-benar digunakan meskipun Anda belum tahu letak perubahan yang tepat.",
+            "Gunakan prioritas mendesak hanya jika penundaan menimbulkan dampak operasional nyata.",
+        ],
+        "validation": True,
+        "follow": "Pantau progres melalui My requests. Setelah pengerjaan dimulai, gunakan Timeline untuk melihat jadwal fitur. Tanggapi validasi melalui Waiting on me.",
+    },
+    {
+        "locale": "id",
+        "filename": "elara-project-request-guide-id.pdf",
+        "title": "Panduan Pengajuan Proyek",
+        "subtitle": "Alur proyek baru dari business case hingga delivery",
+        "use_when": "Gunakan Proyek untuk sistem baru, inisiatif besar, atau ruang lingkup pekerjaan yang memerlukan scoping dan persetujuan formal.",
+        "steps": [
+            ("Susun business case", "Jelaskan latar belakang, masalah, tujuan, proses sebelum dan sesudah, manfaat, biaya, serta hasil yang diharapkan.", "Anda"),
+            ("Tinjauan departemen", "Jika diwajibkan oleh job rank, manajer atau koordinator departemen meninjau pengajuan terlebih dahulu.", "Departemen"),
+            ("Scoping meeting", "ITD bertemu dengan Anda untuk memperjelas ruang lingkup. Persetujuan ITD belum dapat diberikan sebelum pertemuan ini.", "Anda dan ITD"),
+            ("Persetujuan ITD pertama", "Supervisor ITD meninjau proposal hasil scoping dan mencatat keputusan pertama.", "Supervisor ITD"),
+            ("Persetujuan ITD kedua", "Manajer ITD yang berbeda mencatat keputusan kedua. Satu orang tidak boleh memberikan kedua persetujuan.", "Manajer ITD"),
+            ("Perencanaan dan delivery", "Setelah disetujui, proyek dibuat, dijadwalkan berdasarkan kapasitas, lalu dipecah menjadi task.", "ITD"),
+        ],
+        "tips": [
+            "Gunakan tujuan yang terukur jika memungkinkan.",
+            "Jelaskan proses saat ini dengan jujur, termasuk pekerjaan manual sementara.",
+            "Sertakan manfaat terukur seperti penghematan waktu dan manfaat nonfinansial seperti kontrol yang lebih baik.",
+            "Anggap target tanggal sebagai preferensi sampai capacity planning menetapkan jadwal.",
+        ],
+        "validation": True,
+        "follow": "Pantau proposal melalui My requests. Setelah delivery dimulai, gunakan Timeline untuk membuka jadwal proyek dan timeline task-nya.",
+    },
+    {
+        "locale": "id",
+        "filename": "elara-supporting-request-guide-id.pdf",
+        "title": "Panduan Permintaan Supporting",
+        "subtitle": "Alur dukungan operasional dari permintaan hingga selesai",
+        "use_when": "Gunakan Supporting untuk pekerjaan operasional di luar fitur atau proyek, seperti presentasi, printer, akun, atau pemeriksaan jaringan.",
+        "steps": [
+            ("Jelaskan dukungan yang dibutuhkan", "Tuliskan hasil yang diharapkan serta perangkat, file, akun, atau lokasi yang berkaitan.", "Anda"),
+            ("Triage ITD", "ITD meninjau permintaan, memastikan prioritas, dan menentukan anggota tim yang tepat.", "ITD"),
+            ("Dukungan dikerjakan", "PIC mengerjakan permintaan dan memperbarui statusnya secara berkala.", "ITD"),
+            ("Selesai", "Permintaan yang selesai tetap dapat dilihat dalam riwayat permintaan Anda.", "ITD"),
+        ],
+        "tips": [
+            "Gunakan Supporting hanya untuk pekerjaan operasional yang tidak mengubah sistem atau membutuhkan proyek baru.",
+            "Sertakan nama perangkat, lokasi ruangan, format file, atau nama akun jika relevan.",
+            "Pilih tanggal kebutuhan yang realistis dan gunakan prioritas tinggi hanya untuk dampak operasional nyata.",
+            "Jelaskan hasil akhir agar ITD mengetahui kapan permintaan dapat dinyatakan selesai.",
+        ],
+        "validation": False,
+        "follow": "Pantau PIC, status, dan penyelesaian melalui My requests pada tab Supporting.",
+    },
 ]
+
+
+LABELS = {
+    "en": {
+        "use_when": "When to use this request",
+        "flow": "Request-to-delivery flow",
+        "tips": "Before you submit",
+        "validation": "Your validation deadline",
+        "validation_body": "When ITD finishes work that only you can validate, it appears under <b>Waiting on me</b>. Respond within the validation window shown in Elara. No response cancels the request and releases the capacity slot. Requesting changes is always better than not responding.",
+        "follow": "Where to follow progress",
+        "footer": "Elara - Request-to-delivery workspace",
+    },
+    "id": {
+        "use_when": "Kapan permintaan ini digunakan",
+        "flow": "Alur permintaan hingga selesai",
+        "tips": "Sebelum mengirim permintaan",
+        "validation": "Batas waktu validasi Anda",
+        "validation_body": "Saat ITD menyelesaikan pekerjaan yang hanya dapat Anda validasi, item akan muncul di <b>Waiting on me</b>. Berikan respons dalam masa validasi yang ditampilkan di Elara. Tanpa respons, permintaan dibatalkan dan slot kapasitas dilepas. Meminta revisi selalu lebih baik daripada tidak merespons.",
+        "follow": "Tempat memantau progres",
+        "footer": "Elara - Ruang kerja permintaan hingga penyelesaian",
+    },
+}
 
 
 def register_fonts() -> tuple[str, str]:
@@ -110,13 +199,14 @@ def footer(canvas, doc):
     canvas.line(18 * mm, 14 * mm, A4[0] - 18 * mm, 14 * mm)
     canvas.setFont(doc.regular_font, 7.5)
     canvas.setFillColor(MUTED)
-    canvas.drawString(18 * mm, 9 * mm, "Elara - Request-to-delivery workspace")
+    canvas.drawString(18 * mm, 9 * mm, doc.footer_text)
     canvas.drawRightString(A4[0] - 18 * mm, 9 * mm, f"Page {doc.page}")
     canvas.restoreState()
 
 
 def build_guide(guide: dict, regular_font: str, bold_font: str) -> Path:
     output = OUTPUT_DIR / guide["filename"]
+    labels = LABELS[guide.get("locale", "en")]
     doc = SimpleDocTemplate(
         str(output),
         pagesize=A4,
@@ -128,6 +218,7 @@ def build_guide(guide: dict, regular_font: str, bold_font: str) -> Path:
         author="Elara",
     )
     doc.regular_font = regular_font
+    doc.footer_text = labels["footer"]
     styles = getSampleStyleSheet()
     title = ParagraphStyle("Title", parent=styles["Title"], fontName=bold_font, fontSize=20, leading=24, textColor=WHITE, spaceAfter=3)
     subtitle = ParagraphStyle("Subtitle", parent=styles["BodyText"], fontName=regular_font, fontSize=8.5, leading=12, textColor=colors.HexColor("#cbd5e1"))
@@ -160,7 +251,7 @@ def build_guide(guide: dict, regular_font: str, bold_font: str) -> Path:
     ]))
     story.extend([header, Spacer(1, 7 * mm)])
 
-    story.append(Paragraph("When to use this request", section))
+    story.append(Paragraph(labels["use_when"], section))
     use_box = Table([[Paragraph(guide["use_when"], body)]], colWidths=[163 * mm])
     use_box.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), PALE),
@@ -170,12 +261,12 @@ def build_guide(guide: dict, regular_font: str, bold_font: str) -> Path:
         ("TOPPADDING", (0, 0), (-1, -1), 3 * mm),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3 * mm),
     ]))
-    story.extend([use_box, Spacer(1, 5 * mm), Paragraph("Request-to-delivery flow", section)])
+    story.extend([use_box, Spacer(1, 5 * mm), Paragraph(labels["flow"], section)])
 
     for index, (step_name, description, owner) in enumerate(guide["steps"], 1):
         number_box = Table([[Paragraph(str(index), number)]], colWidths=[8 * mm], rowHeights=[8 * mm])
         number_box.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), BLUE if owner == "You" else colors.HexColor("#94a3b8")),
+            ("BACKGROUND", (0, 0), (-1, -1), BLUE if owner in {"You", "Anda"} else colors.HexColor("#94a3b8")),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ]))
         owner_box = Table([[Paragraph(owner, badge)]], colWidths=[26 * mm])
@@ -197,20 +288,20 @@ def build_guide(guide: dict, regular_font: str, bold_font: str) -> Path:
         ]))
         story.append(KeepTogether(row))
 
-    story.extend([Spacer(1, 4 * mm), Paragraph("Before you submit", section)])
+    story.extend([Spacer(1, 4 * mm), Paragraph(labels["tips"], section)])
     for tip in guide["tips"]:
         story.append(Paragraph(f"- {tip}", bullet))
 
     if guide["validation"]:
         story.extend([
             Spacer(1, 3 * mm),
-            Paragraph("Your validation deadline", section),
-            Paragraph("When ITD finishes work that only you can validate, it appears under <b>Waiting on me</b>. Respond within the validation window shown in Elara. No response cancels the request and releases the capacity slot. Requesting changes is always better than not responding.", body),
+            Paragraph(labels["validation"], section),
+            Paragraph(labels["validation_body"], body),
         ])
 
     story.extend([
         Spacer(1, 4 * mm),
-        Paragraph("Where to follow progress", section),
+        Paragraph(labels["follow"], section),
         Paragraph(guide["follow"], body),
     ])
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
