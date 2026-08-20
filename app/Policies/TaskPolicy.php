@@ -81,10 +81,26 @@ class TaskPolicy
 
         $workspaceRole = $this->workspaceMembership($user, $project)?->role;
 
-        return in_array($workspaceRole, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true)
+        if (in_array($workspaceRole, [WorkspaceRole::OWNER, WorkspaceRole::ADMIN], true)
             || $project->memberships()
                 ->where('user_id', $user->id)
                 ->where('role', ProjectMemberRole::MANAGER->value)
+                ->exists()) {
+            return true;
+        }
+
+        if (! config('organization.required') || ! $workspaceRole?->canContribute()) {
+            return false;
+        }
+
+        $subordinateIds = app(OrganizationDirectory::class)
+            ->taskMembers($user, $project->workspace)
+            ->reject(fn (User $member) => $member->is($user))
+            ->pluck('id');
+
+        return $subordinateIds->isNotEmpty()
+            && $project->tasks()
+                ->whereHas('assignees', fn ($assignees) => $assignees->whereIn('users.id', $subordinateIds))
                 ->exists();
     }
 

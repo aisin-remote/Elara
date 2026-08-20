@@ -231,6 +231,7 @@ Eliminate muda transfer ke area palletizing',
 
         $imported = 0;
         $repaired = 0;
+        $stamped = 0;
         $skipped = [];
 
         foreach (static::rows() as $row) {
@@ -267,6 +268,14 @@ Eliminate muda transfer ke area palletizing',
                     $repaired++;
                 }
 
+                // A request with no organisation snapshot is invisible to its own department's
+                // timeline, because that screen matches on the department stamped here. Rows
+                // imported before their requester existed in the directory land that way.
+                if ($profile && $request->requester_department_external_id === null) {
+                    $request->forceFill($directory->snapshot($profile))->save();
+                    $stamped++;
+                }
+
                 continue;
             }
 
@@ -287,7 +296,7 @@ Eliminate muda transfer ke area palletizing',
             $imported++;
         }
 
-        $this->command?->info($imported.' legacy feature requests imported and '.$repaired.' returned to IT review in '.$workspace->name.'.');
+        $this->command?->info($imported.' legacy feature requests imported and '.$repaired.' returned to IT review, '.$stamped.' department stamps repaired in '.$workspace->name.'.');
 
         foreach ($skipped as $note) {
             $this->command?->warn('Skipped '.$note);

@@ -6,6 +6,8 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="description" content="Orbitra keeps projects, tasks, schedules, files, and team communication in one focused workspace.">
         <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
+        <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
         <title>@yield('title', 'Project management for focused teams') · Orbitra</title>
         <script>
             const orbitraTheme = localStorage.getItem('orbitra-theme') ?? 'system';

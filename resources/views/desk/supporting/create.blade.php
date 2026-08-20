@@ -7,8 +7,8 @@
     <div class="border-b border-slate-200 pb-6 dark:border-slate-800">
         <h2 class="text-2xl font-bold tracking-tight">Request operational support</h2>
         <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-            Ask ITD for work outside a system feature or project, such as preparing a presentation,
-            fixing a printer, resolving an account issue, or checking a network connection.
+            Ask ITD for work outside a system feature or project, such as fixing a printer,
+            resolving an account issue, or checking a network connection.
         </p>
     </div>
 

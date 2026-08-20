@@ -321,6 +321,7 @@ class TaskPropertyFlowTest extends TestCase
     public function test_required_task_fields_are_saved_inline_with_one_shared_version(): void
     {
         [$owner, $workspace, $project, $task] = $this->task();
+        $dueAt = now()->addDays(14)->setTime(17, 0);
         $assignee = User::factory()->create();
         $workspace->memberships()->create([
             'user_id' => $assignee->id,
@@ -346,7 +347,7 @@ class TaskPropertyFlowTest extends TestCase
         ])->assertOk()->assertJsonPath('data.version', 3);
         $this->actingAs($owner)->patchJson($endpoint, [
             'field' => 'due_at',
-            'value' => '2026-08-20T17:00',
+            'value' => $dueAt->format('Y-m-d\TH:i'),
             'version' => 3,
         ])->assertOk()->assertJsonPath('data.version', 4);
         $this->actingAs($owner)->patchJson($endpoint, [
@@ -363,7 +364,7 @@ class TaskPropertyFlowTest extends TestCase
         $task = $task->fresh();
         $this->assertSame('Inline task title', $task->title);
         $this->assertSame('Edited directly from the project table.', $task->description);
-        $this->assertSame('2026-08-20 17:00:00', $task->due_at->format('Y-m-d H:i:s'));
+        $this->assertSame($dueAt->format('Y-m-d H:i:s'), $task->due_at->format('Y-m-d H:i:s'));
         $this->assertSame(TaskPriority::URGENT, $task->priority);
         $this->assertEquals([$assignee->id], $task->assignees()->pluck('users.id')->all());
 

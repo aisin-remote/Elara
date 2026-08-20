@@ -64,21 +64,21 @@
 
     <div class="mt-8 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
     @php($timelineView = $dashboard['gantt']['view'])
-    @php($timelineItems = $timelineView === 'tasks' ? $dashboard['gantt']['tasks'] : $dashboard['gantt']['projects'])
+    @php($timelineItems = $timelineView === 'features' ? $dashboard['gantt']['features'] : $dashboard['gantt']['projects'])
     <div class="flex min-w-0 flex-col">
         <nav class="relative z-10 flex w-fit items-end" aria-label="Timeline view" role="tablist" data-timeline-tabs>
-            @foreach(['projects' => 'Projects', 'tasks' => 'Tasks'] as $view => $label)
-                <a href="{{ request()->fullUrlWithQuery(['gantt_view' => $view, 'gantt_scale' => $view === 'tasks' ? 'weekly' : 'monthly']) }}" role="tab" aria-selected="{{ $timelineView === $view ? 'true' : 'false' }}" aria-controls="dashboard-timeline-card" class="-mb-px -mr-px min-w-28 border px-5 py-3 text-center text-sm font-semibold transition first:rounded-tl-xl last:rounded-tr-xl {{ $timelineView === $view ? 'border-slate-200 border-b-white bg-white text-slate-950 dark:border-slate-800 dark:border-b-slate-900 dark:bg-slate-900 dark:text-white' : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">{{ $label }}</a>
+            @foreach(['projects' => 'Projects', 'features' => 'Features'] as $view => $label)
+                <a href="{{ request()->fullUrlWithQuery(['gantt_view' => $view, 'gantt_scale' => 'monthly']) }}" role="tab" aria-selected="{{ $timelineView === $view ? 'true' : 'false' }}" aria-controls="dashboard-timeline-card" class="-mb-px -mr-px min-w-28 border px-5 py-3 text-center text-sm font-semibold transition first:rounded-tl-xl last:rounded-tr-xl {{ $timelineView === $view ? 'border-slate-200 border-b-white bg-white text-slate-950 dark:border-slate-800 dark:border-b-slate-900 dark:bg-slate-900 dark:text-white' : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white' }}">{{ $label }}</a>
             @endforeach
         </nav>
     <section id="dashboard-timeline-card" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-b-2xl rounded-tr-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" aria-labelledby="timeline-title" data-gantt-view="{{ $timelineView }}">
         <div class="flex flex-col gap-4 border-b border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
             <div class="min-w-0">
-                <h3 id="timeline-title" class="text-lg font-bold">{{ $timelineView === 'tasks' ? 'Task timeline' : 'Project timeline' }}</h3>
-                <p class="mt-1 text-xs text-slate-500">{{ $timelineView === 'tasks' ? 'Your personal tasks and assigned work across the selected timeline' : 'Visible project dates and task completion progress' }}</p>
+                <h3 id="timeline-title" class="text-lg font-bold">{{ $timelineView === 'features' ? 'Feature timeline' : 'Project timeline' }}</h3>
+                <p class="mt-1 text-xs text-slate-500">{{ $timelineView === 'features' ? 'Feature work per system, with task completion progress' : 'Visible project dates and task completion progress' }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-                <a href="{{ $timelineView === 'tasks' ? route('app.tasks.index', $workspace) : route('app.projects.index', $workspace) }}" class="text-xs font-bold text-orbit-700 hover:text-orbit-800 dark:text-orbit-300 dark:hover:text-orbit-200">View all</a>
+                <a href="{{ $timelineView === 'features' ? route('app.features.index', $workspace) : route('app.projects.index', $workspace) }}" class="text-xs font-bold text-orbit-700 hover:text-orbit-800 dark:text-orbit-300 dark:hover:text-orbit-200">View all</a>
                 <nav class="inline-flex w-fit shrink-0 rounded-xl bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800" aria-label="Timeline scale">
                     @foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly', 'yearly' => 'Yearly'] as $scale => $label)
                         <a href="{{ request()->fullUrlWithQuery(['gantt_scale' => $scale]) }}" @if($dashboard['gantt']['scale'] === $scale) aria-current="page" @endif class="rounded-lg px-3 py-2 transition {{ $dashboard['gantt']['scale'] === $scale ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white' }}">{{ $label }}</a>
@@ -87,10 +87,24 @@
             </div>
         </div>
 
+        {{-- Whose work to draw. The list is whatever this viewer may already see, so a manager
+             gets their team and everybody else gets only themselves. --}}
+        @if (count($dashboard['gantt']['members']) > 1)
+            <div class="scrollbar-none flex items-center gap-1.5 overflow-x-auto border-b border-slate-200 px-5 py-3 dark:border-slate-800" role="tablist" aria-label="Timeline member">
+                @php($selectedMember = $dashboard['gantt']['member'])
+                <a href="{{ request()->fullUrlWithQuery(['gantt_member' => null]) }}" role="tab" aria-selected="{{ $selectedMember ? 'false' : 'true' }}"
+                    class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $selectedMember ? 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' : 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' }}">Semua</a>
+                @foreach ($dashboard['gantt']['members'] as $person)
+                    <a href="{{ request()->fullUrlWithQuery(['gantt_member' => $person['public_id']]) }}" role="tab" aria-selected="{{ $selectedMember === $person['public_id'] ? 'true' : 'false' }}"
+                        class="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $selectedMember === $person['public_id'] ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' }}">{{ $person['name'] }}</a>
+                @endforeach
+            </div>
+        @endif
+
         @if($timelineItems)
-            <div class="min-h-0 flex-1 overflow-x-auto" tabindex="0" role="region" aria-label="Scrollable {{ $timelineView === 'tasks' ? 'task' : 'project' }} Gantt chart">
+            <div class="min-h-0 flex-1 overflow-x-auto" tabindex="0" role="region" aria-label="Scrollable {{ $timelineView === 'features' ? 'feature' : 'project' }} Gantt chart">
                 <div class="grid min-h-full grid-cols-[minmax(170px,220px)_minmax(0,1fr)]" style="min-width: {{ $dashboard['gantt']['min_width'] }}px; grid-template-rows: 3.5rem repeat({{ count($timelineItems) }}, minmax(4rem, 1fr))" data-gantt-chart>
-                    <div class="sticky left-0 z-20 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">{{ $timelineView === 'tasks' ? 'Task' : 'Project' }}</div>
+                    <div class="sticky left-0 z-20 flex items-end border-b border-r border-slate-200 bg-white px-5 py-3 text-[11px] font-bold uppercase tracking-[.14em] text-slate-400 dark:border-slate-800 dark:bg-slate-900">{{ $timelineView === 'features' ? 'Feature' : 'Project' }}</div>
                     <div class="relative h-14 border-b border-slate-200 dark:border-slate-800" aria-hidden="true">
                         @foreach($dashboard['gantt']['ticks'] as $tick)
                             <span class="absolute inset-y-0 border-l border-slate-200 dark:border-slate-800" style="left: {{ $tick['left'] }}%"><span class="absolute left-1 top-3 whitespace-nowrap text-[10px] font-medium text-slate-400">{{ $tick['label'] }}</span></span>
@@ -106,7 +120,7 @@
                             <span class="min-w-0">
                                 <span class="block truncate text-sm font-semibold">{{ $item['name'] }}</span>
                                 <span class="mt-0.5 block truncate text-[10px] text-slate-400">
-                                    @if($timelineView === 'tasks')
+                                    @if($timelineView === 'features' && $item['context'])
                                         {{ $item['context'] }} ·
                                     @endif
                                     {{ $item['date_label'] }}
@@ -129,7 +143,7 @@
                 </div>
             </div>
         @else
-            <div class="flex flex-1 items-center justify-center p-5"><x-empty-state :title="$timelineView === 'tasks' ? 'No personal or assigned tasks in this window' : 'No dated projects in this window'" :description="$timelineView === 'tasks' ? 'Create a personal task, get assigned work, or choose another timeline scale.' : 'Add start and due dates to an accessible project, or choose another timeline scale.'" /></div>
+            <div class="flex flex-1 items-center justify-center p-5"><x-empty-state :title="$timelineView === 'features' ? 'No dated feature work in this window' : 'No dated projects in this window'" :description="$timelineView === 'features' ? 'Add start and due dates to a feature, or choose another timeline scale.' : 'Add start and due dates to an accessible project, or choose another timeline scale.'" /></div>
         @endif
     </section>
     </div>

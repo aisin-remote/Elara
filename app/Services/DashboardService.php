@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use App\Enums\ProjectType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceRole;
 use App\Models\ActivityLog;
+use App\Models\Feature;
 use App\Models\Project;
 use App\Models\ScheduleEvent;
 use App\Models\SupportingTask;
@@ -194,26 +194,66 @@ class DashboardService
             'completed' => array_fill_keys(array_keys($buckets), 0),
             'overdue' => array_fill_keys(array_keys($buckets), 0),
         ];
+        $details = [
+            'created' => array_fill_keys(array_keys($buckets), []),
+            'completed' => array_fill_keys(array_keys($buckets), []),
+            'overdue' => array_fill_keys(array_keys($buckets), []),
+        ];
         $base = $this->taskQuery($workspace, $user, $filters);
+        $relations = ['project:id,public_id,name', 'status:id,name', 'assignees:id,public_id,first_name,last_name'];
+        $serialize = function (Task $task) use ($period): array {
+            $date = fn ($value) => $value
+                ? CarbonImmutable::instance($value)->setTimezone($period['timezone'])->format('M j, Y H:i')
+                : null;
+
+            return [
+                'public_id' => $task->public_id,
+                'title' => $task->title,
+                'description' => Str::limit($task->description ?? 'No description provided.', 320),
+                'project' => $task->project?->name ?? 'Personal task',
+                'status' => $task->status?->name ?? 'Unknown',
+                'priority' => $task->priority->label(),
+                'assignees' => $task->assignees->pluck('name')->values()->all(),
+                'created_at' => $date($task->created_at),
+                'due_at' => $date($task->due_at),
+                'completed_at' => $date($task->completed_at),
+                'url' => route('app.tasks.show', $task->public_id),
+            ];
+        };
 
         (clone $base)->whereBetween('created_at', [$period['from_utc'], $period['to_utc']])
-            ->get(['created_at'])->each(function (Task $task) use (&$series, $period, $unit): void {
+            ->with($relations)
+            ->get(['id', 'public_id', 'project_id', 'status_id', 'title', 'description', 'priority', 'created_at', 'due_at', 'completed_at'])
+            ->each(function (Task $task) use (&$details, &$series, $period, $serialize, $unit): void {
                 $key = $this->bucketKey(CarbonImmutable::instance($task->created_at)->setTimezone($period['timezone']), $period['from'], $unit);
-                isset($series['created'][$key]) && $series['created'][$key]++;
+                if (isset($series['created'][$key])) {
+                    $series['created'][$key]++;
+                    $details['created'][$key][] = $serialize($task);
+                }
             });
 
         (clone $base)->whereBetween('completed_at', [$period['from_utc'], $period['to_utc']])
-            ->get(['completed_at'])->each(function (Task $task) use (&$series, $period, $unit): void {
+            ->with($relations)
+            ->get(['id', 'public_id', 'project_id', 'status_id', 'title', 'description', 'priority', 'created_at', 'due_at', 'completed_at'])
+            ->each(function (Task $task) use (&$details, &$series, $period, $serialize, $unit): void {
                 $key = $this->bucketKey(CarbonImmutable::instance($task->completed_at)->setTimezone($period['timezone']), $period['from'], $unit);
-                isset($series['completed'][$key]) && $series['completed'][$key]++;
+                if (isset($series['completed'][$key])) {
+                    $series['completed'][$key]++;
+                    $details['completed'][$key][] = $serialize($task);
+                }
             });
 
         (clone $base)->whereBetween('due_at', [$period['from_utc'], $period['to_utc']])
             ->whereHas('status', fn (Builder $status) => $status->where('category', '!=', TaskStatusCategory::CANCELLED->value))
             ->where(fn (Builder $late) => $late->whereNull('completed_at')->orWhereColumn('completed_at', '>', 'due_at'))
-            ->get(['due_at'])->each(function (Task $task) use (&$series, $period, $unit): void {
+            ->with($relations)
+            ->get(['id', 'public_id', 'project_id', 'status_id', 'title', 'description', 'priority', 'created_at', 'due_at', 'completed_at'])
+            ->each(function (Task $task) use (&$details, &$series, $period, $serialize, $unit): void {
                 $key = $this->bucketKey(CarbonImmutable::instance($task->due_at)->setTimezone($period['timezone']), $period['from'], $unit);
-                isset($series['overdue'][$key]) && $series['overdue'][$key]++;
+                if (isset($series['overdue'][$key])) {
+                    $series['overdue'][$key]++;
+                    $details['overdue'][$key][] = $serialize($task);
+                }
             });
 
         return [
@@ -222,6 +262,7 @@ class DashboardService
             'created' => array_values($series['created']),
             'completed' => array_values($series['completed']),
             'overdue' => array_values($series['overdue']),
+            'details' => collect($details)->map(fn (array $rows) => array_values($rows))->all(),
         ];
     }
 
@@ -423,10 +464,29 @@ class DashboardService
             ])->all();
     }
 
+    /**
+     * The colleague the timeline is filtered to, picked only from the people this viewer is
+     * allowed to see. An unknown or forbidden id simply falls back to "everyone", so a
+     * hand-typed query string cannot widen what somebody sees.
+     */
+    private function ganttMember(Workspace $workspace, User $user, array $filters): ?User
+    {
+        $publicId = $filters['gantt_member'] ?? null;
+
+        if (blank($publicId)) {
+            return null;
+        }
+
+        return app(OrganizationDirectory::class)
+            ->taskMembers($user, $workspace)
+            ->firstWhere('public_id', $publicId);
+    }
+
     private function gantt(Workspace $workspace, User $user, array $filters, string $timezone): array
     {
         $view = $filters['gantt_view'] ?? 'projects';
-        $scale = $filters['gantt_scale'] ?? ($view === 'tasks' ? 'weekly' : 'monthly');
+        $focus = $this->ganttMember($workspace, $user, $filters);
+        $scale = $filters['gantt_scale'] ?? 'monthly';
         $today = CarbonImmutable::now($timezone);
         [$from, $to] = match ($scale) {
             'weekly' => [$today->startOfWeek()->subWeeks(2), $today->endOfWeek()->addWeeks(9)],
@@ -435,7 +495,29 @@ class DashboardService
             default => [$today->startOfDay()->subDays(3), $today->endOfDay()->addDays(10)],
         };
         $rangeSeconds = max(1, $from->diffInSeconds($to));
-        $projects = $view === 'projects' ? Project::query()->delivery()->visibleTo($user)
+        // Only people who oversee others get the wider view. A member keeps seeing the work
+        // they are actually on, which is what every other screen shows them.
+        $role = $workspace->memberships()->where('user_id', $user->id)->value('role');
+        $role = $role instanceof WorkspaceRole ? $role : WorkspaceRole::tryFrom((string) $role);
+        $oversees = in_array($role, [
+            WorkspaceRole::SUPERVISOR,
+            WorkspaceRole::MANAGER,
+            WorkspaceRole::ADMIN,
+            WorkspaceRole::OWNER,
+        ], true);
+        $focusIds = collect([$focus?->id])->filter();
+
+        // Project membership alone hides work a supervisor is accountable for: they are rarely
+        // a member of every system their people touch. Assignment is what the timeline follows.
+        $assignedToFocus = fn (Builder $query) => $query
+            ->whereHas('tasks', fn (Builder $task) => $task
+                ->whereNull('archived_at')
+                ->whereHas('assignees', fn (Builder $assignee) => $assignee->whereIn('users.id', $focusIds)))
+            ->orWhereHas('memberships', fn (Builder $membership) => $membership->whereIn('user_id', $focusIds));
+        $projects = $view === 'projects' ? Project::query()->delivery()
+            ->where(fn (Builder $access) => $focus
+                ? $assignedToFocus($access)
+                : $access->visibleTo($user))
             ->where('workspace_id', $workspace->id)
             ->whereNull('archived_at')
             ->whereNotNull('start_date')
@@ -484,58 +566,53 @@ class DashboardService
                 ];
             })->all() : [];
 
-        $tasks = $view === 'tasks' ? $this->taskQuery($workspace, $user, $filters)
-            ->whereHas('project', fn (Builder $project) => $project->whereNull('archived_at'))
-            ->where(function (Builder $owned) use ($user): void {
-                $owned->whereHas('project', fn (Builder $project) => $project
-                    ->where('type', ProjectType::PERSONAL->value)
-                    ->where('owner_id', $user->id))
-                    ->orWhereHas('assignees', fn (Builder $assignees) => $assignees->where('users.id', $user->id));
-            })
-            ->whereRaw('COALESCE(start_at, due_at, created_at) <= ?', [$to->utc()->toDateTimeString()])
-            ->whereRaw('COALESCE(due_at, start_at, created_at) >= ?', [$from->utc()->toDateTimeString()])
-            ->with([
-                'project:id,public_id,name,color,type,owner_id,archived_at',
-                'status:id,category',
-                'assignees:id,public_id,first_name,last_name,avatar_path',
-            ])
+        // The second tab is Feature work, the same pairing the requester's timeline uses:
+        // both sides of the desk then talk about the same two things.
+        $features = $view === 'features' ? Feature::query()
+            ->where(fn (Builder $access) => $focus
+                ? $access->whereHas('tasks', fn (Builder $task) => $task
+                    ->whereNull('archived_at')
+                    ->whereHas('assignees', fn (Builder $assignee) => $assignee->whereIn('users.id', $focusIds)))
+                : $access->visibleTo($user))
+            ->active()
+            ->where('workspace_id', $workspace->id)
+            ->whereNotNull('starts_at')
+            ->whereNotNull('due_at')
+            ->whereDate('starts_at', '<=', $to->format('Y-m-d'))
+            ->whereDate('due_at', '>=', $from->format('Y-m-d'))
+            ->with(['project:id,public_id,name,color'])
             ->withCount([
-                'checklistItems as gantt_checklist_total',
-                'checklistItems as gantt_checklist_completed' => fn (Builder $items) => $items->where('is_completed', true),
+                'tasks as gantt_total_tasks_count' => fn (Builder $query) => $query
+                    ->whereNull('archived_at')
+                    ->whereHas('status', fn (Builder $status) => $status->where('category', '!=', TaskStatusCategory::CANCELLED->value)),
+                'tasks as gantt_completed_tasks_count' => fn (Builder $query) => $query
+                    ->whereNull('archived_at')
+                    ->whereNotNull('completed_at')
+                    ->whereHas('status', fn (Builder $status) => $status->where('category', '!=', TaskStatusCategory::CANCELLED->value)),
             ])
-            ->orderByRaw('COALESCE(start_at, due_at, created_at)')
-            ->limit(5)
+            ->orderBy('starts_at')
+            ->limit(8)
             ->get()
-            ->map(function (Task $task) use ($from, $rangeSeconds, $timezone, $user): array {
-                $start = CarbonImmutable::instance($task->start_at ?? $task->due_at ?? $task->created_at)->setTimezone($timezone);
-                $due = CarbonImmutable::instance($task->due_at ?? $task->start_at ?? $task->created_at)->setTimezone($timezone)->max($start);
+            ->map(function (Feature $feature) use ($from, $rangeSeconds, $timezone, $workspace): array {
+                $start = CarbonImmutable::instance($feature->starts_at)->setTimezone($timezone);
+                $due = CarbonImmutable::instance($feature->due_at)->setTimezone($timezone)->max($start);
                 $visibleStart = $start->max($from);
                 $visibleEnd = $due->min($from->addSeconds($rangeSeconds));
                 $left = round($from->diffInSeconds($visibleStart) / $rangeSeconds * 100, 3);
                 $width = max(1.25, round($visibleStart->diffInSeconds($visibleEnd) / $rangeSeconds * 100, 3));
-                $checklistTotal = (int) $task->gantt_checklist_total;
-                $progress = $checklistTotal
-                    ? (int) round($task->gantt_checklist_completed / $checklistTotal * 100)
-                    : (in_array($task->status->category, [TaskStatusCategory::COMPLETED->value, TaskStatusCategory::CANCELLED->value]) ? 100 : 0);
-                $members = $task->assignees->isNotEmpty() ? $task->assignees : collect([$user]);
+                $total = (int) $feature->gantt_total_tasks_count;
 
                 return [
-                    'public_id' => $task->public_id,
-                    'name' => $task->title,
-                    'url' => route('app.tasks.show', $task),
-                    'context' => $task->project->isPersonal() ? 'Personal task' : $task->project->name,
-                    'color' => $task->project->color ?: '#6366f1',
-                    'date_label' => $start->isSameDay($due)
-                        ? $start->format('M j, Y')
-                        : $start->format('M j').' – '.$due->format('M j, Y'),
-                    'progress' => $progress,
+                    'public_id' => $feature->public_id,
+                    'name' => $feature->name,
+                    'url' => route('app.features.detail', [$workspace, $feature->project, $feature]),
+                    'context' => $feature->project?->name,
+                    'color' => $feature->project?->color ?: '#6366f1',
+                    'date_label' => $start->format('M j').' – '.$due->format('M j, Y'),
+                    'progress' => $total ? (int) round($feature->gantt_completed_tasks_count / $total * 100) : 0,
                     'left' => $left,
                     'width' => min(100 - $left, $width),
-                    'members' => $members->take(3)->map(fn (User $member) => [
-                        'public_id' => $member->public_id,
-                        'name' => $member->name,
-                        'has_avatar' => filled($member->avatar_path),
-                    ])->values()->all(),
+                    'members' => [],
                 ];
             })->all() : [];
 
@@ -574,8 +651,14 @@ class DashboardService
                 'monthly' => 900,
                 default => 760,
             },
+            'member' => $focus?->public_id,
+            'members' => $oversees
+                ? app(OrganizationDirectory::class)->taskMembers($user, $workspace)
+                    ->map(fn (User $person) => ['public_id' => $person->public_id, 'name' => $person->name])
+                    ->values()->all()
+                : [],
             'projects' => $projects,
-            'tasks' => $tasks,
+            'features' => $features,
         ];
     }
 

@@ -8,6 +8,7 @@ use App\Actions\Workspace\CreateWorkspace;
 use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
 use App\Enums\TaskPriority;
+use App\Enums\TaskPropertyType;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
@@ -123,6 +124,79 @@ class TaskHierarchyVisibilityTest extends TestCase
     }
 
     /** @return array{Workspace, Project, array<string, User>, array<string, Task>} */
+    public function test_a_supervisor_reaches_a_project_their_subordinate_works_on(): void
+    {
+        [$workspace, $project, $people] = $this->hierarchy();
+
+        // Nobody put the supervisor on this second system, but their staff is assigned to it.
+        $system = app(CreateProject::class)->handle($workspace, $people['gm'], [
+            'name' => 'Untouched System',
+            'description' => 'Nobody added the supervisor here.',
+            'color' => '#0ea5e9',
+            'status' => ProjectStatus::ACTIVE->value,
+            'start_date' => null,
+            'due_date' => null,
+        ]);
+        // The staff member joins the system so they can be assigned; the supervisor does not.
+        $system->memberships()->create(['user_id' => $people['staff']->id, 'role' => ProjectMemberRole::MEMBER]);
+        $status = $system->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        app(CreateTask::class)->handle($system, $people['gm'], [
+            'title' => 'Staff work on the untouched system',
+            'description' => 'Assigned to the supervisor\'s own staff.',
+            'status_public_id' => $status->public_id,
+            'category_public_id' => null,
+            'priority' => TaskPriority::MEDIUM->value,
+            'start_at' => null,
+            'due_at' => null,
+            'estimate_minutes' => null,
+            'assignee_public_ids' => [$people['staff']->public_id],
+        ]);
+
+        $this->assertTrue(
+            Project::visibleTo($people['supervisor'])->whereKey($system->id)->exists(),
+            'A supervisor should reach the work their own people are assigned to.',
+        );
+        $this->assertTrue($people['supervisor']->can('view', $system));
+
+        // Someone from another branch stays out: hierarchy decides, not workspace membership.
+        $this->assertFalse(
+            Project::visibleTo($people['other_staff'])->whereKey($system->id)->exists(),
+            'A colleague outside the branch has no claim on it.',
+        );
+        $this->assertFalse($people['other_staff']->can('view', $system));
+
+        $this->actingAs($people['supervisor'])
+            ->get(route('app.projects.tasks', [$workspace, $system]))
+            ->assertOk()
+            ->assertSee('Add property')
+            ->assertSee('Add group');
+        $this->actingAs($people['supervisor'])
+            ->postJson(route('internal.task-properties.store', $system), [
+                'name' => 'Supervisor note',
+                'type' => TaskPropertyType::TEXT->value,
+                'options' => [],
+            ])
+            ->assertCreated();
+        $this->actingAs($people['supervisor'])
+            ->postJson(route('internal.task-statuses.store', $system), [
+                'name' => 'Supervisor review',
+                'color' => '#0ea5e9',
+                'category' => TaskStatusCategory::IN_PROGRESS->value,
+            ])
+            ->assertCreated();
+
+        $this->actingAs($people['other_staff'])
+            ->postJson(route('internal.task-properties.store', $system), [
+                'name' => 'Unauthorized field',
+                'type' => TaskPropertyType::TEXT->value,
+                'options' => [],
+            ])
+            ->assertForbidden();
+
+        // The original project is unaffected: everyone on it keeps seeing it.
+        $this->assertTrue(Project::visibleTo($people['staff'])->whereKey($project->id)->exists());
+    }
+
     private function hierarchy(): array
     {
         $people = [

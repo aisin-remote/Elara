@@ -80,6 +80,8 @@ function performanceConfig(data) {
         maxBarThickness: 58,
         stack: 'tasks',
     });
+    const detailKey = { Complete: 'completed', 'New Task': 'created', Overdue: 'overdue' };
+    const hitAt = (event, chart) => chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false)[0];
 
     return {
         type: 'bar',
@@ -93,6 +95,21 @@ function performanceConfig(data) {
         },
         options: options({
             interaction: { mode: 'index', intersect: false },
+            onClick(event, _elements, chart) {
+                const hit = hitAt(event, chart);
+                if (! hit) return;
+
+                const category = chart.data.datasets[hit.datasetIndex].label;
+                const tasks = data.details?.[detailKey[category]]?.[hit.index] ?? [];
+                if (! tasks.length) return;
+
+                window.dispatchEvent(new CustomEvent('task-performance-open', {
+                    detail: { category, period: data.labels[hit.index], tasks },
+                }));
+            },
+            onHover(event, _elements, chart) {
+                chart.canvas.style.cursor = hitAt(event, chart) ? 'pointer' : 'default';
+            },
             layout: { padding: { top: 2 } },
             scales: {
                 x: {

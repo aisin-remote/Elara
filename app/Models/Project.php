@@ -9,6 +9,7 @@ use App\Enums\SystemPlant;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Services\OrganizationDirectory;
 use App\Support\GeneratesPublicId;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -269,14 +270,45 @@ class Project extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        // Nobody puts a supervisor on every system their people touch, so membership alone
+        // hides work they are accountable for. The organisation hierarchy already says whose
+        // work they may read; this lets the project carrying it through.
+        $subordinates = $this->subordinateIds($user);
+
         return $query->where('type', '!=', ProjectType::PERSONAL->value)
-            ->where(function (Builder $access) use ($user) {
+            ->where(function (Builder $access) use ($user, $subordinates) {
                 $access->whereHas('workspace.memberships', fn (Builder $membership) => $membership
                     ->where('user_id', $user->id)
                     ->where('status', WorkspaceMemberStatus::ACTIVE->value)
                     ->whereIn('role', [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value]))
                     ->orWhereHas('memberships', fn (Builder $membership) => $membership->where('user_id', $user->id));
+
+                if ($subordinates !== []) {
+                    $access->orWhereHas('tasks', fn (Builder $task) => $task
+                        ->whereNull('archived_at')
+                        ->whereHas('assignees', fn (Builder $assignee) => $assignee->whereIn('users.id', $subordinates)));
+                }
             });
+    }
+
+    /**
+     * People below this user in the organisation, across the workspaces they share. Empty
+     * when the directory is switched off or the user supervises nobody.
+     *
+     * @return array<int, int>
+     */
+    private function subordinateIds(User $user): array
+    {
+        if (! config('organization.required')) {
+            return [];
+        }
+
+        return collect(app(OrganizationDirectory::class)->taskVisibility($user))
+            ->flatten()
+            ->unique()
+            ->reject(fn ($id) => (int) $id === $user->id)
+            ->values()
+            ->all();
     }
 
     public function resolveRouteBindingQuery($query, $value, $field = null): Builder

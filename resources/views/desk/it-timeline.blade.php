@@ -18,12 +18,20 @@
                 Ringkasan {{ $itemLabelLower }} department Anda. Klik {{ $itemLabelLower }} untuk melihat jadwal task-nya tanpa membuka detail internal seperti description, comment, file, dan dependency.
             </p>
         </div>
-        <nav class="inline-flex w-fit rounded-xl bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800" aria-label="Timeline scale">
-            @foreach (App\Support\GanttTimeline::SCALES as $scale => $label)
+        <div class="flex flex-wrap items-center gap-3">
+            {{-- The whole requester manual, on the page people land on first. --}}
+            <x-link-button href="{{ asset('docs/elara-panduan-requester-id.pdf') }}" variant="secondary" download>
+                <x-icon name="download" />
+                Unduh Panduan
+            </x-link-button>
+
+            <nav class="inline-flex w-fit rounded-xl bg-slate-100 p-1 text-xs font-semibold dark:bg-slate-800" aria-label="Timeline scale">
+                @foreach (App\Support\GanttTimeline::SCALES as $scale => $label)
                 <a href="{{ request()->fullUrlWithQuery(['scale' => $scale]) }}" @if($timeline->scale === $scale) aria-current="page" @endif
                     class="rounded-lg px-3 py-2 transition {{ $timeline->scale === $scale ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white' }}">{{ $label }}</a>
-            @endforeach
-        </nav>
+                @endforeach
+            </nav>
+        </div>
     </div>
 
     <div class="mt-6 grid gap-4 sm:grid-cols-3">

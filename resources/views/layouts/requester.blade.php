@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
+        <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
         {{-- The requester and delivery desks use the same English product language. --}}
         <title>@yield('title', 'Requests') · Orbitra</title>
         <script>

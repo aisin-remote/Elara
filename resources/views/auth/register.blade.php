@@ -7,7 +7,7 @@
         <section class="auth-form-side" aria-labelledby="register-heading">
             <div class="auth-form-wrap auth-form-wrap-wide">
                 <a href="{{ route('home') }}" class="inline-flex items-center gap-3 rounded-lg" aria-label="Elara home">
-                    <span class="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-orbit-400 to-indigo-600 text-base font-extrabold text-white shadow-lg shadow-indigo-950/30" aria-hidden="true">E</span>
+                    <img src="{{ asset('elara-favicon.svg') }}" alt="" class="size-11 shrink-0" aria-hidden="true">
                     <span class="leading-tight">
                         <span class="block text-xl font-extrabold tracking-tight text-slate-950 dark:text-white">Elara</span>
                         <span class="block text-[10px] text-slate-500 dark:text-slate-400">Request-to-delivery workspace</span>

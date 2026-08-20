@@ -45,7 +45,8 @@ class PerformanceRequest extends FormRequest
                 $exists ?: $fail('Choose an accessible task status.');
             }],
             'distribution' => ['nullable', Rule::in(['status', 'priority'])],
-            'gantt_view' => ['nullable', Rule::in(['projects', 'tasks'])],
+            'gantt_view' => ['nullable', Rule::in(['projects', 'features'])],
+            'gantt_member' => ['nullable', 'string', 'size:26'],
             'gantt_scale' => ['nullable', Rule::in(['daily', 'weekly', 'monthly', 'yearly'])],
         ];
     }

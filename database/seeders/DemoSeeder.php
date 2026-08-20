@@ -201,7 +201,7 @@ class DemoSeeder extends Seeder
         }
 
         foreach ([
-            ['Prepare quarterly review PowerPoint', SupportingTaskCategory::PRESENTATION, TaskPriority::MEDIUM, SupportingTaskStatus::IN_PROGRESS, $users['member@example.com'], now()->addDays(2)],
+            ['Replace the failing label printer', SupportingTaskCategory::HARDWARE, TaskPriority::MEDIUM, SupportingTaskStatus::IN_PROGRESS, $users['member@example.com'], now()->addDays(2)],
             ['Repair finance department printer', SupportingTaskCategory::HARDWARE, TaskPriority::HIGH, SupportingTaskStatus::TODO, $users['lead@example.com'], now()->addDay()],
         ] as [$title, $category, $priority, $status, $assignee, $dueDate]) {
             SupportingTask::updateOrCreate(['workspace_id' => $workspace->id, 'title' => $title], [

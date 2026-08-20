@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
         <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
+        <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
         <title>{{ $status }} · {{ $title }} · Orbitra</title>
         @vite(['resources/css/app.css'])
     </head>

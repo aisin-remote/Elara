@@ -144,9 +144,9 @@ class SupportingTaskFlowTest extends TestCase
     private function payload(): array
     {
         return [
-            'title' => 'Prepare quarterly review PowerPoint',
-            'description' => 'Create the deck requested for the quarterly business review.',
-            'category' => SupportingTaskCategory::PRESENTATION->value,
+            'title' => 'Replace the failing label printer',
+            'description' => 'The printer in the QA room stops mid-batch and needs replacing.',
+            'category' => SupportingTaskCategory::HARDWARE->value,
             'priority' => TaskPriority::MEDIUM->value,
             'status' => SupportingTaskStatus::TODO->value,
             'assignee_public_id' => null,

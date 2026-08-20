@@ -1,10 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Elara">
-    <defs>
-        <linearGradient id="elara-gradient" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#38bdf8"/>
-            <stop offset="1" stop-color="#4f46e5"/>
-        </linearGradient>
-    </defs>
-    <rect width="64" height="64" rx="16" fill="url(#elara-gradient)"/>
-    <path d="M44 16H21v32h23M21 32h19" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect width="64" height="64" rx="16" fill="#6366f1"/>
+    <path d="M25.146428571428583 45.558576285714295H39.061607142857156V49.45589771428572H30.302678571428583V53.179112H38.539285714285725V57.076433428571434H30.302678571428583V61.65679057142857H39.35625000000001V65.554112H25.146428571428583Z" fill="#fff"/>
 </svg>

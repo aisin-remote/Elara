@@ -11,10 +11,10 @@ use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\ActivityLog;
+use App\Models\Feature;
 use App\Models\ScheduleEvent;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\PersonalTaskSpace;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -77,11 +77,14 @@ class PerformanceFlowTest extends TestCase
         $member = $this->addProjectMember($visibleProject);
         $visibleStatus = $visibleProject->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
         $hiddenStatus = $hiddenProject->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
-        $this->task($visibleProject, $owner, $visibleStatus);
-        $this->task($hiddenProject, $owner, $hiddenStatus);
+        $visibleTask = $this->task($visibleProject, $owner, $visibleStatus, ['title' => 'Visible chart detail']);
+        $hiddenTask = $this->task($hiddenProject, $owner, $hiddenStatus, ['title' => 'Hidden chart detail']);
 
         $this->actingAs($member)->getJson(route('internal.dashboard.index', $workspace))
-            ->assertOk()->assertJsonPath('data.kpis.total.value', 1);
+            ->assertOk()
+            ->assertJsonPath('data.kpis.total.value', 1)
+            ->assertJsonFragment(['public_id' => $visibleTask->public_id, 'title' => 'Visible chart detail'])
+            ->assertJsonMissing(['public_id' => $hiddenTask->public_id, 'title' => 'Hidden chart detail']);
         $this->actingAs($member)->getJson(route('internal.performance.index', [
             'workspace' => $workspace, 'project_public_id' => $hiddenProject->public_id,
         ]))->assertUnprocessable()->assertJsonValidationErrors('project_public_id');
@@ -147,59 +150,75 @@ class PerformanceFlowTest extends TestCase
             ->assertJsonMissing(['public_id' => $extraProject->public_id]);
     }
 
-    public function test_task_gantt_contains_only_own_personal_and_directly_assigned_work(): void
+    public function test_feature_gantt_lists_dated_feature_work_with_its_system_and_progress(): void
     {
         Carbon::setTestNow('2026-07-29 12:00:00 UTC');
         CarbonImmutable::setTestNow('2026-07-29 12:00:00 UTC');
         [$owner, $workspace, $project] = $this->project();
-        $member = $this->addProjectMember($project);
         $todo = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
+        $completed = $project->taskStatuses()->where('category', TaskStatusCategory::COMPLETED->value)->firstOrFail();
 
-        $assigned = $this->task($project, $owner, $todo, [
-            'title' => 'Assigned release task',
-            'start_at' => '2026-07-28 09:00:00',
-            'due_at' => '2026-07-31 17:00:00',
+        $feature = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $project->id,
+            'name' => 'Bulk export',
+            'starts_at' => '2026-07-27',
+            'due_at' => '2026-08-05',
         ]);
-        $assigned->assignees()->attach($member->id, ['assigned_by' => $owner->id, 'assigned_at' => now()]);
-        $unassigned = $this->task($project, $owner, $todo, [
-            'title' => 'Someone elses visible task',
-            'due_at' => '2026-07-30 17:00:00',
+        $this->task($project, $owner, $todo)->update(['feature_id' => $feature->id]);
+        $this->task($project, $owner, $completed, ['completed_at' => '2026-07-28 12:00:00'])
+            ->update(['feature_id' => $feature->id]);
+
+        // No dates, so the planner has nothing to draw and the row stays out.
+        $undated = Feature::create([
+            'workspace_id' => $workspace->id,
+            'project_id' => $project->id,
+            'name' => 'Someday idea',
         ]);
 
-        $personalSpace = app(PersonalTaskSpace::class)->for($workspace, $member);
-        $personal = $this->task(
-            $personalSpace,
-            $member,
-            $personalSpace->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail(),
-            ['title' => 'Private planning task', 'due_at' => '2026-07-30 12:00:00'],
-        );
-        $ownerPersonalSpace = app(PersonalTaskSpace::class)->for($workspace, $owner);
-        $otherPersonal = $this->task(
-            $ownerPersonalSpace,
-            $owner,
-            $ownerPersonalSpace->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail(),
-            ['title' => 'Owners private task', 'due_at' => '2026-07-30 12:00:00'],
-        );
-        foreach (range(1, 4) as $index) {
-            $extraAssigned = $this->task($project, $owner, $todo, [
-                'title' => "Extra assigned task {$index}",
-                'due_at' => CarbonImmutable::parse('2026-07-30 12:00:00')->addHours($index)->toDateTimeString(),
-            ]);
-            $extraAssigned->assignees()->attach($member->id, ['assigned_by' => $owner->id, 'assigned_at' => now()]);
-        }
-
-        $this->actingAs($member)->getJson(route('internal.dashboard.index', [
+        $this->actingAs($owner)->getJson(route('internal.dashboard.index', [
             'workspace' => $workspace,
-            'gantt_view' => 'tasks',
+            'gantt_view' => 'features',
         ]))->assertOk()
-            ->assertJsonPath('data.gantt.view', 'tasks')
-            ->assertJsonPath('data.gantt.scale', 'weekly')
-            ->assertJsonCount(5, 'data.gantt.tasks')
-            ->assertJsonFragment(['public_id' => $assigned->public_id, 'context' => $project->name])
-            ->assertJsonFragment(['public_id' => $personal->public_id, 'context' => 'Personal task'])
-            ->assertJsonMissing(['public_id' => $unassigned->public_id])
-            ->assertJsonMissing(['public_id' => $otherPersonal->public_id])
-            ->assertJsonMissing(['public_id' => $extraAssigned->public_id]);
+            ->assertJsonPath('data.gantt.view', 'features')
+            ->assertJsonPath('data.gantt.scale', 'monthly')
+            ->assertJsonCount(1, 'data.gantt.features')
+            ->assertJsonPath('data.gantt.features.0.public_id', $feature->public_id)
+            ->assertJsonPath('data.gantt.features.0.context', $project->name)
+            ->assertJsonPath('data.gantt.features.0.progress', 50)
+            ->assertJsonMissing(['public_id' => $undated->public_id]);
+    }
+
+    public function test_timeline_can_be_narrowed_to_one_visible_member_only(): void
+    {
+        Carbon::setTestNow('2026-07-29 12:00:00 UTC');
+        CarbonImmutable::setTestNow('2026-07-29 12:00:00 UTC');
+        [$owner, $workspace, $project] = $this->project();
+        $project->update(['start_date' => '2026-07-27', 'due_date' => '2026-08-05']);
+        $member = $this->addProjectMember($project);
+
+        $otherProject = app(CreateProject::class)->handle($workspace, $owner, [
+            'name' => 'Owner only project', 'description' => null, 'color' => '#8b5cf6',
+            'status' => ProjectStatus::ACTIVE->value, 'start_date' => '2026-07-27', 'due_date' => '2026-08-05',
+        ]);
+
+        // Filtered to the member: only what they are on.
+        $this->actingAs($owner)->getJson(route('internal.dashboard.index', [
+            'workspace' => $workspace,
+            'gantt_member' => $member->public_id,
+        ]))->assertOk()
+            ->assertJsonPath('data.gantt.member', $member->public_id)
+            ->assertJsonFragment(['public_id' => $project->public_id])
+            ->assertJsonMissing(['public_id' => $otherProject->public_id]);
+
+        // An id the viewer may not see is ignored rather than obeyed.
+        $stranger = User::factory()->create();
+        $this->actingAs($owner)->getJson(route('internal.dashboard.index', [
+            'workspace' => $workspace,
+            'gantt_member' => $stranger->public_id,
+        ]))->assertOk()
+            ->assertJsonPath('data.gantt.member', null)
+            ->assertJsonFragment(['public_id' => $otherProject->public_id]);
     }
 
     public function test_dashboard_and_performance_pages_render_real_controls(): void
@@ -219,7 +238,7 @@ class PerformanceFlowTest extends TestCase
             ->assertSee('Add task')
             ->assertSee('aria-label="Timeline view"', false)
             ->assertSee('data-timeline-tabs', false)
-            ->assertSee('gantt_view=tasks&amp;gantt_scale=weekly', false)
+            ->assertSee('gantt_view=features&amp;gantt_scale=monthly', false)
             ->assertSee('gantt_view=projects&amp;gantt_scale=monthly', false)
             ->assertSee(route('app.projects.index', $workspace))
             ->assertSee('xl:grid-cols-3', false)
@@ -233,12 +252,17 @@ class PerformanceFlowTest extends TestCase
             strpos($dashboardResponse->getContent(), 'aria-labelledby="members-title"'),
         );
         $this->actingAs($owner)->get(route('internal.dashboard.widgets.insights', $workspace))
-            ->assertOk()->assertSee('Task Performance')->assertSee('Member task workload')->assertDontSee('Task distribution');
-        $this->actingAs($owner)->get(route('app.workspaces.show', ['workspace' => $workspace, 'gantt_view' => 'tasks']))
             ->assertOk()
-            ->assertSee('data-gantt-view="tasks"', false)
-            ->assertSee('name="gantt_view" value="tasks"', false)
-            ->assertSee(route('app.tasks.index', $workspace));
+            ->assertSee('Task Performance')
+            ->assertSee('Click a bar segment to view its tasks.')
+            ->assertSee('task-performance-dialog', false)
+            ->assertSee('Member task workload')
+            ->assertDontSee('Task distribution');
+        $this->actingAs($owner)->get(route('app.workspaces.show', ['workspace' => $workspace, 'gantt_view' => 'features']))
+            ->assertOk()
+            ->assertSee('data-gantt-view="features"', false)
+            ->assertSee('name="gantt_view" value="features"', false)
+            ->assertSee(route('app.features.index', $workspace));
         $this->actingAs($owner)->get(route('app.performance.index', $workspace))
             ->assertOk()->assertSee('Performance overview')->assertSee('Bottleneck warning')->assertSee('PDF report');
     }

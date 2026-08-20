@@ -8,7 +8,7 @@
         <div>
             <p class="text-sm text-slate-500">{{ $workspace->name }}</p>
             <h2 class="mt-1 text-2xl font-bold tracking-tight">Operational work outside delivery projects</h2>
-            <p class="mt-1 text-sm text-slate-500">Register presentation, hardware, software, network, and other supporting work here.</p>
+            <p class="mt-1 text-sm text-slate-500">Register hardware, software, network, and other supporting work here.</p>
         </div>
         @can('create', [App\Models\SupportingTask::class, $workspace])
             <x-link-button href="{{ route('app.supporting.create', $workspace) }}"><x-icon name="plus" />Add supporting task</x-link-button>

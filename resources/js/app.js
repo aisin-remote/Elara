@@ -521,11 +521,15 @@ function initConnectivity() {
 }
 
 function initSubmitStates() {
-    document.addEventListener('submit', (event) => requestAnimationFrame(() => {
-        if (event.defaultPrevented) return;
-        event.target.setAttribute('aria-busy', 'true');
-        if (event.submitter) event.submitter.disabled = true;
-    }));
+    document.addEventListener('submit', (event) => {
+        if (event.target.method === 'dialog') return;
+
+        requestAnimationFrame(() => {
+            if (event.defaultPrevented) return;
+            event.target.setAttribute('aria-busy', 'true');
+            if (event.submitter) event.submitter.disabled = true;
+        });
+    });
 }
 
 function initLazyWidgets() {
