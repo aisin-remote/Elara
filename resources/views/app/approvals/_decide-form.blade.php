@@ -36,7 +36,7 @@
                 <x-label :for="'estimated_hours_'.$request->public_id">How many working hours will this take?</x-label>
                 <x-input :id="'estimated_hours_'.$request->public_id" type="number" step="0.5" min="0.5" name="estimated_hours" value="{{ old('estimated_hours') }}" placeholder="e.g. 16" />
                 <x-field-error name="estimated_hours" />
-                <p class="mt-2 text-xs text-slate-500">Total hours of work, not a deadline. Orbitra picks the start and due dates from this and the assignee's free capacity — a rough number is fine, it can be corrected later.</p>
+                <p class="mt-2 text-xs text-slate-500">Total hours of work, not a deadline. Elara picks the start and due dates from this and the assignee's free capacity — a rough number is fine, it can be corrected later.</p>
                 </div>
 
                 <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">

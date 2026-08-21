@@ -7,7 +7,7 @@
         <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
         <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
         <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
-        <title>{{ $status }} · {{ $title }} · Orbitra</title>
+        <title>{{ $status }} · {{ $title }} · Elara</title>
         @vite(['resources/css/app.css'])
     </head>
     <body>

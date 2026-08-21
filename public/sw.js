@@ -1,6 +1,6 @@
 self.addEventListener('push', (event) => {
     const payload = event.data ? event.data.json() : {};
-    event.waitUntil(self.registration.showNotification(payload.title || 'Orbitra', {
+    event.waitUntil(self.registration.showNotification(payload.title || 'Elara', {
         body: payload.body || '',
         icon: payload.icon || '/favicon.ico',
         data: payload.data || {},

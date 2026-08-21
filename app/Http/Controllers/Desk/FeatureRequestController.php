@@ -75,7 +75,7 @@ class FeatureRequestController extends Controller
 
         if ($needsDepartmentApproval && $organization->departmentApprovers($workspace, $profile['department_id'])->isEmpty()) {
             throw ValidationException::withMessages([
-                'organization' => 'Your department manager or coordinator does not have active Orbitra access yet.',
+                'organization' => 'Your department manager or coordinator does not have active Elara access yet.',
             ]);
         }
 

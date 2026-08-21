@@ -12,7 +12,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
- * Classic CPM over Orbitra tasks: early/late dates and total slack in working days.
+ * Classic CPM over Elara tasks: early/late dates and total slack in working days.
  * Duration comes from estimate_minutes against the assignee's daily capacity (workspace default when unassigned).
  */
 class CriticalPathAnalyzer

@@ -8,7 +8,7 @@
         @include('app.settings._navigation')
         <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-                <p class="text-sm text-slate-500">Control how Orbitra keeps you informed in {{ $workspace->name }}.</p>
+                <p class="text-sm text-slate-500">Control how Elara keeps you informed in {{ $workspace->name }}.</p>
                 <h2 class="mt-1 text-xl font-bold">Choose what reaches you</h2>
             </div>
             <a href="{{ route('app.workspaces.settings', $workspace) }}" class="text-sm font-semibold text-orbit-700 dark:text-orbit-300">← Workspace settings</a>
@@ -34,7 +34,7 @@
 
         <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <div><h3 class="font-bold">Browser push notifications</h3><p class="mt-1 text-sm text-slate-500">Receive alerts even when Orbitra is in the background.</p></div>
+                <div><h3 class="font-bold">Browser push notifications</h3><p class="mt-1 text-sm text-slate-500">Receive alerts even when Elara is in the background.</p></div>
                 <x-button data-enable-push type="button" variant="secondary" :disabled="! (bool) $vapidPublicKey">Enable on this device</x-button>
             </div>
             @unless ($vapidPublicKey)

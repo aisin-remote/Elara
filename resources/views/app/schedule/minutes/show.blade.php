@@ -40,7 +40,7 @@
                         @php($statusClass = match($item->status) { App\Enums\MeetingMinuteStatus::DONE => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300', App\Enums\MeetingMinuteStatus::IN_PROGRESS => 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300', App\Enums\MeetingMinuteStatus::PENDING => 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300', default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' })
                         <tr class="align-top">
                             <td class="max-w-md whitespace-pre-line px-5 py-4 font-semibold leading-6">{{ $item->content }}</td>
-                            <td class="px-5 py-4"><p class="font-bold">{{ $item->pic_name }}</p>@if($item->pic)<p class="mt-1 text-xs text-slate-500">Orbitra member</p>@endif</td>
+                            <td class="px-5 py-4"><p class="font-bold">{{ $item->pic_name }}</p>@if($item->pic)<p class="mt-1 text-xs text-slate-500">IT member</p>@endif</td>
                             <td class="whitespace-nowrap px-5 py-4 font-semibold {{ $item->due_date?->isPast() && $item->status !== App\Enums\MeetingMinuteStatus::DONE ? 'text-rose-600' : '' }}">{{ $item->due_date?->format('M j, Y') ?? 'TBA' }}</td>
                             <td class="px-5 py-4">
                                 @can('update', $item)

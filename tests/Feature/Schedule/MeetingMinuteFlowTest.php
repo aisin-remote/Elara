@@ -220,6 +220,11 @@ class MeetingMinuteFlowTest extends TestCase
         $item = $minute->items()->firstOrFail();
         $this->assertSame(MeetingMinutePublicationStatus::PUBLISHED, $minute->publication_status);
         $this->assertDatabaseCount('meeting_minute_revisions', 1);
+        $this->actingAs($owner)
+            ->get(route('app.schedule.minutes.show', [$workspace, $minute]))
+            ->assertOk()
+            ->assertSee('IT member')
+            ->assertDontSee('Orbitra member');
 
         $this->actingAs($owner)->patch(route('internal.meeting-minutes.publication', $minute), ['publication_status' => 'locked'])
             ->assertRedirect();

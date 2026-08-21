@@ -15,7 +15,7 @@ class RegistrationTest extends TestCase
 
     public function test_registration_screen_is_rendered(): void
     {
-        $this->get(route('register'))->assertOk()->assertSee('Create your Orbitra account');
+        $this->get(route('register'))->assertOk()->assertSee('Create your Elara account')->assertDontSee('Orbitra');
     }
 
     public function test_user_can_register_with_a_regenerated_session(): void

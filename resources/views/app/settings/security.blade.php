@@ -12,7 +12,7 @@
                 <p class="text-sm font-semibold text-orbit-600">Password</p>
                 @if (auth()->user()->isOrganizationManaged())
                     <h2 class="mt-1 text-xl font-bold">Managed by your company</h2>
-                    <p class="mt-2 text-sm leading-6 text-slate-500">Orbitra verifies your company-directory password at sign-in. Change or recover it through your company account service.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">Elara verifies your company-directory password at sign-in. Change or recover it through your company account service.</p>
                 @else
                     <h2 class="mt-1 text-xl font-bold">Change your password</h2>
                     <p class="mt-2 text-sm text-slate-500">Use at least 12 characters with upper and lowercase letters, a number, and a symbol.</p>

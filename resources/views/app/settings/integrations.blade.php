@@ -6,7 +6,7 @@
 @section('content')
     <div>
         @include('app.settings._navigation')
-        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p class="text-sm font-semibold text-orbit-600">Connected tools</p><h2 class="mt-1 text-3xl font-bold tracking-tight">Bring your workflow together</h2><p class="mt-2 max-w-2xl text-sm text-slate-500">OAuth tokens are encrypted at rest and every provider receives only the scopes needed for its Orbitra action.</p></div></div>
+        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p class="text-sm font-semibold text-orbit-600">Connected tools</p><h2 class="mt-1 text-3xl font-bold tracking-tight">Bring your workflow together</h2><p class="mt-2 max-w-2xl text-sm text-slate-500">OAuth tokens are encrypted at rest and every provider receives only the scopes needed for its Elara action.</p></div></div>
 
         @if ($errors->has('provider'))<x-alert variant="error" class="mt-5">{{ $errors->first('provider') }}</x-alert>@endif
 
@@ -33,7 +33,7 @@
                                 @switch($provider->value)
                                     @case('slack')
                                         <div><x-label for="slack_channel">Channel ID or name</x-label><x-input id="slack_channel" name="channel" value="{{ data_get($connection->settings_json, 'channel') }}" placeholder="#product-updates" required /></div>
-                                        <div><x-label for="slack_message">Message</x-label><x-textarea id="slack_message" name="message" rows="3" required>Orbitra update: {{ $workspace->name }} is connected and ready.</x-textarea></div>
+                                        <div><x-label for="slack_message">Message</x-label><x-textarea id="slack_message" name="message" rows="3" required>Elara update: {{ $workspace->name }} is connected and ready.</x-textarea></div>
                                         <x-button>Send test notification</x-button>
                                         @break
                                     @case('google_drive')

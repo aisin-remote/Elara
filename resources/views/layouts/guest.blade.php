@@ -7,7 +7,7 @@
         <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
         <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
         <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
-        <title>@yield('title', 'Orbitra') · Orbitra</title>
+        <title>@yield('title', 'Elara') · Elara</title>
         <script>
             // Dark by default before sign-in, but only when the visitor has expressed no
             // preference — someone who chose light and signed out still gets light back.

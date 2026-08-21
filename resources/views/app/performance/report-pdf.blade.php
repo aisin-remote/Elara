@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Orbitra performance report</title>
+    <title>Elara performance report</title>
     <style>
         @page { margin: 28px; }
         body { color: #0f172a; font-family: DejaVu Sans, sans-serif; font-size: 10px; }
@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-    <h1>Orbitra performance report</h1>
+    <h1>Elara performance report</h1>
     <p class="muted">{{ $workspace->name }} · {{ $report['period']['label'] }} · {{ $report['period']['timezone'] }}</p>
     <table class="metrics"><tr>
         <td class="metric">Active projects<strong>{{ $report['summary']['active_projects'] }}</strong></td>

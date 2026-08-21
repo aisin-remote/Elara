@@ -28,7 +28,7 @@ class NewPasswordController extends Controller
             function (User $user, string $password): void {
                 if ($user->isOrganizationManaged()) {
                     throw ValidationException::withMessages([
-                        'email' => 'This password is managed by the company directory and cannot be reset in Orbitra.',
+                        'email' => 'This password is managed by the company directory and cannot be reset in Elara.',
                     ]);
                 }
 

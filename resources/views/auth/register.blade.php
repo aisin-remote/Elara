@@ -15,8 +15,8 @@
                 </a>
 
                 <div class="mt-8">
-                    <h1 id="register-heading" class="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">Create your Orbitra account</h1>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Set up your profile and start organizing work in Orbitra.</p>
+                    <h1 id="register-heading" class="text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">Create your Elara account</h1>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Set up your profile and start organizing work in Elara.</p>
                 </div>
 
                 <div class="mt-4"><x-auth-errors /></div>
@@ -65,7 +65,7 @@
         </section>
 
         @include('auth._visual', [
-            'label' => 'Orbitra registration information',
+            'label' => 'Elara registration information',
             'eyebrow' => 'Start with clarity',
             'heading' => 'Your delivery workspace, ready from day one.',
             'description' => 'Create your account and keep projects, requests, schedules, and team collaboration connected in one place.',

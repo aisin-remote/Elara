@@ -54,7 +54,7 @@ class OrbitraNotification extends Notification implements ShouldQueue
             ->subject($this->title)
             ->greeting('Hello '.$notifiable->name.',')
             ->line($this->body)
-            ->action('Open Orbitra', $this->url);
+            ->action('Open Elara', $this->url);
     }
 
     public function toWebPush(object $notifiable, Notification $notification): WebPushMessage
@@ -63,7 +63,7 @@ class OrbitraNotification extends Notification implements ShouldQueue
             ->title($this->title)
             ->body($this->body)
             ->icon('/favicon.ico')
-            ->action('Open Orbitra', 'open_orbitra')
+            ->action('Open Elara', 'open_elara')
             ->data(['url' => $this->url, 'event' => $this->event]);
     }
 }

@@ -33,7 +33,7 @@ class UpdateProfileRequest extends FormRequest
                 Rule::unique('users')->ignore($this->user()),
                 function (string $attribute, mixed $value, \Closure $fail) use ($emailChanged): void {
                     if ($emailChanged && $this->user()->isOrganizationManaged()) {
-                        $fail('Your email is managed by the company directory and cannot be changed in Orbitra.');
+                        $fail('Your email is managed by the company directory and cannot be changed in Elara.');
                     }
                 },
             ],

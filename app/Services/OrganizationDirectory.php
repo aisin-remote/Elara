@@ -195,7 +195,7 @@ class OrganizationDirectory
             ->values();
     }
 
-    /** @return array<int, array<int, int>> workspace id => visible Orbitra user ids */
+    /** @return array<int, array<int, int>> workspace id => visible Elara user ids */
     public function taskVisibility(User $viewer): array
     {
         if (isset($this->taskVisibilityCache[$viewer->id])) {
@@ -417,7 +417,7 @@ class OrganizationDirectory
     }
 
     /** @param Collection<int, User> $users
-     * @return Collection<int, array<string, mixed>> keyed by Orbitra user id
+     * @return Collection<int, array<string, mixed>> keyed by Elara user id
      */
     private function profilesFor(Collection $users): Collection
     {

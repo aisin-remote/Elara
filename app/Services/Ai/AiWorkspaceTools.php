@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
-/** Permission-aware, read-only access to Orbitra data for Ask AI. */
+/** Permission-aware, read-only access to Elara data for Ask AI. */
 class AiWorkspaceTools
 {
     /** @return array<int, array<string, mixed>> */
@@ -49,7 +49,7 @@ class AiWorkspaceTools
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20],
             ], ['project_public_id', 'limit'])),
             $this->tool('list_requests', 'List feature and project requests visible to the current user.', $object([
-                'status' => ['type' => 'string', 'description' => 'Use all or an Orbitra request status such as approved or in_progress.'],
+                'status' => ['type' => 'string', 'description' => 'Use all or an Elara request status such as approved or in_progress.'],
                 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 20],
             ], ['status', 'limit'])),
             $this->tool('search_workspace', 'Search visible projects, tasks, feature requests, and project requests by title.', $object([

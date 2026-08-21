@@ -1,1 +1,1 @@
-@include('errors.layout', ['status' => 503, 'title' => 'Orbitra is temporarily unavailable', 'description' => 'Maintenance is in progress. Please return shortly; queued work will resume when the service is available.'])
+@include('errors.layout', ['status' => 503, 'title' => 'Elara is temporarily unavailable', 'description' => 'Maintenance is in progress. Please return shortly; queued work will resume when the service is available.'])

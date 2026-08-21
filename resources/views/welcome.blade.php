@@ -28,7 +28,7 @@
                         @if ($department)
                             This device remembers the last signed-in department. Only public schedule, status, and progress information is shown here.
                         @else
-                            This device has not been personalized yet. Sign in once and Orbitra will remember the department timeline for future guest visits.
+                            This device has not been personalized yet. Sign in once and Elara will remember the department timeline for future guest visits.
                         @endif
                     </p>
                 </div>
@@ -36,7 +36,7 @@
                     @auth
                         <x-link-button href="{{ auth()->user()->homePath() }}">Open workspace</x-link-button>
                     @else
-                        <x-link-button href="{{ route('login') }}">Log in to Orbitra</x-link-button>
+                        <x-link-button href="{{ route('login') }}">Log in to Elara</x-link-button>
                         @if ($department)
                             <form method="POST" action="{{ route('home.forget-department') }}">
                                 @csrf

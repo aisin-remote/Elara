@@ -62,7 +62,7 @@
 <h2><span class="section-num">1.</span> Tentang Aplikasi</h2>
 
 <h3>Aplikasi ini digunakan untuk apa?</h3>
-<p><strong>Elara</strong> (dibangun di atas platform Orbitra) membantu perusahaan mengelola:</p>
+<p><strong>Elara</strong> membantu perusahaan mengelola:</p>
 <ul>
     <li><strong>Permintaan perubahan fitur</strong> pada sistem/aplikasi yang sudah dipakai sehari-hari.</li>
     <li><strong>Proposal proyek IT baru</strong> beserta studi kelayakan bisnis.</li>
@@ -95,7 +95,7 @@
     <tr><td>Admin / Owner workspace</td><td>Pengelola workspace ITD</td><td>Pengaturan master data &amp; anggota</td></tr>
 </table>
 
-<div class="note"><strong>Catatan tampilan:</strong> Di layar login dan sidebar, nama produk yang tampil adalah <strong>Elara</strong>. Istilah teknis internal proyek adalah Orbitra — pengguna tidak perlu memahami perbedaan ini.</div>
+<div class="note"><strong>Catatan tampilan:</strong> Di layar login, sidebar, notifikasi, dan dokumen, nama produk yang tampil adalah <strong>Elara</strong>.</div>
 
 {{-- 3. GAMBARAN UMUM --}}
 <h2 class="page-break"><span class="section-num">2.</span> Gambaran Umum Alur Sistem</h2>
@@ -851,7 +851,7 @@ Kembali ke Manager atau ITD (sesuai yang bertanya)</div>
 <p>Orang ITD yang ditunjuk Supervisor/Manager saat approve feature request. Dialah yang bertanggung jawab mengerjakan/mengawal task.</p>
 
 <div class="note" style="margin-top:16pt;">
-    <strong>Dokumen ini</strong> dibuat otomatis dari alur aktual aplikasi Elara/Orbitra.<br>
+    <strong>Dokumen ini</strong> dibuat otomatis dari alur aktual aplikasi Elara.<br>
     Versi {{ $version }} · {{ $generatedAt }} · AIIA<br>
     Untuk pertanyaan operasional, hubungi tim ITD atau administrator workspace.
 </div>

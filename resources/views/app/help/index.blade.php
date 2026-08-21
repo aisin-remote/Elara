@@ -6,7 +6,7 @@
 @section('content')
     <div>
         <section class="overflow-hidden rounded-3xl bg-slate-950 px-6 py-10 text-white shadow-xl sm:px-10 sm:py-14 dark:bg-gradient-to-br dark:from-orbit-950 dark:to-slate-950">
-            <div class="max-w-2xl"><p class="text-sm font-semibold text-orbit-300">Orbitra knowledge base</p><h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">How can we help your team move forward?</h2><p class="mt-3 text-sm text-slate-300">Search practical guidance for projects, security, collaboration, and connected tools.</p></div>
+            <div class="max-w-2xl"><p class="text-sm font-semibold text-orbit-300">Elara knowledge base</p><h2 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">How can we help your team move forward?</h2><p class="mt-3 text-sm text-slate-300">Search practical guidance for projects, security, collaboration, and connected tools.</p></div>
             <form method="GET" action="{{ route('help') }}" class="mt-7 flex max-w-2xl flex-col gap-3 sm:flex-row"><label class="sr-only" for="help_search">Search help</label><input id="help_search" name="q" value="{{ $query }}" minlength="2" class="min-h-12 flex-1 rounded-xl border-white/10 bg-white/10 text-white placeholder:text-slate-400 focus:border-orbit-400 focus:ring-orbit-400" placeholder="Search articles…"><x-button class="bg-white text-slate-950 hover:bg-slate-100">Search</x-button></form>
         </section>
 

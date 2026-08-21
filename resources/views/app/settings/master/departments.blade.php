@@ -14,7 +14,7 @@
         <div class="flex flex-col gap-3 border-b border-slate-200 p-5 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h3 id="departments-title" class="text-lg font-bold">Department PIC</h3>
-                <p class="mt-1 text-xs text-slate-500">Departments come live from PostgreSQL. Orbitra stores only the default IT PIC you choose.</p>
+                <p class="mt-1 text-xs text-slate-500">Departments come live from PostgreSQL. Elara stores only the default IT PIC you choose.</p>
             </div>
             <form method="GET" class="flex gap-2">
                 <x-input name="search" value="{{ $search }}" placeholder="Search departments" aria-label="Search departments" class="sm:w-56" />
@@ -24,7 +24,7 @@
 
         @if (! $directoryAvailable)
             <div class="p-5">
-                <x-empty-state icon="alert" title="Organisation directory unavailable" description="Orbitra could not read the PostgreSQL department list. Existing PIC mappings have not been changed." />
+                <x-empty-state icon="alert" title="Organisation directory unavailable" description="Elara could not read the PostgreSQL department list. Existing PIC mappings have not been changed." />
             </div>
         @elseif ($departments->isEmpty())
             <div class="p-5">

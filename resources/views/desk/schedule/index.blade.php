@@ -35,8 +35,8 @@
         <div class="mt-5 space-y-3 md:hidden" data-schedule-agenda></div>
     </section>
 
-    <dialog id="requester-schedule-detail-dialog" class="m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-slate-950/60 sm:m-auto sm:h-auto sm:max-h-[90vh] sm:w-[620px] sm:rounded-2xl">
-        <div class="h-full overflow-y-auto bg-white p-5 dark:bg-slate-900 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 dark:sm:border-slate-800">
+    <dialog id="requester-schedule-detail-dialog" class="m-auto w-[min(92vw,620px)] max-w-none rounded-2xl bg-transparent p-0 backdrop:bg-slate-950/60">
+        <div class="max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div class="flex items-start justify-between gap-4">
                 <div><p class="text-xs font-semibold uppercase tracking-[0.14em] text-orbit-600">Meeting details</p><h3 class="mt-1 text-xl font-bold" data-schedule-detail-title>Meeting</h3></div>
                 <button type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onclick="this.closest('dialog').close()" aria-label="Close"><x-icon name="close" /></button>

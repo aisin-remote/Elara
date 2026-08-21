@@ -90,7 +90,7 @@ class SaveMeetingMinuteRequest extends FormRequest
                     $pic = User::query()->where('public_id', $picPublicId)->first();
 
                     if (! $pic || ! $workspace || ! $this->canUsePic($pic, $workspace, $event)) {
-                        $validator->errors()->add("items.$index.pic_user_public_id", 'Choose an available Orbitra user or enter a name as free text.');
+                        $validator->errors()->add("items.$index.pic_user_public_id", 'Choose an available IT member or enter a name as free text.');
                     }
                 }
             }

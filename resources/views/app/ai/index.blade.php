@@ -46,7 +46,7 @@
                                 <x-icon name="sparkles" />
                             </div>
                             <div class="min-w-0">
-                                <h2 data-ai-title class="truncate font-bold text-slate-900 dark:text-white">{{ $selectedConversation?->title ?? 'Orbitra copilot' }}</h2>
+                                <h2 data-ai-title class="truncate font-bold text-slate-900 dark:text-white">{{ $selectedConversation?->title ?? 'Elara copilot' }}</h2>
                                 <p class="truncate text-xs text-slate-500">{{ $model }} · workspace data stays permission-scoped</p>
                             </div>
                         </div>
@@ -122,7 +122,7 @@
                     <div class="mx-auto max-w-3xl">
                         <p data-ai-error class="mb-2 hidden rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" role="alert"></p>
                         <div class="flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm focus-within:border-orbit-400 focus-within:ring-2 focus-within:ring-orbit-100 dark:border-slate-700 dark:bg-slate-950 dark:focus-within:ring-orbit-950">
-                            <textarea data-ai-input rows="1" maxlength="4000" class="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 focus:ring-0" placeholder="Ask about your Orbitra workspace…" aria-label="Message Ask AI"></textarea>
+                            <textarea data-ai-input rows="1" maxlength="4000" class="max-h-36 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-2.5 text-sm leading-6 focus:ring-0" placeholder="Ask about your Elara workspace…" aria-label="Message Ask AI"></textarea>
                             <button data-ai-submit type="submit" class="grid size-11 shrink-0 place-items-center rounded-xl bg-orbit-600 font-bold text-white hover:bg-orbit-700 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Send message">↑</button>
                         </div>
                         <p class="mt-2 text-center text-[11px] text-slate-400">Ask AI may make mistakes. Verify important details before acting.</p>

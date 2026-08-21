@@ -161,12 +161,12 @@ class DemoSeeder extends Seeder
         }
 
         $fixturePath = 'demo/orbitra-product-brief.txt';
-        Storage::disk('local')->put($fixturePath, "Orbitra Product Studio demo fixture.\nSafe to delete with demo data.\n");
+        Storage::disk('local')->put($fixturePath, "Elara Product Studio demo fixture.\nSafe to delete with demo data.\n");
         ProjectFile::updateOrCreate(['workspace_id' => $workspace->id, 'path' => $fixturePath], [
             'project_id' => $projects[0]->id,
             'uploader_id' => $owner->id,
             'disk' => 'local',
-            'original_name' => 'orbitra-product-brief.txt',
+            'original_name' => 'elara-product-brief.txt',
             'mime_type' => 'text/plain',
             'size' => Storage::disk('local')->size($fixturePath),
             'metadata_json' => ['fixture' => true],

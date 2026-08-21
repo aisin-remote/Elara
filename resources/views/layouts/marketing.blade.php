@@ -4,11 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <meta name="description" content="Orbitra keeps projects, tasks, schedules, files, and team communication in one focused workspace.">
+        <meta name="description" content="Elara keeps projects, tasks, schedules, files, and team communication in one focused workspace.">
         <link rel="icon" type="image/svg+xml" href="{{ asset('elara-favicon.svg') }}">
         <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
         <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
-        <title>@yield('title', 'Project management for focused teams') · Orbitra</title>
+        <title>@yield('title', 'Project management for focused teams') · Elara</title>
         <script>
             const orbitraTheme = localStorage.getItem('orbitra-theme') ?? 'system';
             document.documentElement.classList.toggle('dark', orbitraTheme === 'dark' || (orbitraTheme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches));
@@ -58,7 +58,7 @@
                 <div><x-logo /><p class="mt-4 max-w-md text-sm leading-6 text-slate-400">A secure internal delivery portal for project visibility, request tracking, and focused collaboration.</p></div>
                 <nav class="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-1" aria-label="Footer navigation"><a class="hover:text-white" href="{{ route('home') }}#timeline">Project timeline</a><a class="hover:text-white" href="{{ route('login') }}">Login</a><a class="hover:text-white" href="{{ route('legal.privacy') }}">Privacy</a><a class="hover:text-white" href="{{ route('legal.accessibility') }}">Accessibility</a></nav>
             </div>
-            <div class="border-t border-slate-800 px-5 py-6 text-center text-xs text-slate-500">© {{ now()->year }} Orbitra. Built with an original identity and no copied third-party branding or assets.</div>
+            <div class="border-t border-slate-800 px-5 py-6 text-center text-xs text-slate-500">© {{ now()->year }} Elara. Built with an original identity and no copied third-party branding or assets.</div>
         </footer>
     </body>
 </html>

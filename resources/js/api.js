@@ -14,7 +14,7 @@ export async function apiRequest(url, options = {}) {
         });
     } catch (error) {
         if (error.name === 'AbortError') throw error;
-        throw new Error('Orbitra could not be reached. Check your connection and try again.');
+        throw new Error('Elara could not be reached. Check your connection and try again.');
     }
 
     const payload = response.headers.get('content-type')?.includes('application/json')

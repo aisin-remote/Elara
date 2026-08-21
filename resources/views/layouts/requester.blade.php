@@ -8,7 +8,7 @@
         <link rel="alternate icon" href="{{ asset('favicon.ico') }}" sizes="any">
         <link rel="apple-touch-icon" href="{{ asset('elara-icon-180.png') }}">
         {{-- The requester and delivery desks use the same English product language. --}}
-        <title>@yield('title', 'Requests') · Orbitra</title>
+        <title>@yield('title', 'Requests') · Elara</title>
         <script>
             const orbitraTheme = localStorage.getItem('orbitra-theme') ?? @json(auth()->user()->theme);
             document.documentElement.classList.toggle('dark', orbitraTheme === 'dark' || (orbitraTheme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches));
@@ -115,7 +115,7 @@
                     <div class="flex items-center gap-3">
                         <button x-ref="sidebarTrigger" type="button" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-800" x-on:click="openSidebar()" aria-label="Open navigation" x-bind:aria-expanded="sidebarOpen">☰</button>
                         <div>
-                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $deskWorkspace?->name ?? 'Orbitra' }}</p>
+                            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $deskWorkspace?->name ?? 'Elara' }}</p>
                             <h1 class="text-lg font-bold">@yield('page-title', 'My requests')</h1>
                         </div>
                     </div>

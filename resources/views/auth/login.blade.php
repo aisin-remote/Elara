@@ -71,7 +71,7 @@
                     </p> --}}
                 </form>
 
-                <ul class="mt-10 space-y-3 text-xs text-slate-600 dark:text-slate-300" aria-label="Orbitra benefits">
+                <ul class="mt-10 space-y-3 text-xs text-slate-600 dark:text-slate-300" aria-label="Elara benefits">
                     <li class="flex items-center gap-3"><x-icon name="tasks" class="size-4 text-orbit-500" /> Keep
                         requests and delivery work connected</li>
                     <li class="flex items-center gap-3"><x-icon name="calendar" class="size-4 text-orbit-500" /> Plan work
@@ -83,7 +83,7 @@
         </section>
 
         @include('auth._visual', [
-            'label' => 'Orbitra introduction',
+            'label' => 'Elara introduction',
             'eyebrow' => 'One delivery workspace',
             'heading' => 'Projects move forward, clearly managed.',
             'description' =>

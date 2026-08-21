@@ -25,8 +25,8 @@ class WorkspaceInvitationNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("You're invited to {$this->workspaceName} on Orbitra")
-            ->greeting('Join your team on Orbitra')
+            ->subject("You're invited to {$this->workspaceName} on Elara")
+            ->greeting('Join your team on Elara')
             ->line("{$this->inviterName} invited you to {$this->workspaceName}.")
             ->action('Review invitation', route('invitations.show', $this->token))
             ->line("This invitation expires {$this->expiresAt}.");

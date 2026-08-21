@@ -28,7 +28,7 @@
             </aside>
 
             <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
-                <div><p class="text-sm font-semibold text-orbit-600">Personal details</p><h2 class="mt-1 text-xl font-bold">Your Orbitra profile</h2><p class="mt-2 text-sm text-slate-500">This information is visible to teammates in shared workspaces.</p></div>
+                <div><p class="text-sm font-semibold text-orbit-600">Personal details</p><h2 class="mt-1 text-xl font-bold">Your Elara profile</h2><p class="mt-2 text-sm text-slate-500">This information is visible to teammates in shared workspaces.</p></div>
                 <div class="mt-7 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
                     <div><x-label for="first_name">First name</x-label><x-input id="first_name" name="first_name" value="{{ old('first_name', auth()->user()->first_name) }}" required /><x-field-error name="first_name" /></div>
                     <div><x-label for="last_name">Last name</x-label><x-input id="last_name" name="last_name" value="{{ old('last_name', auth()->user()->last_name) }}" required /><x-field-error name="last_name" /></div>
