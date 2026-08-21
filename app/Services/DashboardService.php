@@ -39,7 +39,7 @@ class DashboardService
                 'previous' => $previous[$key],
                 'delta' => $value - $previous[$key],
             ])->all(),
-            'mom_action_items' => $this->meetingMinuteActions->forUser($user, $workspace),
+            'mom_action_items' => $this->momActionItems($workspace, $user, $filters),
             'meetings' => $this->meetings($workspace, $user, $period['timezone']),
             'members' => $this->members($workspace),
             'distribution' => $this->distribution($workspace, $user, $filters, $period),
@@ -56,6 +56,22 @@ class DashboardService
             'period' => $this->serializePeriod($period),
             'trend' => $this->trend($workspace, $user, $filters, $period),
             'member_task_heatmap' => $this->memberTaskHeatmap($workspace, $user, $filters, $period),
+        ];
+    }
+
+    private function momActionItems(Workspace $workspace, User $user, array $filters): array
+    {
+        $members = app(OrganizationDirectory::class)->taskMembers($user, $workspace);
+        $focus = $members->firstWhere('public_id', $filters['mom_member'] ?? null);
+        $items = $this->meetingMinuteActions->forUsers($focus ? collect([$focus]) : $members, $user, $workspace);
+
+        return [
+            ...$items,
+            'member' => $focus?->public_id,
+            'members' => $members->map(fn (User $member) => [
+                'public_id' => $member->public_id,
+                'name' => $member->name,
+            ])->values()->all(),
         ];
     }
 

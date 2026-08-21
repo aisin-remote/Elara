@@ -6,6 +6,7 @@ use App\Models\Workspace;
 use App\Models\WorkspaceHoliday;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Throwable;
@@ -21,6 +22,8 @@ class SyncWorkspaceHolidays extends Command
         $years = $this->years();
 
         if ($years === null) {
+            $this->rememberResult('failed', 'The requested year was invalid.');
+
             return self::FAILURE;
         }
 
@@ -64,11 +67,23 @@ class SyncWorkspaceHolidays extends Command
 
         if ($failed !== []) {
             $this->error('Holiday sync failed for: '.implode(', ', $failed).'. Existing dates were kept.');
+            $this->rememberResult('failed', 'Failed years: '.implode(', ', $failed));
 
             return self::FAILURE;
         }
 
+        $this->rememberResult('healthy', sprintf('Synced %d holiday dates.', count($holidays)));
+
         return self::SUCCESS;
+    }
+
+    private function rememberResult(string $status, string $message): void
+    {
+        Cache::forever('system_health.holiday_sync', [
+            'status' => $status,
+            'message' => $message,
+            'at' => now()->toIso8601String(),
+        ]);
     }
 
     /** @return list<int>|null */

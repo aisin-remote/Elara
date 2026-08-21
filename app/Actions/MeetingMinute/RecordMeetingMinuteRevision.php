@@ -9,7 +9,7 @@ class RecordMeetingMinuteRevision
 {
     public function handle(MeetingMinute $minute, User $editor): void
     {
-        $minute->load('items');
+        $minute->load(['items', 'project']);
 
         $minute->revisions()->create([
             'editor_id' => $editor->id,
@@ -19,6 +19,7 @@ class RecordMeetingMinuteRevision
                 'meeting_at' => $minute->meeting_at?->toIso8601String(),
                 'summary' => $minute->summary,
                 'project_id' => $minute->project_id,
+                'project_name' => $minute->project?->name,
                 'publication_status' => $minute->publication_status->value,
                 'items' => $minute->items->map(fn ($item) => [
                     'content' => $item->content,

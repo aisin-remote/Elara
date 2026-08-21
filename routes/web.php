@@ -20,6 +20,7 @@ use App\Http\Controllers\App\ScheduleController;
 use App\Http\Controllers\App\SearchController;
 use App\Http\Controllers\App\SettingsController;
 use App\Http\Controllers\App\SupportingTaskController;
+use App\Http\Controllers\App\SystemHealthController;
 use App\Http\Controllers\App\TaskController;
 use App\Http\Controllers\App\TeamController;
 use App\Http\Controllers\App\WorkspaceController;
@@ -108,6 +109,8 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::get('/app/workspaces/{workspace}/settings/security', [SettingsController::class, 'security'])->name('app.settings.security');
     Route::get('/app/workspaces/{workspace}/settings/integrations', [IntegrationController::class, 'index'])->name('app.settings.integrations');
     Route::get('/app/workspaces/{workspace}/settings/notifications', [NotificationSettingsController::class, 'edit'])->name('app.settings.notifications');
+    Route::get('/app/workspaces/{workspace}/settings/system-health', [SystemHealthController::class, 'show'])->name('app.settings.system-health');
+    Route::post('/app/workspaces/{workspace}/settings/system-health/{action}', [SystemHealthController::class, 'run'])->name('app.settings.system-health.run');
     Route::get('/settings/security', [SettingsController::class, 'securityDefault'])->name('settings.security');
     Route::get('/settings/notifications', [NotificationSettingsController::class, 'default'])->name('settings.notifications');
     Route::get('/settings/integrations', [IntegrationController::class, 'default'])->name('settings.integrations');

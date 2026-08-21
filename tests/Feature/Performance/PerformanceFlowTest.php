@@ -4,6 +4,7 @@ namespace Tests\Feature\Performance;
 
 use App\Actions\Project\CreateProject;
 use App\Actions\Workspace\CreateWorkspace;
+use App\Enums\MeetingMinutePublicationStatus;
 use App\Enums\ProjectMemberRole;
 use App\Enums\ProjectStatus;
 use App\Enums\TaskPriority;
@@ -11,6 +12,7 @@ use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Feature;
+use App\Models\MeetingMinute;
 use App\Models\ScheduleEvent;
 use App\Models\Task;
 use App\Models\User;
@@ -388,6 +390,63 @@ class PerformanceFlowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.mom_action_items.total', 0)
             ->assertJsonCount(0, 'data.mom_action_items.items');
+    }
+
+    public function test_dashboard_mom_tabs_show_visible_team_and_filter_one_member(): void
+    {
+        config(['organization.required' => false]);
+        [$owner, $workspace, $project] = $this->project();
+        $member = $this->addProjectMember($project);
+        $outsider = User::factory()->create();
+        $minute = MeetingMinute::create([
+            'workspace_id' => $workspace->id,
+            'creator_id' => $owner->id,
+            'title' => 'Team follow-ups',
+            'meeting_at' => now(),
+            'publication_status' => MeetingMinutePublicationStatus::PUBLISHED,
+            'published_at' => now(),
+            'published_by' => $owner->id,
+        ]);
+
+        foreach ([
+            [$owner, 'Owner follow-up'],
+            [$member, 'Member follow-up'],
+            [$outsider, 'Hidden follow-up'],
+        ] as $index => [$pic, $content]) {
+            $minute->items()->create([
+                'content' => $content,
+                'pic_name' => $pic->name,
+                'pic_user_id' => $pic->id,
+                'status' => 'outstanding',
+                'position' => ($index + 1) * 1024,
+            ]);
+        }
+
+        $this->actingAs($owner)->get(route('app.workspaces.show', $workspace))
+            ->assertOk()
+            ->assertSee('aria-label="MOM member"', false)
+            ->assertSee('mom_member='.$member->public_id, false)
+            ->assertSee('Owner follow-up')
+            ->assertSee('Member follow-up')
+            ->assertDontSee('Hidden follow-up');
+
+        $this->actingAs($owner)->getJson(route('internal.dashboard.index', [
+            'workspace' => $workspace,
+            'mom_member' => $member->public_id,
+        ]))->assertOk()
+            ->assertJsonPath('data.mom_action_items.member', $member->public_id)
+            ->assertJsonPath('data.mom_action_items.total', 1)
+            ->assertJsonPath('data.mom_action_items.items.0.content', 'Member follow-up')
+            ->assertJsonMissing(['content' => 'Owner follow-up'])
+            ->assertJsonMissing(['content' => 'Hidden follow-up']);
+
+        $this->actingAs($owner)->getJson(route('internal.dashboard.index', [
+            'workspace' => $workspace,
+            'mom_member' => $outsider->public_id,
+        ]))->assertOk()
+            ->assertJsonPath('data.mom_action_items.member', null)
+            ->assertJsonPath('data.mom_action_items.total', 2)
+            ->assertJsonMissing(['content' => 'Hidden follow-up']);
     }
 
     private function project(string $timezone = 'UTC'): array

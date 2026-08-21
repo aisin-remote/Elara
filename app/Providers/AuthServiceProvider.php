@@ -20,6 +20,7 @@ use App\Models\Task;
 use App\Models\TaskBreakdown;
 use App\Models\TaskComment;
 use App\Models\TaskStatus;
+use App\Models\User;
 use App\Models\ValidationCheckpoint;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
@@ -85,5 +86,11 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('viewReport', [ReportPolicy::class, 'view']);
+        Gate::define('viewSystemHealth', function (User $user): bool {
+            $allowedEmail = strtolower(trim((string) config('orbitra.system_health_email')));
+
+            return $allowedEmail !== ''
+                && hash_equals($allowedEmail, strtolower(trim($user->email)));
+        });
     }
 }

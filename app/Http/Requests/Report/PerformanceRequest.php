@@ -47,6 +47,7 @@ class PerformanceRequest extends FormRequest
             'distribution' => ['nullable', Rule::in(['status', 'priority'])],
             'gantt_view' => ['nullable', Rule::in(['projects', 'features'])],
             'gantt_member' => ['nullable', 'string', 'size:26'],
+            'mom_member' => ['nullable', 'string', 'size:26'],
             'gantt_scale' => ['nullable', Rule::in(['daily', 'weekly', 'monthly', 'yearly'])],
         ];
     }

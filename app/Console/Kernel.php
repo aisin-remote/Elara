@@ -4,6 +4,7 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\Cache;
 
 class Kernel extends ConsoleKernel
 {
@@ -12,6 +13,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        $schedule->call(fn () => Cache::put('system_health.scheduler_last_seen_at', now()->toIso8601String(), now()->addDays(2)))
+            ->name('system-health-heartbeat')
+            ->everyMinute();
         $schedule->command('orbitra:send-deadline-reminders')->hourly()->withoutOverlapping();
         $schedule->command('orbitra:send-mom-reminders')->dailyAt('08:00')->timezone('Asia/Jakarta')->withoutOverlapping();
         $schedule->command('orbitra:drain-request-queue')->hourly()->withoutOverlapping();

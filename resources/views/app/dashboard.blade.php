@@ -208,18 +208,33 @@
 
     <div class="mt-5 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
         <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="mom-follow-ups-title">
+            @php($selectedMomMember = $dashboard['mom_action_items']['member'])
+            @php($selectedMomPerson = collect($dashboard['mom_action_items']['members'])->firstWhere('public_id', $selectedMomMember))
+            @php($emptyMomDescription = $selectedMomPerson ? 'No published action items are assigned to '.$selectedMomPerson['name'].'.' : 'Published action items assigned to your visible team will appear here.')
             <div class="flex items-center justify-between gap-3">
-                <div><h3 id="mom-follow-ups-title" class="text-lg font-bold">MOM follow-ups</h3><p class="mt-1 text-xs text-slate-500">Action items assigned to you</p></div>
+                <div><h3 id="mom-follow-ups-title" class="text-lg font-bold">MOM follow-ups</h3><p class="mt-1 text-xs text-slate-500">{{ $selectedMomPerson ? 'Action items assigned to '.$selectedMomPerson['name'] : 'Action items assigned to you and your team' }}</p></div>
                 <a href="{{ route('app.schedule.minutes.index', $workspace) }}" class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Open MOM</a>
             </div>
+            @if(count($dashboard['mom_action_items']['members']) > 1)
+                <div class="scrollbar-none -mx-1 mt-4 flex items-center gap-1.5 overflow-x-auto px-1" role="tablist" aria-label="MOM member">
+                    <a href="{{ request()->fullUrlWithQuery(['mom_member' => null]) }}" role="tab" aria-selected="{{ $selectedMomMember ? 'false' : 'true' }}" class="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $selectedMomMember ? 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' : 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' }}">Semua</a>
+                    @foreach($dashboard['mom_action_items']['members'] as $person)
+                        <a href="{{ request()->fullUrlWithQuery(['mom_member' => $person['public_id']]) }}" role="tab" aria-selected="{{ $selectedMomMember === $person['public_id'] ? 'true' : 'false' }}" class="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition {{ $selectedMomMember === $person['public_id'] ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' }}">{{ $person['name'] }}</a>
+                    @endforeach
+                </div>
+            @endif
             <ol class="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
                 @forelse($dashboard['mom_action_items']['items'] as $item)
                     <li class="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                        <div class="flex items-start justify-between gap-3"><a href="{{ $item['url'] }}" class="min-w-0 flex-1"><span class="block truncate text-sm font-bold hover:text-orbit-700 dark:hover:text-orbit-300">{{ $item['content'] }}</span><span class="mt-1 block truncate text-xs text-slate-500">{{ $item['minute'] }} · {{ $item['project'] }}</span></a><span class="shrink-0 text-xs font-bold {{ $item['overdue'] ? 'text-rose-600' : 'text-slate-500' }}">{{ $item['due'] }}</span></div>
-                        <form method="POST" action="{{ route('internal.meeting-minute-items.update', $item['public_id']) }}" class="mt-2 flex items-center gap-2">@csrf @method('PATCH')<select name="status" class="min-w-0 flex-1 rounded-lg border-slate-300 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-950">@foreach(App\Enums\MeetingMinuteStatus::cases() as $status)<option value="{{ $status->value }}" @selected($item['status'] === $status)>{{ $status->label() }}</option>@endforeach</select><button class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Save</button></form>
+                        <div class="flex items-start justify-between gap-3"><a href="{{ $item['url'] }}" class="min-w-0 flex-1"><span class="block truncate text-sm font-bold hover:text-orbit-700 dark:hover:text-orbit-300">{{ $item['content'] }}</span><span class="mt-1 block truncate text-xs text-slate-500">{{ $item['minute'] }} · {{ $item['project'] }} · {{ $item['pic_name'] }}</span></a><span class="shrink-0 text-xs font-bold {{ $item['overdue'] ? 'text-rose-600' : 'text-slate-500' }}">{{ $item['due'] }}</span></div>
+                        @if($item['can_update'])
+                            <form method="POST" action="{{ route('internal.meeting-minute-items.update', $item['public_id']) }}" class="mt-2 flex items-center gap-2">@csrf @method('PATCH')<select name="status" class="min-w-0 flex-1 rounded-lg border-slate-300 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-950">@foreach(App\Enums\MeetingMinuteStatus::cases() as $status)<option value="{{ $status->value }}" @selected($item['status'] === $status)>{{ $status->label() }}</option>@endforeach</select><button class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Save</button></form>
+                        @else
+                            <span class="mt-2 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $item['status']->label() }}</span>
+                        @endif
                     </li>
                 @empty
-                    <li><x-empty-state icon="check" title="No MOM follow-ups" description="Published action items assigned to you will appear here." class="p-8" /></li>
+                    <li><x-empty-state icon="check" title="No MOM follow-ups" :description="$emptyMomDescription" class="p-8" /></li>
                 @endforelse
             </ol>
         </section>

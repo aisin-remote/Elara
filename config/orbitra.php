@@ -1,6 +1,10 @@
 <?php
 
 return [
+    // Temporary rollout guard for the operational console. Keeping this in config makes the
+    // menu and every server-side route use the same rule, and lets deployment override it.
+    'system_health_email' => strtolower((string) env('ELARA_SYSTEM_HEALTH_EMAIL', 'fabian@aiia.co.id')),
+
     'email_verification' => (bool) env('ORBITRA_EMAIL_VERIFICATION', false),
     'max_file_upload_kb' => (int) env('ORBITRA_MAX_FILE_UPLOAD_KB', 10240),
     'bottleneck_days' => max(1, (int) env('ORBITRA_BOTTLENECK_DAYS', 7)),

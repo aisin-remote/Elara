@@ -223,6 +223,8 @@ class MeetingMinuteFlowTest extends TestCase
         $this->actingAs($owner)
             ->get(route('app.schedule.minutes.show', [$workspace, $minute]))
             ->assertOk()
+            ->assertSee('aria-label="View MOM version 1"', false)
+            ->assertSee('Close the finding')
             ->assertSee('IT member')
             ->assertDontSee('Orbitra member');
 
@@ -230,6 +232,12 @@ class MeetingMinuteFlowTest extends TestCase
             ->assertRedirect();
         $this->assertSame(MeetingMinutePublicationStatus::LOCKED, $minute->fresh()->publication_status);
         $this->assertDatabaseCount('meeting_minute_revisions', 2);
+        $this->actingAs($owner)
+            ->get(route('app.schedule.minutes.show', [$workspace, $minute]))
+            ->assertOk()
+            ->assertSee('aria-label="View MOM version 2"', false)
+            ->assertSee('MOM version 1')
+            ->assertSee('Documents are not included in revision snapshots.');
 
         $this->actingAs($owner)->patchJson(route('internal.meeting-minutes.update', $minute), [])->assertForbidden();
         $this->actingAs($owner)->patch(route('internal.meeting-minute-items.update', $item), ['status' => 'done'])->assertRedirect();

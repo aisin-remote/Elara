@@ -56,10 +56,7 @@
         </div>
     </section>
 
-    <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex items-center justify-between"><div><h3 class="text-lg font-bold">Revision history</h3><p class="mt-1 text-sm text-slate-500">An immutable snapshot is kept whenever this MOM changes.</p></div><span class="text-sm font-bold text-slate-500">{{ $meetingMinute->revisions->count() }} versions</span></div>
-        <ol class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">@forelse($meetingMinute->revisions->take(5) as $revision)<li class="flex items-center justify-between gap-3 py-3 text-sm"><span><strong>Version {{ $revision->revision }}</strong> · {{ $revision->editor?->name ?? 'Deleted user' }}</span><time class="text-xs text-slate-500">{{ $revision->created_at->diffForHumans() }}</time></li>@empty<li class="py-3 text-sm text-slate-500">No revisions recorded yet.</li>@endforelse</ol>
-    </section>
+    @include('shared.meeting-minute-revisions')
 
     <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
         <div class="flex items-center justify-between gap-3"><div><h3 class="text-lg font-bold">Documents</h3><p class="mt-1 text-sm text-slate-500">Files are private to authorized workspace members.</p></div>@can('update', $meetingMinute)<a href="{{ route('app.schedule.minutes.edit', [$workspace, $meetingMinute]) }}" class="text-sm font-bold text-orbit-700 dark:text-orbit-300">Add documents</a>@endcan</div>

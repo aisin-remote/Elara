@@ -162,6 +162,12 @@ class RequesterScheduleTest extends TestCase
             ]);
 
         $this->actingAs($requester)
+            ->get(route('desk.schedule.mom.show', [$requesterWorkspace, $minute->public_id]))
+            ->assertOk()
+            ->assertSee('aria-label="View MOM version 1"', false)
+            ->assertSee('Prepare technical review');
+
+        $this->actingAs($requester)
             ->get(route('desk.schedule.mom.files.download', [$requesterWorkspace, $minute->public_id, $file->public_id]))
             ->assertOk();
     }

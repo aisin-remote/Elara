@@ -10,6 +10,9 @@
             $settingsLinks[] = ['app.settings.master', 'Master data'];
             $settingsLinks[] = ['app.settings.integrations', 'Integrations'];
         }
+        if (auth()->user()->can('viewSystemHealth')) {
+            $settingsLinks[] = ['app.settings.system-health', 'System health'];
+        }
     @endphp
     @foreach ($settingsLinks as [$routeName, $label])
         @if (Route::has($routeName))
