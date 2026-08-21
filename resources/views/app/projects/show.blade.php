@@ -163,6 +163,8 @@
         </section>
     </div>
 
+    @include('app.schedule.minutes._related', ['workspace' => $project->workspace, 'subjectLabel' => 'project'])
+
     @can('delete', $project)
         <section class="mt-6 rounded-3xl border border-rose-200 bg-white p-6 dark:border-rose-900/60 dark:bg-slate-900" aria-labelledby="danger-zone-title">
             <h2 id="danger-zone-title" class="text-lg font-bold text-rose-700 dark:text-rose-300">Danger zone</h2>

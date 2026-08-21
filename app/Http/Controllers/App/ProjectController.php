@@ -97,6 +97,12 @@ class ProjectController extends Controller
                 ->whereNotIn('user_id', $assignedUserIds)
                 ->with('user')
                 ->get(),
+            'relatedMinutes' => $project->workspace->meetingMinutes()
+                ->where('project_id', $project->id)
+                ->withCount(['items as related_items_count'])
+                ->latest('meeting_at')
+                ->limit(5)
+                ->get(),
         ]);
     }
 

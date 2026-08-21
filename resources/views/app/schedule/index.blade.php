@@ -4,12 +4,14 @@
 @section('page-title', 'Schedule')
 
 @section('content')
+    @include('app.schedule._tabs')
+
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div><p class="text-sm text-slate-500">{{ $workspace->name }} / {{ $workspace->timezone }}</p><h2 class="mt-1 text-2xl font-bold tracking-tight">Weekly schedule</h2></div>
         @can('create', [App\Models\ScheduleEvent::class, $workspace])<x-button type="button" onclick="document.getElementById('schedule-create-dialog').showModal()"><x-icon name="plus"/>New event</x-button>@endcan
     </div>
 
-    <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900" data-schedule data-url="{{ $calendarUrl }}" data-timezone="{{ $workspace->timezone }}" data-week-start="{{ data_get($workspace->settings_json, 'week_start', 1) }}">
+    <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900" data-schedule data-schedule-dialog="schedule-edit-dialog" data-url="{{ $calendarUrl }}" data-timezone="{{ $workspace->timezone }}" data-week-start="{{ data_get($workspace->settings_json, 'week_start', 1) }}">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div><p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Week</p><h3 class="mt-1 text-lg font-bold" data-schedule-title>Schedule</h3></div>
             <div class="flex gap-2"><x-button type="button" variant="secondary" data-schedule-action="prev">←</x-button><x-button type="button" variant="secondary" data-schedule-action="today">Today</x-button><x-button type="button" variant="secondary" data-schedule-action="next">→</x-button></div>
@@ -34,6 +36,7 @@
         <dialog id="schedule-edit-dialog" class="m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-slate-950/60 sm:m-auto sm:h-auto sm:max-h-[90vh] sm:w-[620px] sm:rounded-2xl">
             <div class="h-full overflow-y-auto bg-white p-5 dark:bg-slate-900 sm:rounded-2xl sm:border sm:border-slate-200 sm:p-6 dark:sm:border-slate-800">
                 <div class="flex items-center justify-between"><h3 class="text-xl font-bold">Edit schedule event</h3><button type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100" onclick="this.closest('dialog').close()" aria-label="Close">✕</button></div>
+                <a href="#" data-schedule-mom class="mt-4 inline-flex items-center gap-2 rounded-xl bg-violet-100 px-4 py-2.5 text-sm font-bold text-violet-700 transition hover:bg-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:hover:bg-violet-900">Create MOM</a>
                 <form method="POST" action="" class="mt-5 space-y-4" data-schedule-edit-form>
                     @csrf @method('PATCH')
                     @include('app.schedule._form', ['prefix' => 'edit'])

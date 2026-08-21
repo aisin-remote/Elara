@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,6 +45,11 @@ class ScheduleEvent extends Model
     public function attendees(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'schedule_event_attendees')->withPivot('response');
+    }
+
+    public function meetingMinute(): HasOne
+    {
+        return $this->hasOne(MeetingMinute::class);
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder

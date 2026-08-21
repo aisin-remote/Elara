@@ -19,7 +19,7 @@
         <x-connectivity-status />
         <div
             x-bind:style="! mobile ? { gridTemplateColumns: sidebarCollapsed ? '0px minmax(0, 1fr)' : '248px minmax(0, 1fr)' } : {}"
-            class="min-h-screen bg-[#f7f8fb] dark:bg-slate-950 lg:grid lg:grid-cols-[248px_1fr] lg:transition-[grid-template-columns] lg:duration-200">
+            class="min-h-screen bg-[#f7f8fb] dark:bg-slate-950 lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:transition-[grid-template-columns] lg:duration-200">
             <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" x-on:click="closeSidebar()" aria-hidden="true"></div>
 
             <aside x-ref="sidebar"
@@ -135,7 +135,7 @@
                 </div>
             </aside>
 
-            <div class="min-w-0" x-bind:inert="mobile && sidebarOpen ? true : null">
+            <div class="w-full min-w-0 max-w-full" x-bind:inert="mobile && sidebarOpen ? true : null">
                 <header class="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur md:px-7 dark:border-slate-800 dark:bg-slate-950/95">
                     <div class="flex items-center gap-3">
                         <button x-ref="sidebarTrigger" type="button" class="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden dark:text-slate-300 dark:hover:bg-slate-800" x-on:click="openSidebar()" aria-label="Open navigation" x-bind:aria-expanded="sidebarOpen">☰</button>
@@ -176,7 +176,7 @@
                     <x-theme-toggle class="hidden sm:inline-flex" /></div>
                 </header>
 
-                <main id="main-content" class="p-4 md:p-7">
+                <main id="main-content" class="w-full min-w-0 max-w-full p-4 md:p-7">
                     <x-status />
                     @yield('content')
                 </main>

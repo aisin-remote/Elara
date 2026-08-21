@@ -62,16 +62,43 @@ function openEditor(root, item) {
         return;
     }
 
-    const dialog = document.getElementById('schedule-edit-dialog');
+    const dialog = document.getElementById(root.dataset.scheduleDialog || 'schedule-edit-dialog');
     if (! dialog) return;
+
+    const detailTitle = dialog.querySelector('[data-schedule-detail-title]');
+    const detailDescription = dialog.querySelector('[data-schedule-detail-description]');
+    const detailWhen = dialog.querySelector('[data-schedule-detail-when]');
+    const momLink = dialog.querySelector('[data-schedule-mom]');
+    const meetingLink = dialog.querySelector('[data-schedule-meeting-link]');
+
+    if (detailTitle) detailTitle.textContent = item.title;
+    if (detailDescription) detailDescription.textContent = item.description || 'No agenda or notes were added.';
+    if (detailWhen) {
+        const formatter = new Intl.DateTimeFormat('en', { timeZone: root.dataset.timezone, dateStyle: 'medium', timeStyle: 'short' });
+        detailWhen.textContent = `${formatter.format(new Date(item.start))} – ${formatter.format(new Date(item.end))}`;
+    }
+    if (momLink) {
+        momLink.href = item.mom_url;
+        momLink.textContent = item.mom_label;
+    }
+    if (meetingLink) {
+        meetingLink.classList.toggle('hidden', ! item.meeting_url);
+        meetingLink.href = item.meeting_url || '#';
+    }
+
     const form = dialog.querySelector('[data-schedule-edit-form]');
-    form.action = item.mutation_url;
-    dialog.querySelector('[data-schedule-delete-form]').action = item.mutation_url;
-    Object.entries(item.mutation).forEach(([field, value]) => {
-        const input = form.querySelector(`[data-schedule-field="${field}"]`);
-        if (input) input.value = ['start_at', 'end_at'].includes(field) ? localInput(value, root.dataset.timezone) : (value ?? '');
-    });
-    form.querySelectorAll('[data-schedule-attendee]').forEach((input) => { input.checked = item.mutation.attendee_public_ids.includes(input.value); });
+    if (form && item.mutation_url) {
+        form.action = item.mutation_url;
+        const deleteForm = dialog.querySelector('[data-schedule-delete-form]');
+        if (deleteForm) deleteForm.action = item.mutation_url;
+        Object.entries(item.mutation || {}).forEach(([field, value]) => {
+            const input = form.querySelector(`[data-schedule-field="${field}"]`);
+            if (input) input.value = ['start_at', 'end_at'].includes(field) ? localInput(value, root.dataset.timezone) : (value ?? '');
+        });
+        form.querySelectorAll('[data-schedule-attendee]').forEach((input) => {
+            input.checked = (item.mutation.attendee_public_ids || []).includes(input.value);
+        });
+    }
     dialog.showModal();
 }
 

@@ -75,6 +75,43 @@ class DescriptionDraftTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->data()['input'][0]['content'], 'System: Inventory Core'));
     }
 
+    public function test_an_it_member_can_generate_a_mom_summary_from_action_items(): void
+    {
+        $summary = 'Tim menyepakati peninjauan ruang lingkup. Alya menyiapkan dokumen teknis sebelum 28 Agustus 2026, sedangkan tindak lanjut tanpa tenggat tetap dicatat sebagai TBA.';
+        Http::fake(['*/responses' => Http::response([
+            'model' => 'gpt-4o',
+            'output' => [[
+                'type' => 'message',
+                'content' => [[
+                    'type' => 'output_text',
+                    'text' => json_encode(['summary' => $summary], JSON_THROW_ON_ERROR),
+                ]],
+            ]],
+        ])]);
+        [$workspace, $owner] = $this->workspace();
+
+        $this->actingAs($owner)
+            ->postJson(route('internal.ai.meeting-summary', $workspace), [
+                'title' => 'Scope alignment',
+                'items' => [[
+                    'content' => 'Prepare technical document',
+                    'pic_name' => 'Alya',
+                    'due_date' => '2026-08-28',
+                    'status' => 'outstanding',
+                ]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.summary', $summary);
+
+        Http::assertSent(function ($request): bool {
+            $body = $request->data();
+
+            return $body['store'] === false
+                && $body['text']['format']['name'] === 'meeting_summary'
+                && str_contains($body['input'][0]['content'], 'Prepare technical document');
+        });
+    }
+
     public function test_the_create_forms_expose_the_ai_description_action(): void
     {
         [$workspace, $owner] = $this->workspace();

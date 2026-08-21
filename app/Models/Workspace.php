@@ -90,6 +90,11 @@ class Workspace extends Model
         return $this->hasMany(ScheduleEvent::class);
     }
 
+    public function meetingMinutes(): HasMany
+    {
+        return $this->hasMany(MeetingMinute::class);
+    }
+
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);

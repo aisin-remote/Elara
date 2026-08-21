@@ -52,6 +52,11 @@ class Feature extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function meetingMinuteItems(): HasMany
+    {
+        return $this->hasMany(MeetingMinuteItem::class);
+    }
+
     public function breakdowns(): MorphMany
     {
         return $this->morphMany(TaskBreakdown::class, 'subject');

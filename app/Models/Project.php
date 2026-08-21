@@ -119,6 +119,11 @@ class Project extends Model
         return $this->hasMany(ScheduleEvent::class);
     }
 
+    public function meetingMinuteItems(): HasMany
+    {
+        return $this->hasMany(MeetingMinuteItem::class);
+    }
+
     public function conversations(): HasMany
     {
         return $this->hasMany(Conversation::class);

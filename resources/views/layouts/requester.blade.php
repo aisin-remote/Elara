@@ -48,13 +48,14 @@
                     <nav class="mt-7 space-y-1" aria-label="Main navigation">
                         @php($items = [
                             ['desk.it-timeline', 'Timeline', 'calendar', null],
+                            ...($deskWorkspace ? [['desk.schedule.index', 'Schedule', 'clock', null]] : []),
                             ['desk.index', 'My requests', 'list', null],
                             ['desk.validations.index', 'Waiting on me', 'hourglass', $waitingOnMe],
                         ])
                         @foreach ($items as [$routeName, $label, $icon, $badge])
                             @php($isCurrent = request()->routeIs($routeName)
                                 || ($routeName === 'desk.index' && request()->routeIs('desk.requests.*', 'desk.project-requests.*')))
-                            <a href="{{ route($routeName) }}" @if ($isCurrent) aria-current="page" @endif class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ $isCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
+                            <a href="{{ route($routeName, $routeName === 'desk.schedule.index' ? $deskWorkspace : []) }}" @if ($isCurrent) aria-current="page" @endif class="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {{ $isCurrent ? 'bg-orbit-50 text-orbit-800 dark:bg-orbit-950/60 dark:text-orbit-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800' }}">
                                 <x-icon :name="$icon" />{{ $label }}
                                 @if ($badge)
                                     <span class="ml-auto min-w-5 rounded-full bg-rose-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">{{ $badge }}</span>

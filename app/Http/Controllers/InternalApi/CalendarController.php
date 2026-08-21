@@ -41,7 +41,7 @@ class CalendarController extends Controller
             ->when($projectId, fn (Builder $query) => $query->where('project_id', $projectId))
             ->where('start_at', '<', $end)
             ->where('end_at', '>', $start)
-            ->with(['project', 'attendees'])
+            ->with(['project', 'attendees', 'meetingMinute'])
             ->get()
             ->map(fn (ScheduleEvent $event) => $this->scheduleEvent($request, $event));
 
@@ -95,6 +95,11 @@ class CalendarController extends Controller
             'end' => $event->end_at->toIso8601String(),
             'color' => $event->color ?? $event->project?->color ?? '#4f46e5',
             'meeting_url' => $event->meeting_url,
+            'description' => $event->description,
+            'mom_url' => $event->meetingMinute
+                ? route('app.schedule.minutes.show', [$event->workspace, $event->meetingMinute])
+                : route('app.schedule.minutes.create', [$event->workspace, 'event' => $event->public_id]),
+            'mom_label' => $event->meetingMinute ? 'Open MOM' : 'Create MOM',
             'can_update' => $request->user()->can('update', $event),
             'mutation_url' => route('internal.schedule-events.update', $event),
             'mutation' => [

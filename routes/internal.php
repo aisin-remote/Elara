@@ -15,6 +15,7 @@ use App\Http\Controllers\InternalApi\FeatureController;
 use App\Http\Controllers\InternalApi\FileController;
 use App\Http\Controllers\InternalApi\IntegrationController;
 use App\Http\Controllers\InternalApi\MasterDataController;
+use App\Http\Controllers\InternalApi\MeetingMinuteController;
 use App\Http\Controllers\InternalApi\MessageController;
 use App\Http\Controllers\InternalApi\MessageReactionController;
 use App\Http\Controllers\InternalApi\NotificationController;
@@ -75,6 +76,7 @@ Route::get('/workspaces/{workspace}/dashboard', [DashboardController::class, 'in
 Route::get('/workspaces/{workspace}/dashboard/widgets/insights', [DashboardWidgetController::class, 'insights'])->name('internal.dashboard.widgets.insights');
 Route::get('/workspaces/{workspace}/performance', [PerformanceController::class, 'index'])->name('internal.performance.index');
 Route::post('/workspaces/{workspace}/ai/descriptions', [AiDescriptionController::class, 'store'])->middleware('throttle:10,1')->name('internal.ai.descriptions.store');
+Route::post('/workspaces/{workspace}/ai/meeting-summary', [AiDescriptionController::class, 'meetingSummary'])->middleware('throttle:10,1')->name('internal.ai.meeting-summary');
 Route::post('/workspaces/{workspace}/ask-ai/messages', [AiMessageController::class, 'store'])->middleware('throttle:12,1')->name('internal.ai.messages.store');
 Route::get('/workspaces/{workspace}/reports.csv', [ReportController::class, 'csv'])->name('internal.reports.csv');
 Route::get('/workspaces/{workspace}/reports.pdf', [ReportController::class, 'pdf'])->name('internal.reports.pdf');
@@ -206,3 +208,6 @@ Route::get('/workspaces/{workspace}/calendar', [CalendarController::class, 'inde
 Route::post('/workspaces/{workspace}/schedule-events', [ScheduleEventController::class, 'store'])->name('internal.schedule-events.store');
 Route::patch('/schedule-events/{event}', [ScheduleEventController::class, 'update'])->name('internal.schedule-events.update');
 Route::delete('/schedule-events/{event}', [ScheduleEventController::class, 'destroy'])->name('internal.schedule-events.destroy');
+Route::post('/workspaces/{workspace}/meeting-minutes', [MeetingMinuteController::class, 'store'])->name('internal.meeting-minutes.store');
+Route::patch('/meeting-minutes/{meetingMinute}', [MeetingMinuteController::class, 'update'])->name('internal.meeting-minutes.update');
+Route::delete('/meeting-minutes/{meetingMinute}', [MeetingMinuteController::class, 'destroy'])->name('internal.meeting-minutes.destroy');

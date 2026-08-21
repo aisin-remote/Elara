@@ -6,6 +6,7 @@ use App\Models\AiConversation;
 use App\Models\Conversation;
 use App\Models\FeatureRequest;
 use App\Models\IntegrationConnection;
+use App\Models\MeetingMinute;
 use App\Models\Message;
 use App\Models\Project;
 use App\Models\ProjectFile;
@@ -24,6 +25,7 @@ use App\Policies\ConversationPolicy;
 use App\Policies\FeatureRequestPolicy;
 use App\Policies\FilePolicy;
 use App\Policies\IntegrationConnectionPolicy;
+use App\Policies\MeetingMinutePolicy;
 use App\Policies\MessagePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\ProjectRequestPolicy;
@@ -65,6 +67,7 @@ class AuthServiceProvider extends ServiceProvider
         Conversation::class => ConversationPolicy::class,
         IntegrationConnection::class => IntegrationConnectionPolicy::class,
         Message::class => MessagePolicy::class,
+        MeetingMinute::class => MeetingMinutePolicy::class,
     ];
 
     /**

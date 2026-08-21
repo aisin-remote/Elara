@@ -561,6 +561,87 @@ function initLazyWidgets() {
     widgets.forEach((widget) => observer.observe(widget));
 }
 
+Alpine.data('meetingMinuteForm', ({ initialItems, users, aiUrl, initialSummary = '' }) => ({
+    users,
+    aiUrl,
+    summary: initialSummary,
+    generatingSummary: false,
+    summaryError: '',
+    items: initialItems.map((item) => ({
+        key: crypto.randomUUID(),
+        content: item.content ?? '',
+        pic_name: item.pic_name ?? '',
+        pic_user_public_id: item.pic_user_public_id ?? '',
+        picOpen: false,
+        picMenuStyle: '',
+        due_date: item.due_date ?? '',
+        status: item.status ?? 'outstanding',
+    })),
+    addItem() {
+        this.items.push({
+            key: crypto.randomUUID(), content: '', pic_name: '', pic_user_public_id: '', picOpen: false, picMenuStyle: '', due_date: '', status: 'outstanding',
+        });
+    },
+    removeItem(index) {
+        if (this.items.length > 1) this.items.splice(index, 1);
+    },
+    matchingUsers(search) {
+        const needle = String(search ?? '').trim().toLowerCase();
+        return this.users.filter((user) => needle === '' || user.label.toLowerCase().includes(needle)).slice(0, 8);
+    },
+    openPic(item, input) {
+        const rect = input.getBoundingClientRect();
+        const width = Math.min(Math.max(288, rect.width), window.innerWidth - 32);
+        const left = Math.max(16, Math.min(rect.left, window.innerWidth - width - 16));
+        const below = window.innerHeight - rect.bottom;
+        const top = below >= 260 ? rect.bottom + 6 : Math.max(16, rect.top - 250);
+        item.picMenuStyle = `left:${left}px;top:${top}px;width:${width}px`;
+        item.picOpen = true;
+    },
+    editPic(item, input) {
+        const selected = this.users.find((user) => user.value === item.pic_user_public_id);
+        if (selected && selected.label !== item.pic_name) item.pic_user_public_id = '';
+        this.openPic(item, input);
+    },
+    choosePic(item, user) {
+        item.pic_name = user.label;
+        item.pic_user_public_id = user.value;
+        item.picOpen = false;
+    },
+    useFreeText(item) {
+        item.pic_user_public_id = '';
+        item.picOpen = false;
+    },
+    async generateSummary() {
+        const title = String(this.$root.elements.namedItem('title')?.value ?? '').trim();
+        const items = this.items.filter((item) => item.content.trim() !== '').map((item) => ({
+            content: item.content,
+            pic_name: item.pic_name || null,
+            due_date: item.due_date || null,
+            status: item.status,
+        }));
+
+        if (! title || items.length === 0) {
+            this.summaryError = 'Enter the meeting title and at least one action item first.';
+            return;
+        }
+
+        this.generatingSummary = true;
+        this.summaryError = '';
+        try {
+            const payload = await apiRequest(this.aiUrl, {
+                method: 'POST',
+                body: JSON.stringify({ title, items }),
+            });
+            this.summary = payload.data.summary;
+        } catch (error) {
+            this.summaryError = error.message;
+        } finally {
+            this.generatingSummary = false;
+        }
+    },
+}));
+
 Alpine.start();
 initCalendars();
 initSchedules();

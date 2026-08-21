@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\MeetingMinute;
 use App\Models\ProjectFile;
 use App\Models\User;
 use App\Models\Workspace;
@@ -43,9 +44,13 @@ class FilePolicy
 
     public function update(User $user, ProjectFile $file): bool
     {
-        // Only the person who attached it may remove it, and only while the request is still
-        // open. Evidence a decision was made on should not vanish afterwards.
+        // MOM editors manage their shared documents. Request evidence stays uploader-only
+        // and cannot disappear after a decision has been made on it.
         if ($file->attachable) {
+            if ($file->attachable instanceof MeetingMinute) {
+                return $user->can('update', $file->attachable);
+            }
+
             return $file->uploader_id === $user->id
                 && $file->attachable->status->isOpen()
                 && $user->can('view', $file->attachable);

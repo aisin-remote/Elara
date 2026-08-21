@@ -4,8 +4,10 @@ namespace App\Http\Controllers\InternalApi;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ai\DraftDescriptionRequest;
+use App\Http\Requests\Ai\DraftMeetingSummaryRequest;
 use App\Models\Workspace;
 use App\Services\Ai\OpenAiDescriptionDraft;
+use App\Services\Ai\OpenAiMeetingSummary;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
@@ -44,6 +46,32 @@ class AiDescriptionController extends Controller
         return response()->json([
             'message' => 'Description generated.',
             'data' => ['description' => $description],
+        ]);
+    }
+
+    public function meetingSummary(
+        DraftMeetingSummaryRequest $request,
+        Workspace $workspace,
+        OpenAiMeetingSummary $draft,
+    ): JsonResponse {
+        try {
+            $summary = $draft->generate(
+                $workspace,
+                $request->user(),
+                $request->string('title')->toString(),
+                $request->validated('items'),
+            );
+        } catch (RuntimeException $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'AI could not summarize the meeting right now. Please try again.',
+            ], 503);
+        }
+
+        return response()->json([
+            'message' => 'Meeting summary generated.',
+            'data' => ['summary' => $summary],
         ]);
     }
 }
