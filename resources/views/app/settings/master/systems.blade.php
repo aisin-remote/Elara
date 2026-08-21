@@ -14,6 +14,17 @@
 
     @php
         $departmentNames = $departments->pluck('name', 'id');
+        $departmentOptions = $departments->map(function ($department) use ($departmentPics) {
+            $mapping = $departmentPics->get($department->id);
+            $pic = $mapping?->pic?->name;
+
+            return [
+                'value' => $department->id,
+                'label' => $department->name
+                    .($department->code ? ' ('.$department->code.')' : '')
+                    .' — '.($pic ? 'PIC: '.$pic : 'PIC not set'),
+            ];
+        })->values();
         $colorPalette = [
             '#2eb0fb', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899',
             '#14b8a6', '#6366f1', '#84cc16', '#f97316', '#06b6d4', '#a855f7',
@@ -33,7 +44,7 @@
         <div class="flex flex-col gap-3 border-b border-slate-200 p-5 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h3 id="systems-title" class="text-lg font-bold">{{ $systems->total() }} {{ \Illuminate\Support\Str::plural('system', $systems->total()) }}</h3>
-                <p class="mt-1 text-xs text-slate-500">Feature requests are raised against these. Each needs a PIC before it can receive one.</p>
+                <p class="mt-1 text-xs text-slate-500">Choose the departments a system serves; their default PIC is applied automatically.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <form method="GET" class="flex gap-2">
@@ -144,55 +155,31 @@
                 </x-select>
                 <x-field-error name="plant" />
             </div>
-            @php($picRows = max(1, count(old('pics', [[]]))))
-            <div x-data="{ rows: {{ $picRows }} }">
-                <x-label>PIC per department</x-label>
+            @php($departmentRows = max(1, count(old('departments', ['']))))
+            <div x-data="{ rows: {{ $departmentRows }} }">
+                <x-label>Departments served</x-label>
                 @if ($departments->isEmpty())
                     <p class="mt-1 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
                         The organisation directory is unreachable, so departments cannot be listed.
-                        You can still add the system with one PIC and name the rest later.
+                        Add the system after the PostgreSQL connection is restored.
                     </p>
-                    <div class="mt-2">
-                        <x-searchable-select
-                            id="new-pic"
-                            name="pics[0][pic_public_id]"
-                            :selected="old('pics.0.pic_public_id')"
-                            placeholder="Choose the person who knows it best"
-                            search-placeholder="Search people…"
-                            :options="$candidates->map(fn ($c) => ['value' => $c->user->public_id, 'label' => $c->user->name])->values()" />
-                    </div>
                 @else
-                    <p class="mt-1 text-xs text-slate-500">A system can serve several departments, each with its own PIC. Add them all here — no need to save first.</p>
+                    <p class="mt-1 text-xs text-slate-500">The selected option shows the PIC configured under Master data → Departments.</p>
                     @for ($row = 0; $row < 5; $row++)
-                        <div class="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" @if ($row > 0) x-cloak x-show="rows > {{ $row }}" @endif>
-                            <div class="min-w-0">
-                                <x-searchable-select
-                                    id="new-pic-department-{{ $row }}"
-                                    name="pics[{{ $row }}][organization_department_id]"
-                                    :selected="old('pics.'.$row.'.organization_department_id')"
-                                    empty-label="No department"
-                                    search-placeholder="Search departments…"
-                                    :options="$departments->map(fn ($d) => [
-                                        'value' => $d->id,
-                                        'label' => $d->name.($d->code ? ' ('.$d->code.')' : ''),
-                                    ])" />
-                                <x-field-error name="pics.{{ $row }}.organization_department_id" />
-                            </div>
-                            <div class="min-w-0">
-                                <x-searchable-select
-                                    id="new-pic-{{ $row }}"
-                                    name="pics[{{ $row }}][pic_public_id]"
-                                    :selected="old('pics.'.$row.'.pic_public_id')"
-                                    placeholder="Choose a PIC"
-                                    search-placeholder="Search people…"
-                                    :options="$candidates->map(fn ($c) => ['value' => $c->user->public_id, 'label' => $c->user->name])->values()" />
-                                <x-field-error name="pics.{{ $row }}.pic_public_id" />
-                            </div>
+                        <div class="mt-2" @if ($row > 0) x-cloak x-show="rows > {{ $row }}" @endif>
+                            <x-searchable-select
+                                id="new-system-department-{{ $row }}"
+                                name="departments[{{ $row }}]"
+                                :selected="old('departments.'.$row)"
+                                empty-label="No department"
+                                search-placeholder="Search departments…"
+                                :options="$departmentOptions" />
+                            <x-field-error name="departments.{{ $row }}" />
                         </div>
                     @endfor
                     <x-button type="button" variant="secondary" class="mt-2 w-full" x-show="rows < 5" x-on:click="rows++">Add another department</x-button>
                 @endif
-                <x-field-error name="pics" />
+                <x-field-error name="departments" />
             </div>
             <div
                 x-data="systemColorPicker({
@@ -265,14 +252,14 @@
                         <div><x-label for="description-{{ $system->public_id }}">Description</x-label><x-textarea id="description-{{ $system->public_id }}" name="description" rows="3">{{ $editingThis ? old('description', $system->description) : $system->description }}</x-textarea></div>
                         {{-- Inline form only: a block-form php directive here would pair with the
                              inline one further up the file and swallow everything between them. --}}
-                        @php($existingPics = $assignments->map(fn ($a) => ['department' => $a->pivot->organization_department_id, 'pic' => $a->public_id])->values())
+                        @php($existingDepartments = $assignments->pluck('pivot.organization_department_id')->values())
                         {{-- old() belongs to the system whose save was rejected; every other modal
                              on the page keeps showing what the database holds. --}}
-                        @php($picValue = fn (string $key, $default) => $editingThis ? old($key, $default) : $default)
-                        @php($picRows = max(1, $editingThis && is_array(old('pics')) ? count(old('pics')) : $existingPics->count()))
+                        @php($departmentValue = fn (string $key, $default) => $editingThis ? old($key, $default) : $default)
+                        @php($departmentRows = max(1, $editingThis && is_array(old('departments')) ? count(old('departments')) : $existingDepartments->count()))
 
-                        <div x-data="{ rows: {{ $picRows }} }">
-                            <x-label>PIC per department</x-label>
+                        <div x-data="{ rows: {{ $departmentRows }} }">
+                            <x-label>Departments served</x-label>
 
                             @if ($editingThis)
                                 <div class="mt-2"><x-form-errors :except="['name', 'color', 'plant', 'description']" /></div>
@@ -283,39 +270,23 @@
                                     The organisation directory is unreachable, so departments cannot be listed. Existing PICs are unaffected.
                                 </p>
                             @else
-                                <p class="mt-1 text-xs text-slate-500">Feature requests reach the PIC of the department they come from. Set a row back to “No PIC” to drop it — everything saves with the button below.</p>
+                                <p class="mt-1 text-xs text-slate-500">PIC names come from Master data → Departments and cannot be overridden per system.</p>
                                 @for ($row = 0; $row < 5; $row++)
-                                    <div class="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" @if ($row > 0) x-cloak x-show="rows > {{ $row }}" @endif>
-                                        <div class="min-w-0">
-                                            <x-searchable-select
-                                                :id="'pic-department-'.$system->public_id.'-'.$row"
-                                                name="pics[{{ $row }}][organization_department_id]"
-                                                :selected="$picValue('pics.'.$row.'.organization_department_id', data_get($existingPics->get($row), 'department'))"
-                                                empty-label="No department"
-                                                search-placeholder="Search departments…"
-                                                :options="$departments->map(fn ($d) => [
-                                                    'value' => $d->id,
-                                                    'label' => $d->name.($d->code ? ' ('.$d->code.')' : ''),
-                                                ])" />
-                                            <x-field-error name="pics.{{ $row }}.organization_department_id" />
-                                        </div>
-                                        <div class="min-w-0">
-                                            <x-searchable-select
-                                                :id="'pic-person-'.$system->public_id.'-'.$row"
-                                                name="pics[{{ $row }}][pic_public_id]"
-                                                :selected="$picValue('pics.'.$row.'.pic_public_id', data_get($existingPics->get($row), 'pic'))"
-                                                empty-label="No PIC"
-                                                placeholder="Choose a PIC"
-                                                search-placeholder="Search people…"
-                                                :options="$candidates->map(fn ($c) => ['value' => $c->user->public_id, 'label' => $c->user->name])->values()" />
-                                            <x-field-error name="pics.{{ $row }}.pic_public_id" />
-                                        </div>
+                                    <div class="mt-2" @if ($row > 0) x-cloak x-show="rows > {{ $row }}" @endif>
+                                        <x-searchable-select
+                                            :id="'system-department-'.$system->public_id.'-'.$row"
+                                            name="departments[{{ $row }}]"
+                                            :selected="$departmentValue('departments.'.$row, $existingDepartments->get($row))"
+                                            empty-label="No department"
+                                            search-placeholder="Search departments…"
+                                            :options="$departmentOptions" />
+                                        <x-field-error name="departments.{{ $row }}" />
                                     </div>
                                 @endfor
-                                <x-button type="button" variant="secondary" class="mt-2 w-full" x-show="rows < 5" x-on:click="rows++">Add PIC</x-button>
+                                <x-button type="button" variant="secondary" class="mt-2 w-full" x-show="rows < 5" x-on:click="rows++">Add department</x-button>
                             @endif
 
-                            <x-field-error name="pics" />
+                            <x-field-error name="departments" />
                         </div>
 
                         <div class="flex justify-end gap-3">

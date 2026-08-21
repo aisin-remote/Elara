@@ -51,4 +51,5 @@
             </dl>
         </section>
     </div>
+    <x-discussion :subject="$task" />
 @endsection

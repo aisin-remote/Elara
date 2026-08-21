@@ -2,6 +2,7 @@
     // Holidays are scheduler-managed. Help articles, capacity, and request rules stay hidden for now.
     $masterLinks = [
         ['app.settings.master', 'Overview'],
+        ['app.settings.master.departments', 'Departments'],
         ['app.settings.master.systems', 'Systems'],
         ['app.settings.master.categories', 'Task categories'],
         ['app.settings.master.status-templates', 'Workflow'],

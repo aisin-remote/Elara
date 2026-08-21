@@ -7,13 +7,14 @@ use App\Actions\Validation\RespondToCheckpoint;
 use App\Enums\CheckpointStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ValidationCheckpoint;
+use App\Services\MeetingMinuteActionItems;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ValidationController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, MeetingMinuteActionItems $meetingMinuteActionItems): View
     {
         $checkpoints = ValidationCheckpoint::query()
             ->visibleTo($request->user())
@@ -25,6 +26,7 @@ class ValidationController extends Controller
         return view('desk.validations.index', [
             'open' => $checkpoints->where('status', CheckpointStatus::OPEN),
             'answered' => $checkpoints->where('status', '!=', CheckpointStatus::OPEN),
+            'momActionItems' => $meetingMinuteActionItems->forUser($request->user(), requesterWorkspace: $request->user()->workspaceMemberships()->active()->with('workspace')->first()?->workspace, limit: 20),
         ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\MeetingMinutePublicationStatus;
 use App\Enums\WorkspaceMemberStatus;
 use App\Support\GeneratesPublicId;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,9 +20,15 @@ class MeetingMinute extends Model
 
     protected $fillable = [
         'workspace_id', 'creator_id', 'schedule_event_id', 'project_id', 'title', 'meeting_at', 'summary',
+        'publication_status', 'published_at', 'published_by', 'locked_at', 'locked_by',
     ];
 
-    protected $casts = ['meeting_at' => 'datetime'];
+    protected $casts = [
+        'meeting_at' => 'datetime',
+        'publication_status' => MeetingMinutePublicationStatus::class,
+        'published_at' => 'datetime',
+        'locked_at' => 'datetime',
+    ];
 
     public function workspace(): BelongsTo
     {
@@ -53,11 +60,41 @@ class MeetingMinute extends Model
         return $this->morphMany(ProjectFile::class, 'attachable');
     }
 
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(MeetingMinuteRevision::class)->latest('revision');
+    }
+
+    public function discussionComments(): MorphMany
+    {
+        return $this->morphMany(DiscussionComment::class, 'subject');
+    }
+
+    public function publishedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'published_by');
+    }
+
+    public function lockedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'locked_by');
+    }
+
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        return $query->whereHas('workspace.memberships', fn (Builder $membership) => $membership
-            ->where('user_id', $user->id)
-            ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+        return $query->where(function (Builder $visible) use ($user): void {
+            $visible->where('creator_id', $user->id)
+                ->orWhereHas('scheduleEvent.attendees', fn (Builder $attendees) => $attendees->where('users.id', $user->id))
+                ->orWhereHas('items', fn (Builder $items) => $items->where('pic_user_id', $user->id))
+                ->orWhereHas('workspace.memberships', fn (Builder $membership) => $membership
+                    ->where('user_id', $user->id)
+                    ->where('status', WorkspaceMemberStatus::ACTIVE->value));
+        });
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->publication_status === MeetingMinutePublicationStatus::LOCKED;
     }
 
     public function resolveRouteBindingQuery($query, $value, $field = null): Builder

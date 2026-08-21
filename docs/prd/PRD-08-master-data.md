@@ -9,6 +9,10 @@ replacement, and `tests/Feature/Workspace/MasterDataTest.php`.
 
 Shipped in 10: **Systems**, once `projects.type` existed for its rows to live in.
 
+Updated 2026-08-21: **Departments** reads the live department catalog from the organization
+PostgreSQL connection and stores only a workspace-scoped default PIC. System forms select a
+department and show its resolved PIC instead of asking for the same person repeatedly.
+
 Shipped in 13 (the deferred 9b): **member capacity, capacity exceptions, holidays, and request
 rules**, built beside the `CapacityPlanner` that reads them rather than ahead of it — a form
 for data nothing reads yet is a guess at its shape. The rules screen edits the three tuning
@@ -60,7 +64,11 @@ status.
 
 ### The masters
 
-**Systems** (PRD-02) — name, description, colour, PIC, additional maintainers, status. This is
+**Departments** — read-only identity (id, code, and name) from PostgreSQL plus one editable
+default IT PIC stored in Orbitra. Updating a PIC synchronizes existing systems already linked
+to that department. Orbitra never copies or owns the corporate department catalog.
+
+**Systems** (PRD-02) — name, description, colour, departments served, derived PICs, and status. This is
 the "master existing project" the flow needs: the catalog a feature request picks from.
 Creating one here creates a `projects` row with `type = 'system'`.
 

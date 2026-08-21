@@ -4,6 +4,7 @@ namespace Tests\Feature\Schedule;
 
 use App\Actions\Project\CreateProject;
 use App\Actions\Workspace\CreateWorkspace;
+use App\Enums\MeetingMinutePublicationStatus;
 use App\Enums\ProjectStatus;
 use App\Enums\ProjectType;
 use App\Enums\WorkspaceMemberStatus;
@@ -203,6 +204,31 @@ class MeetingMinuteFlowTest extends TestCase
         $outsider = User::factory()->create();
         $this->actingAs($outsider)->get(route('app.schedule.minutes.show', [$workspace, $meetingMinute]))->assertNotFound();
         $this->actingAs($outsider)->get(route('internal.files.download', $file))->assertNotFound();
+    }
+
+    public function test_published_mom_tracks_revisions_and_can_be_locked_while_pic_updates_follow_up(): void
+    {
+        [$owner, $workspace] = $this->context();
+
+        $this->actingAs($owner)->post(route('internal.meeting-minutes.store', $workspace), [
+            'title' => 'Controlled MOM', 'meeting_at' => '2026-08-20 10:00:00',
+            'publication_status' => 'published',
+            'items' => [[...$this->item('Close the finding', $owner->name), 'pic_user_public_id' => $owner->public_id]],
+        ])->assertSessionHasNoErrors();
+
+        $minute = MeetingMinute::firstOrFail();
+        $item = $minute->items()->firstOrFail();
+        $this->assertSame(MeetingMinutePublicationStatus::PUBLISHED, $minute->publication_status);
+        $this->assertDatabaseCount('meeting_minute_revisions', 1);
+
+        $this->actingAs($owner)->patch(route('internal.meeting-minutes.publication', $minute), ['publication_status' => 'locked'])
+            ->assertRedirect();
+        $this->assertSame(MeetingMinutePublicationStatus::LOCKED, $minute->fresh()->publication_status);
+        $this->assertDatabaseCount('meeting_minute_revisions', 2);
+
+        $this->actingAs($owner)->patchJson(route('internal.meeting-minutes.update', $minute), [])->assertForbidden();
+        $this->actingAs($owner)->patch(route('internal.meeting-minute-items.update', $item), ['status' => 'done'])->assertRedirect();
+        $this->assertSame('done', $item->fresh()->status->value);
     }
 
     private function context(): array

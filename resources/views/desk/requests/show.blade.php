@@ -81,4 +81,5 @@
         :files="$request->attachments"
         :can-upload="$request->requester_id === auth()->id() && $request->status->isOpen()"
         :upload-url="route('internal.requests.attachments.store', $request)" />
+    <x-discussion :subject="$request" />
 @endsection

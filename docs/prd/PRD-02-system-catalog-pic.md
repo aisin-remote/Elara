@@ -7,6 +7,11 @@ Shipped: `projects.type` with `delivery()`/`systems()` scopes, `features` table,
 `tasks.feature_id`, the Feature menu, the Systems master with PIC rules, the full
 project-surface audit, and `tests/Feature/Project/SystemCatalogTest.php`.
 
+Updated 2026-08-21: PIC ownership is configured once per PostgreSQL department under
+**Master data → Departments**. A system now selects departments only; Orbitra resolves and
+applies each department's default PIC server-side. Changing the department master also
+synchronizes existing systems that already serve that department.
+
 Two decisions worth carrying forward. Surfaces that list *work* rather than *projects* — the
 Task List and Performance filters — show both types under optgroups instead of hiding systems,
 because system tasks appear in those lists either way and a filter that cannot name them leaves
@@ -57,12 +62,14 @@ in a handful of query builders, not a schema fork.
 
 ### PIC
 
-`project_members` already carries a role (`manager` | `member` | `viewer`). A system's PIC is
-its member with `role = manager`. Multiple managers are allowed; the first by `id` is the
-primary PIC for assignment purposes, and PRD-05 walks the rest in order.
+The external PostgreSQL database remains the source of department IDs, codes, and names.
+Orbitra stores only the workspace-scoped `department → default IT PIC` mapping. A system's
+department selection copies that mapping into `project_members` as a manager assignment so
+existing task, policy, and team behavior remains unchanged.
 
-A dedicated `is_pic` flag was considered and rejected: `manager` on a system already means
-"the person accountable for this system", and a second overlapping concept invites drift.
+A dedicated `is_pic` flag remains unnecessary: `manager` on a system still means "the person
+accountable for this system". The department master prevents admins from repeatedly choosing
+or accidentally assigning a different person on each system.
 
 ## Scope
 
@@ -106,8 +113,8 @@ timeline tabs for a system are the existing project views scoped to `type = 'sys
 ### Catalog administration
 
 Systems are created and maintained by users with full Settings access in
-**Settings → Master data → Systems** (PRD-08): name, description, colour, PIC, and optional
-additional maintainers. A system cannot
+**Settings → Master data → Systems** (PRD-08): name, description, colour, and the departments
+served. Their PICs are displayed from the Department master and cannot be overridden here. A system cannot
 be deleted while it has active features; it can be archived, which hides it from the request
 form while leaving its history intact.
 
@@ -125,6 +132,7 @@ require editing the database — that is the whole point of PRD-08.
   history intact.
 - A feature request cannot be submitted against a system with no PIC — the form blocks it and
   says why.
+- A department cannot be selected on a new system until its default PIC has been configured.
 - Existing projects are migrated with `type = 'project'`; no existing query changes meaning.
 
 ## Out of scope

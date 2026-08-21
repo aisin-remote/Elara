@@ -16,12 +16,16 @@ class MeetingMinuteItem extends Model
     protected $fillable = [
         'meeting_minute_id', 'content', 'pic_name', 'pic_user_id', 'related_type', 'project_id',
         'feature_id', 'related_name', 'due_date', 'status', 'position',
+        'due_reminded_at', 'overdue_reminded_at', 'tba_reminded_at',
     ];
 
     protected $casts = [
         'related_type' => MeetingMinuteRelation::class,
         'status' => MeetingMinuteStatus::class,
         'due_date' => 'date',
+        'due_reminded_at' => 'datetime',
+        'overdue_reminded_at' => 'datetime',
+        'tba_reminded_at' => 'datetime',
     ];
 
     public function meetingMinute(): BelongsTo

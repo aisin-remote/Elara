@@ -207,29 +207,19 @@
     </div>
 
     <div class="mt-5 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-        <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="recent-activity-title">
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="mom-follow-ups-title">
             <div class="flex items-center justify-between gap-3">
-                <h3 id="recent-activity-title" class="text-lg font-bold">Recent activity</h3>
-                <a href="{{ route('app.workspaces.team', $workspace) }}" class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Open team</a>
+                <div><h3 id="mom-follow-ups-title" class="text-lg font-bold">MOM follow-ups</h3><p class="mt-1 text-xs text-slate-500">Action items assigned to you</p></div>
+                <a href="{{ route('app.schedule.minutes.index', $workspace) }}" class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Open MOM</a>
             </div>
-            <ol class="mt-5 space-y-1">
-                @forelse($dashboard['recent_activity'] as $activity)
-                    <li class="relative flex gap-3 rounded-xl p-2 transition hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                        <x-avatar :src="$activity['actor_has_avatar'] ? route('internal.users.avatar', $activity['actor_public_id']) : null" :name="$activity['actor']" size="size-9" />
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm"><span class="font-semibold">{{ $activity['actor'] }}</span> <span class="text-slate-600 dark:text-slate-300">{{ $activity['action'] }}</span></p>
-                            @if ($activity['subject'])
-                                <p class="truncate text-sm font-medium text-orbit-700 dark:text-orbit-300">{{ $activity['subject']['label'] }}</p>
-                            @endif
-                            <time datetime="{{ $activity['occurred_at'] }}" class="mt-1 block text-xs text-slate-400">{{ $activity['relative'] }}</time>
-                        </div>
-                        @if ($activity['subject'])
-                            {{-- Stretched link so the whole row is clickable without nesting interactive elements. --}}
-                            <a href="{{ $activity['subject']['url'] }}" class="absolute inset-0 rounded-xl"><span class="sr-only">Open {{ $activity['subject']['label'] }}</span></a>
-                        @endif
+            <ol class="mt-4 max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                @forelse($dashboard['mom_action_items']['items'] as $item)
+                    <li class="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                        <div class="flex items-start justify-between gap-3"><a href="{{ $item['url'] }}" class="min-w-0 flex-1"><span class="block truncate text-sm font-bold hover:text-orbit-700 dark:hover:text-orbit-300">{{ $item['content'] }}</span><span class="mt-1 block truncate text-xs text-slate-500">{{ $item['minute'] }} · {{ $item['project'] }}</span></a><span class="shrink-0 text-xs font-bold {{ $item['overdue'] ? 'text-rose-600' : 'text-slate-500' }}">{{ $item['due'] }}</span></div>
+                        <form method="POST" action="{{ route('internal.meeting-minute-items.update', $item['public_id']) }}" class="mt-2 flex items-center gap-2">@csrf @method('PATCH')<select name="status" class="min-w-0 flex-1 rounded-lg border-slate-300 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-950">@foreach(App\Enums\MeetingMinuteStatus::cases() as $status)<option value="{{ $status->value }}" @selected($item['status'] === $status)>{{ $status->label() }}</option>@endforeach</select><button class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Save</button></form>
                     </li>
                 @empty
-                    <li><x-empty-state icon="clock" title="Nothing has happened yet" description="Activity from projects, tasks, and schedule events you can see will appear here." class="p-8" /></li>
+                    <li><x-empty-state icon="check" title="No MOM follow-ups" description="Published action items assigned to you will appear here." class="p-8" /></li>
                 @endforelse
             </ol>
         </section>

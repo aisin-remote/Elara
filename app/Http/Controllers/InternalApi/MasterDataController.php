@@ -4,15 +4,17 @@ namespace App\Http\Controllers\InternalApi;
 
 use App\Actions\Project\AssignSystemPic;
 use App\Actions\Project\CreateSystem;
+use App\Actions\Project\SetDepartmentPic;
 use App\Http\Requests\Master\ArchiveTaskCategoryRequest;
-use App\Http\Requests\Master\AssignSystemPicRequest;
 use App\Http\Requests\Master\MasterActionRequest;
+use App\Http\Requests\Master\SaveDepartmentPicRequest;
 use App\Http\Requests\Master\StoreSupportArticleRequest;
 use App\Http\Requests\Master\StoreSystemRequest;
 use App\Http\Requests\Master\StoreTaskStatusTemplateRequest;
 use App\Http\Requests\Master\UpdateTaskCategoryRequest;
 use App\Models\ActivityLog;
 use App\Models\CapacityException;
+use App\Models\DepartmentPic;
 use App\Models\MemberCapacity;
 use App\Models\Project;
 use App\Models\SupportArticle;
@@ -215,30 +217,31 @@ class MasterDataController extends Controller
 
     public function storeSystem(StoreSystemRequest $request, Workspace $workspace, CreateSystem $action, AssignSystemPic $assign): JsonResponse|RedirectResponse
     {
-        $rows = collect($request->validated('pics'));
+        $departmentIds = collect($request->validated('departments'))->map(fn ($id) => (int) $id);
+        $mappings = DepartmentPic::where('workspace_id', $workspace->id)
+            ->whereIn('organization_department_id', $departmentIds)
+            ->with('pic')
+            ->get()
+            ->keyBy('organization_department_id');
+        $firstDepartmentId = $departmentIds->shift();
+        $first = $mappings->get($firstDepartmentId);
 
-        // The first row creates the system with its PIC; the rest are assigned onto it. Both
-        // paths end in the same place, so naming three departments here and naming them one at
-        // a time afterwards produce the same system.
-        $first = $rows->shift();
-        $firstDepartmentId = $first['organization_department_id'] ?? null;
-
-        $system = DB::transaction(function () use ($request, $workspace, $action, $assign, $rows, $first, $firstDepartmentId): Project {
+        $system = DB::transaction(function () use ($request, $workspace, $action, $assign, $departmentIds, $first, $firstDepartmentId, $mappings): Project {
             $system = $action->handle($workspace, $request->user(), [
                 ...$request->safe()->only(['name', 'description', 'color', 'plant']),
                 'organization_department_id' => $firstDepartmentId,
-                'organization_department_code' => $this->departmentCode($firstDepartmentId),
-                'pic_id' => $this->picByPublicId($first)->id,
+                'organization_department_code' => $first->organization_department_code,
+                'pic_id' => $first->pic_id,
             ]);
 
-            foreach ($rows as $row) {
-                $departmentId = (int) $row['organization_department_id'];
+            foreach ($departmentIds as $departmentId) {
+                $mapping = $mappings->get($departmentId);
 
                 $assign->assign(
                     $system,
-                    $this->picByPublicId($row),
+                    $mapping->pic,
                     $departmentId,
-                    $this->departmentCode($departmentId),
+                    $mapping->organization_department_code,
                     $request->user(),
                 );
             }
@@ -249,12 +252,6 @@ class MasterDataController extends Controller
         return $this->success($request, ['public_id' => $system->public_id], 'System created.', back()->getTargetUrl(), 201);
     }
 
-    /** @param array<string, mixed> $row */
-    private function picByPublicId(array $row): User
-    {
-        return User::where('public_id', $row['pic_public_id'])->firstOrFail();
-    }
-
     public function updateSystem(StoreSystemRequest $request, Project $system, AssignSystemPic $assign): JsonResponse|RedirectResponse
     {
         abort_unless($system->isSystem(), 404);
@@ -262,10 +259,8 @@ class MasterDataController extends Controller
         DB::transaction(function () use ($request, $system, $assign): void {
             $system->update($request->safe()->only(['name', 'description', 'color', 'plant']));
 
-            // The form posts every PIC row it shows, so the list it sends is the list the system
-            // should end up with: departments missing from it are the ones that lost their PIC.
-            if ($request->has('pics')) {
-                $this->syncSystemPics($request, $system, $assign);
+            if ($request->has('departments')) {
+                $this->syncSystemDepartments($request, $system, $assign);
             }
 
             ActivityLog::record($system->workspace, $system, 'system.updated', $request->user());
@@ -274,13 +269,29 @@ class MasterDataController extends Controller
         return $this->success($request, ['public_id' => $system->public_id], 'System updated.', back()->getTargetUrl());
     }
 
-    /** Brings the system's department PICs in line with the rows the edit form posted. */
-    private function syncSystemPics(StoreSystemRequest $request, Project $system, AssignSystemPic $assign): void
+    /** Apply each department's centrally configured PIC to this system. */
+    private function syncSystemDepartments(StoreSystemRequest $request, Project $system, AssignSystemPic $assign): void
     {
-        $rows = collect($request->validated('pics') ?? [])
-            ->filter(fn (array $row) => filled($row['organization_department_id'] ?? null));
+        $keep = collect($request->validated('departments') ?? [])->map(fn ($id) => (int) $id);
+        $mappings = DepartmentPic::where('workspace_id', $system->workspace_id)
+            ->whereIn('organization_department_id', $keep)
+            ->with('pic')
+            ->get()
+            ->keyBy('organization_department_id');
 
-        $keep = $rows->pluck('organization_department_id')->map(fn ($id) => (int) $id);
+        // Assign first so replacing the only department never temporarily leaves the system
+        // without a manager and trips the last-PIC safety rule.
+        foreach ($keep as $departmentId) {
+            $mapping = $mappings->get($departmentId);
+
+            $assign->assign(
+                $system,
+                $mapping->pic,
+                $departmentId,
+                $mapping->organization_department_code,
+                $request->user(),
+            );
+        }
 
         foreach ($system->picAssignments() as $current) {
             $departmentId = (int) ($current->pivot->organization_department_id ?? 0);
@@ -289,58 +300,32 @@ class MasterDataController extends Controller
                 $assign->remove($system, $departmentId, $request->user());
             }
         }
-
-        foreach ($rows as $row) {
-            $departmentId = (int) $row['organization_department_id'];
-
-            $assign->assign(
-                $system,
-                $this->picByPublicId($row),
-                $departmentId,
-                $this->departmentCode($departmentId),
-                $request->user(),
-            );
-        }
     }
 
-    /**
-     * Names the PIC for one department of a system. Assigning again replaces whoever held that
-     * department, so the screen never has to ask which of two people is really responsible.
-     */
-    public function assignSystemPic(AssignSystemPicRequest $request, Project $system, AssignSystemPic $action): JsonResponse|RedirectResponse
-    {
-        abort_unless($system->isSystem(), 404);
+    public function saveDepartmentPic(
+        SaveDepartmentPicRequest $request,
+        Workspace $workspace,
+        OrganizationDirectory $organization,
+        SetDepartmentPic $action,
+    ): JsonResponse|RedirectResponse {
+        $departmentId = $request->integer('organization_department_id');
+        $department = $organization->departments()->firstWhere('id', $departmentId);
+
+        if (! $department) {
+            throw ValidationException::withMessages([
+                'organization_department_id' => 'The organisation directory is unavailable or that department no longer exists.',
+            ]);
+        }
 
         $pic = User::where('public_id', $request->string('pic_public_id'))->firstOrFail();
-        $departmentId = $request->integer('organization_department_id');
+        $mapping = $action->handle($workspace, $department, $pic, $request->user());
 
-        $action->assign($system, $pic, $departmentId, $this->departmentCode($departmentId), $request->user());
-
-        return $this->success($request, ['public_id' => $system->public_id], 'PIC assigned.', back()->getTargetUrl());
-    }
-
-    /**
-     * Removal names only the department, so it authorises like the other master actions and
-     * validates nothing further: an id no PIC holds is refused by the Action itself.
-     */
-    public function removeSystemPic(MasterActionRequest $request, Project $system, AssignSystemPic $action): JsonResponse|RedirectResponse
-    {
-        abort_unless($system->isSystem(), 404);
-
-        $action->remove($system, $request->integer('organization_department_id'), $request->user());
-
-        return $this->success($request, ['public_id' => $system->public_id], 'PIC removed.', back()->getTargetUrl());
-    }
-
-    /**
-     * The code looked up beside the id. Storing only the id would make every screen depend on
-     * the external directory being up just to print a label.
-     */
-    private function departmentCode(?int $id): ?string
-    {
-        return $id
-            ? app(OrganizationDirectory::class)->departments()->firstWhere('id', $id)?->code
-            : null;
+        return $this->success(
+            $request,
+            ['public_id' => $mapping->public_id],
+            'Department PIC saved and existing systems updated.',
+            back()->getTargetUrl(),
+        );
     }
 
     public function archiveSystem(MasterActionRequest $request, Project $system): JsonResponse|RedirectResponse

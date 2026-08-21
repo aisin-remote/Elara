@@ -11,6 +11,7 @@ use App\Http\Controllers\InternalApi\ConversationMessageController;
 use App\Http\Controllers\InternalApi\ConversationReadController;
 use App\Http\Controllers\InternalApi\DashboardController;
 use App\Http\Controllers\InternalApi\DashboardWidgetController;
+use App\Http\Controllers\InternalApi\DiscussionController;
 use App\Http\Controllers\InternalApi\FeatureController;
 use App\Http\Controllers\InternalApi\FileController;
 use App\Http\Controllers\InternalApi\IntegrationController;
@@ -172,12 +173,10 @@ Route::delete('/capacity-exceptions/{exception}', [MasterDataController::class, 
 Route::post('/workspaces/{workspace}/holidays', [MasterDataController::class, 'storeHoliday'])->name('internal.master.holidays.store');
 Route::delete('/holidays/{holiday}', [MasterDataController::class, 'destroyHoliday'])->name('internal.master.holidays.destroy');
 Route::post('/workspaces/{workspace}/request-rules', [MasterDataController::class, 'saveRules'])->name('internal.master.rules.save');
+Route::post('/workspaces/{workspace}/department-pics', [MasterDataController::class, 'saveDepartmentPic'])->name('internal.master.departments.pic.save');
 Route::post('/workspaces/{workspace}/systems', [MasterDataController::class, 'storeSystem'])->name('internal.master.systems.store');
 Route::patch('/systems/{system}', [MasterDataController::class, 'updateSystem'])->name('internal.master.systems.update');
 Route::post('/systems/{system}/archive', [MasterDataController::class, 'archiveSystem'])->name('internal.master.systems.archive');
-// One PIC per department, keyed by the department: a system serves several, each with its own.
-Route::post('/systems/{system}/pics', [MasterDataController::class, 'assignSystemPic'])->name('internal.master.systems.pics.assign');
-Route::delete('/systems/{system}/pics', [MasterDataController::class, 'removeSystemPic'])->name('internal.master.systems.pics.remove');
 Route::post('/support-articles', [MasterDataController::class, 'storeArticle'])->name('internal.master.articles.store');
 Route::patch('/support-articles/{article}', [MasterDataController::class, 'updateArticle'])->name('internal.master.articles.update');
 Route::post('/support-articles/{article}/archive', [MasterDataController::class, 'archiveArticle'])->name('internal.master.articles.archive');
@@ -210,4 +209,11 @@ Route::patch('/schedule-events/{event}', [ScheduleEventController::class, 'updat
 Route::delete('/schedule-events/{event}', [ScheduleEventController::class, 'destroy'])->name('internal.schedule-events.destroy');
 Route::post('/workspaces/{workspace}/meeting-minutes', [MeetingMinuteController::class, 'store'])->name('internal.meeting-minutes.store');
 Route::patch('/meeting-minutes/{meetingMinute}', [MeetingMinuteController::class, 'update'])->name('internal.meeting-minutes.update');
+Route::patch('/meeting-minutes/{meetingMinute}/publication', [MeetingMinuteController::class, 'publication'])->name('internal.meeting-minutes.publication');
+Route::patch('/meeting-minute-items/{meetingMinuteItem}', [MeetingMinuteController::class, 'updateItem'])->name('internal.meeting-minute-items.update');
 Route::delete('/meeting-minutes/{meetingMinute}', [MeetingMinuteController::class, 'destroy'])->name('internal.meeting-minutes.destroy');
+Route::post('/discussions/{subjectType}/{subject}/comments', [DiscussionController::class, 'store'])->name('internal.discussions.comments.store');
+Route::delete('/discussion-comments/{discussionComment}', [DiscussionController::class, 'destroy'])->name('internal.discussions.comments.destroy');
+Route::patch('/discussion-comments/{discussionComment}/pin', [DiscussionController::class, 'pin'])->name('internal.discussions.comments.pin');
+Route::post('/discussions/{subjectType}/{subject}/read', [DiscussionController::class, 'read'])->name('internal.discussions.read');
+Route::get('/discussion-files/{file}/download', [DiscussionController::class, 'download'])->name('internal.discussions.files.download');

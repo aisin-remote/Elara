@@ -23,7 +23,10 @@
         <x-connectivity-status />
 
         @php
-            $waitingOnMe = App\Models\ValidationCheckpoint::visibleTo(auth()->user())->open()->count();
+            $waitingOnMe = App\Models\ValidationCheckpoint::visibleTo(auth()->user())->open()->count()
+                + App\Models\MeetingMinuteItem::query()->where('pic_user_id', auth()->id())
+                    ->where('status', '!=', App\Enums\MeetingMinuteStatus::DONE->value)
+                    ->whereHas('meetingMinute', fn ($minute) => $minute->whereIn('publication_status', ['published', 'locked']))->count();
             $deskWorkspace = $activeWorkspace ?? null;
         @endphp
 

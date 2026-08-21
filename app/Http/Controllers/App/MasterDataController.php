@@ -5,6 +5,7 @@ namespace App\Http\Controllers\App;
 use App\Enums\TaskStatusCategory;
 use App\Http\Controllers\Controller;
 use App\Models\CapacityException;
+use App\Models\DepartmentPic;
 use App\Models\MemberCapacity;
 use App\Models\SupportArticle;
 use App\Models\Task;
@@ -32,6 +33,7 @@ class MasterDataController extends Controller
             'workspace' => $workspace,
             'counts' => [
                 'systems' => $workspace->projects()->systems()->whereNull('archived_at')->count(),
+                'departments' => $workspace->departmentPics()->count(),
                 'categories' => $workspace->taskCategories()->whereNull('archived_at')->count(),
                 'statuses' => TaskStatusTemplate::where('workspace_id', $workspace->id)->active()->count(),
                 'articles' => SupportArticle::active()->count(),
@@ -71,7 +73,7 @@ class MasterDataController extends Controller
         ]);
     }
 
-    public function systems(Request $request, Workspace $workspace): View
+    public function systems(Request $request, Workspace $workspace, OrganizationDirectory $organization): View
     {
         $this->authorize('manageMasterData', $workspace);
         $search = trim($request->string('search'));
@@ -88,17 +90,45 @@ class MasterDataController extends Controller
                 ->withQueryString(),
             // Every colour in use, not just the current page: the add form has to skip them all.
             'takenColors' => $workspace->projects()->systems()->pluck('color'),
-            // A requester can never be a PIC: they cannot open the delivery desk at all.
-            'candidates' => $workspace->memberships()
-                ->active()
-                ->with('user')
-                ->get()
-                ->filter(fn ($membership) => $membership->role->canContribute())
-                ->sortBy('user.first_name'),
             // Empty when the organisation directory is unreachable. The view says so rather
             // than showing an empty picker that looks like the company has no departments.
-            'departments' => app(OrganizationDirectory::class)->departments(),
+            'departments' => $organization->departments(),
+            'departmentPics' => DepartmentPic::where('workspace_id', $workspace->id)
+                ->with('pic:id,public_id,first_name,last_name')
+                ->get()
+                ->keyBy('organization_department_id'),
             'search' => $search,
+        ]);
+    }
+
+    public function departments(Request $request, Workspace $workspace, OrganizationDirectory $organization): View
+    {
+        $this->authorize('manageMasterData', $workspace);
+        $search = strtolower(trim($request->string('search')));
+        $allDepartments = $organization->departments();
+        $departments = $allDepartments
+            ->when($search, fn ($rows) => $rows->filter(fn ($department) => str_contains(
+                strtolower($department->name.' '.($department->code ?? '')),
+                $search,
+            )))
+            ->values();
+
+        return view('app.settings.master.departments', [
+            'workspace' => $workspace,
+            'departments' => $departments,
+            'departmentPics' => DepartmentPic::where('workspace_id', $workspace->id)
+                ->with('pic:id,public_id,first_name,last_name,job_title')
+                ->get()
+                ->keyBy('organization_department_id'),
+            'candidates' => $workspace->memberships()
+                ->active()
+                ->with('user:id,public_id,first_name,last_name,job_title')
+                ->get()
+                ->filter(fn ($membership) => $membership->role->canContribute())
+                ->sortBy(fn ($membership) => strtolower($membership->user->name))
+                ->values(),
+            'search' => $request->string('search')->toString(),
+            'directoryAvailable' => $allDepartments->isNotEmpty(),
         ]);
     }
 

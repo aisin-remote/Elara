@@ -17,9 +17,22 @@ class MeetingMinuteController extends Controller
     public function index(Request $request, Workspace $workspace): View
     {
         $this->authorize('viewAny', [MeetingMinute::class, $workspace]);
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'], 'lifecycle' => ['nullable', 'in:draft,published,locked'],
+            'project' => ['nullable', 'string', 'size:26'], 'pic' => ['nullable', 'string', 'size:26'],
+            'action_status' => ['nullable', 'in:outstanding,in_progress,pending,done'],
+            'from' => ['nullable', 'date'], 'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
 
         $minutes = $workspace->meetingMinutes()
             ->visibleTo($request->user())
+            ->when($filters['q'] ?? null, fn ($query, $q) => $query->where(fn ($search) => $search->where('title', 'like', '%'.$q.'%')->orWhere('summary', 'like', '%'.$q.'%')))
+            ->when($filters['lifecycle'] ?? null, fn ($query, $status) => $query->where('publication_status', $status))
+            ->when($filters['project'] ?? null, fn ($query, $project) => $query->whereHas('project', fn ($related) => $related->where('public_id', $project)))
+            ->when($filters['pic'] ?? null, fn ($query, $pic) => $query->whereHas('items.pic', fn ($related) => $related->where('public_id', $pic)))
+            ->when($filters['action_status'] ?? null, fn ($query, $status) => $query->whereHas('items', fn ($items) => $items->where('status', $status)))
+            ->when($filters['from'] ?? null, fn ($query, $from) => $query->whereDate('meeting_at', '>=', $from))
+            ->when($filters['to'] ?? null, fn ($query, $to) => $query->whereDate('meeting_at', '<=', $to))
             ->with(['creator', 'project'])
             ->withCount([
                 'items',
@@ -31,7 +44,11 @@ class MeetingMinuteController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('app.schedule.minutes.index', compact('workspace', 'minutes'));
+        return view('app.schedule.minutes.index', [
+            'workspace' => $workspace, 'minutes' => $minutes, 'filters' => $filters,
+            'projects' => $workspace->projects()->whereNull('archived_at')->orderBy('name')->get(['public_id', 'name']),
+            'picUsers' => $workspace->memberships()->active()->with('user')->get()->pluck('user')->filter()->sortBy('name'),
+        ]);
     }
 
     public function create(Request $request, Workspace $workspace): View|RedirectResponse
@@ -58,7 +75,7 @@ class MeetingMinuteController extends Controller
         abort_unless($meetingMinute->workspace_id === $workspace->id, 404);
         $this->authorize('view', $meetingMinute);
 
-        $meetingMinute->load(['creator', 'project', 'scheduleEvent', 'items.pic', 'files.uploader']);
+        $meetingMinute->load(['creator', 'project', 'scheduleEvent', 'items.pic', 'files.uploader', 'revisions.editor']);
 
         return view('app.schedule.minutes.show', compact('workspace', 'meetingMinute'));
     }

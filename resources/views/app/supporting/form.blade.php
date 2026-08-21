@@ -46,4 +46,5 @@
             </ul>
         </aside>
     </div>
+    @if($task)<x-discussion :subject="$task" />@endif
 @endsection

@@ -5,12 +5,19 @@
 
 @section('content')
     <div class="pb-6">
-        <h2 class="text-2xl font-bold tracking-tight">{{ $open->count() }} waiting for your response</h2>
+        <h2 class="text-2xl font-bold tracking-tight">{{ $open->count() + $momActionItems['total'] }} waiting on you</h2>
         <p class="mt-2 text-sm text-slate-500">
             Anything ITD is blocked on: a question they asked about your request, or a finished piece of work
             waiting for your confirmation.
         </p>
     </div>
+
+    @if ($momActionItems['items'] !== [])
+        <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800"><h2 class="text-lg font-bold">MOM follow-ups</h2><p class="mt-1 text-sm text-slate-500">Update meeting action items assigned to you.</p></div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">@foreach($momActionItems['items'] as $item)<div class="flex flex-wrap items-center gap-3 p-4"><a href="{{ $item['url'] }}" class="min-w-0 flex-1"><strong class="block truncate text-sm hover:text-orbit-700 dark:hover:text-orbit-300">{{ $item['content'] }}</strong><span class="mt-1 block truncate text-xs text-slate-500">{{ $item['minute'] }} · due {{ $item['due'] }}</span></a><form method="POST" action="{{ route('internal.meeting-minute-items.update', $item['public_id']) }}" class="flex items-center gap-2">@csrf @method('PATCH')<select name="status" class="rounded-lg border-slate-300 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-950">@foreach(App\Enums\MeetingMinuteStatus::cases() as $statusOption)<option value="{{ $statusOption->value }}" @selected($item['status'] === $statusOption)>{{ $statusOption->label() }}</option>@endforeach</select><button class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Save</button></form></div>@endforeach</div>
+        </section>
+    @endif
 
     @forelse ($open as $checkpoint)
         @php($question = $checkpoint->isInformationRequest())
@@ -89,8 +96,9 @@
             </form>
         </section>
     @empty
-        <x-empty-state icon="check" title="Nothing is waiting on you"
+        @if ($momActionItems['items'] === [])<x-empty-state icon="check" title="Nothing is waiting on you"
             description="When ITD asks you something, or finishes work that needs your confirmation, it appears here." />
+        @endif
     @endforelse
 
     @if ($answered->isNotEmpty())

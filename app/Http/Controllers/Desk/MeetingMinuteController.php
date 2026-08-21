@@ -40,45 +40,7 @@ class MeetingMinuteController extends Controller
             return redirect()->route('desk.schedule.mom.show', [$workspace, $scheduleEvent->meetingMinute->public_id]);
         }
 
-        $departmentId = $workspace->organization_department_id;
-        $projects = Project::query()
-            ->where('workspace_id', $deliveryWorkspace->id)
-            ->where('type', '!=', ProjectType::PERSONAL->value)
-            ->whereNull('archived_at')
-            ->when(config('organization.required') && $departmentId, fn (Builder $query) => $query->where(fn (Builder $visible) => $visible
-                ->where('type', ProjectType::SYSTEM->value)
-                ->orWhereIn('id', ProjectRequest::query()
-                    ->select('project_id')
-                    ->where('workspace_id', $deliveryWorkspace->id)
-                    ->where('requester_department_external_id', $departmentId)
-                    ->whereNotNull('project_id'))))
-            ->orderBy('name')
-            ->get(['id', 'public_id', 'name', 'type']);
-        $picUsers = $deliveryWorkspace->memberships()->active()->whereHas('user')->with('user')->get()->pluck('user')
-            ->merge($scheduleEvent->attendees)->unique('id')->sortBy(fn ($user) => strtolower($user->name))->values();
-        $formItems = old('items');
-        if (! is_array($formItems)) {
-            $formItems = [[
-                'content' => '', 'pic_name' => '', 'pic_user_public_id' => null,
-                'due_date' => null, 'status' => MeetingMinuteStatus::OUTSTANDING->value,
-            ]];
-        }
-
-        return view('desk.schedule.mom.create', [
-            'requesterWorkspace' => $workspace,
-            'workspace' => $deliveryWorkspace,
-            'meetingMinute' => null,
-            'scheduleEvent' => $scheduleEvent,
-            'projects' => $projects,
-            'picUsers' => $picUsers,
-            'statuses' => MeetingMinuteStatus::cases(),
-            'formItems' => array_values($formItems),
-            'aiSummaryUrl' => route('desk.schedule.mom.summary', [$workspace, $event]),
-            'formAction' => route('desk.schedule.mom.store', [$workspace, $event]),
-            'formMethod' => 'POST',
-            'cancelUrl' => route('desk.schedule.index', $workspace),
-            'submitLabel' => 'Create MOM',
-        ]);
+        return view('desk.schedule.mom.create', $this->formData($workspace, $deliveryWorkspace, $scheduleEvent));
     }
 
     public function store(
@@ -105,17 +67,41 @@ class MeetingMinuteController extends Controller
             ->with('status', 'MOM created.');
     }
 
+    public function edit(Request $request, Workspace $workspace, string $meetingMinute, DepartmentWorkspaceService $workspaces): View
+    {
+        $this->authorizeRequesterWorkspace($workspace);
+        $minute = $this->requesterMinute($request, $workspaces->deliveryWorkspace(), $meetingMinute, creatorOnly: true)
+            ->load(['scheduleEvent.attendees', 'items.pic', 'files.uploader']);
+        $this->authorize('update', $minute);
+
+        return view('desk.schedule.mom.edit', $this->formData($workspace, $minute->workspace, $minute->scheduleEvent, $minute));
+    }
+
+    public function update(
+        SaveRequesterMeetingMinuteRequest $request,
+        Workspace $workspace,
+        string $meetingMinute,
+        DepartmentWorkspaceService $workspaces,
+        SaveMeetingMinute $save,
+        StorePrivateFile $storeFile,
+    ): RedirectResponse {
+        $minute = $this->requesterMinute($request, $workspaces->deliveryWorkspace(), $meetingMinute, creatorOnly: true);
+        $minute = $save->handle($minute->workspace, $request->user(), $request->validated(), $minute, $request->ip());
+
+        foreach ($request->file('attachments', []) as $upload) {
+            $file = $storeFile->handle($minute->workspace, $request->user(), $upload);
+            $minute->files()->save($file);
+        }
+
+        return redirect()->route('desk.schedule.mom.show', [$workspace, $minute->public_id])
+            ->with('status', 'MOM updated.');
+    }
+
     public function show(Request $request, Workspace $workspace, string $meetingMinute, DepartmentWorkspaceService $workspaces): View
     {
         $this->authorizeRequesterWorkspace($workspace);
-        $minute = MeetingMinute::query()
-            ->where('workspace_id', $workspaces->deliveryWorkspace()->id)
-            ->where('public_id', $meetingMinute)
-            ->where(fn (Builder $access) => $access
-                ->where('creator_id', $request->user()->id)
-                ->orWhereHas('scheduleEvent.attendees', fn (Builder $attendees) => $attendees->where('users.id', $request->user()->id)))
-            ->with(['creator', 'project', 'scheduleEvent', 'items.pic', 'files.uploader'])
-            ->firstOrFail();
+        $minute = $this->requesterMinute($request, $workspaces->deliveryWorkspace(), $meetingMinute)
+            ->load(['creator', 'project', 'scheduleEvent', 'items.pic', 'files.uploader', 'revisions.editor']);
 
         return view('desk.schedule.mom.show', ['requesterWorkspace' => $workspace, 'meetingMinute' => $minute]);
     }
@@ -141,13 +127,7 @@ class MeetingMinuteController extends Controller
     public function download(Request $request, Workspace $workspace, string $meetingMinute, string $file, DepartmentWorkspaceService $workspaces): StreamedResponse
     {
         $this->authorizeRequesterWorkspace($workspace);
-        $minute = MeetingMinute::query()
-            ->where('workspace_id', $workspaces->deliveryWorkspace()->id)
-            ->where('public_id', $meetingMinute)
-            ->where(fn (Builder $access) => $access
-                ->where('creator_id', $request->user()->id)
-                ->orWhereHas('scheduleEvent.attendees', fn (Builder $attendees) => $attendees->where('users.id', $request->user()->id)))
-            ->firstOrFail();
+        $minute = $this->requesterMinute($request, $workspaces->deliveryWorkspace(), $meetingMinute);
         $document = ProjectFile::query()->where('public_id', $file)
             ->where('attachable_type', $minute->getMorphClass())->where('attachable_id', $minute->id)->firstOrFail();
         abort_unless(Storage::disk($document->disk)->exists($document->path), 404);
@@ -170,5 +150,66 @@ class MeetingMinuteController extends Controller
     {
         abort_unless($workspace->memberships()->active()->where('user_id', request()->user()->id)
             ->where('role', WorkspaceRole::REQUESTER->value)->exists(), 403);
+    }
+
+    private function requesterMinute(Request $request, Workspace $deliveryWorkspace, string $publicId, bool $creatorOnly = false): MeetingMinute
+    {
+        return MeetingMinute::query()
+            ->where('workspace_id', $deliveryWorkspace->id)
+            ->where('public_id', $publicId)
+            ->where(function (Builder $access) use ($request, $creatorOnly): void {
+                $access->where('creator_id', $request->user()->id);
+                if (! $creatorOnly) {
+                    $access->orWhereHas('scheduleEvent.attendees', fn (Builder $attendees) => $attendees->where('users.id', $request->user()->id))
+                        ->orWhereHas('items', fn (Builder $items) => $items->where('pic_user_id', $request->user()->id));
+                }
+            })
+            ->when(! $creatorOnly, fn (Builder $query) => $query->where(fn (Builder $visible) => $visible
+                ->where('creator_id', $request->user()->id)
+                ->orWhere('publication_status', '!=', 'draft')))
+            ->firstOrFail();
+    }
+
+    private function formData(Workspace $requesterWorkspace, Workspace $deliveryWorkspace, ScheduleEvent $scheduleEvent, ?MeetingMinute $minute = null): array
+    {
+        $departmentId = $requesterWorkspace->organization_department_id;
+        $projects = Project::query()
+            ->where('workspace_id', $deliveryWorkspace->id)
+            ->where('type', '!=', ProjectType::PERSONAL->value)
+            ->whereNull('archived_at')
+            ->when(config('organization.required') && $departmentId, fn (Builder $query) => $query->where(fn (Builder $visible) => $visible
+                ->where('type', ProjectType::SYSTEM->value)
+                ->orWhereIn('id', ProjectRequest::query()->select('project_id')
+                    ->where('workspace_id', $deliveryWorkspace->id)
+                    ->where('requester_department_external_id', $departmentId)
+                    ->whereNotNull('project_id'))))
+            ->orderBy('name')->get(['id', 'public_id', 'name', 'type']);
+        $picUsers = $deliveryWorkspace->memberships()->active()->whereHas('user')->with('user')->get()->pluck('user')
+            ->merge($scheduleEvent->attendees)->unique('id')->sortBy(fn ($user) => strtolower($user->name))->values();
+        $formItems = old('items');
+        if (! is_array($formItems)) {
+            $formItems = $minute
+                ? $minute->items->map(fn ($item) => [
+                    'content' => $item->content, 'pic_name' => $item->pic_name,
+                    'pic_user_public_id' => $item->pic?->public_id, 'due_date' => $item->due_date?->format('Y-m-d'),
+                    'status' => $item->status->value,
+                ])->all()
+                : [['content' => '', 'pic_name' => '', 'pic_user_public_id' => null, 'due_date' => null, 'status' => MeetingMinuteStatus::OUTSTANDING->value]];
+        }
+
+        return [
+            'requesterWorkspace' => $requesterWorkspace, 'workspace' => $deliveryWorkspace,
+            'meetingMinute' => $minute, 'scheduleEvent' => $scheduleEvent, 'projects' => $projects,
+            'picUsers' => $picUsers, 'statuses' => MeetingMinuteStatus::cases(), 'formItems' => array_values($formItems),
+            'aiSummaryUrl' => route('desk.schedule.mom.summary', [$requesterWorkspace, $scheduleEvent->public_id]),
+            'formAction' => $minute
+                ? route('desk.schedule.mom.update', [$requesterWorkspace, $minute->public_id])
+                : route('desk.schedule.mom.store', [$requesterWorkspace, $scheduleEvent->public_id]),
+            'formMethod' => $minute ? 'PATCH' : 'POST',
+            'cancelUrl' => $minute
+                ? route('desk.schedule.mom.show', [$requesterWorkspace, $minute->public_id])
+                : route('desk.schedule.index', $requesterWorkspace),
+            'submitLabel' => $minute ? 'Save changes' : 'Create MOM',
+        ];
     }
 }

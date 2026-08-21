@@ -21,6 +21,7 @@ class NotificationPreferenceService
         'project_request' => 'Project requests and approvals',
         'task_breakdown' => 'Proposed plans waiting for my acceptance',
         'validation_checkpoint' => 'Things waiting for my confirmation',
+        'mom_action_item' => 'MOM action item reminders',
     ];
 
     public const CHANNELS = ['mail', 'database', 'broadcast', 'push'];

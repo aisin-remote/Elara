@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('orbitra:send-deadline-reminders')->hourly()->withoutOverlapping();
+        $schedule->command('orbitra:send-mom-reminders')->dailyAt('08:00')->timezone('Asia/Jakarta')->withoutOverlapping();
         $schedule->command('orbitra:drain-request-queue')->hourly()->withoutOverlapping();
         // After the drain: a takedown in this sweep frees capacity the next drain absorbs.
         $schedule->command('orbitra:sweep-validations')->hourly()->withoutOverlapping();

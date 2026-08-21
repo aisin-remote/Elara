@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\MeetingMinute;
 
+use App\Enums\MeetingMinutePublicationStatus;
 use App\Enums\MeetingMinuteStatus;
 use App\Models\MeetingMinute;
 use App\Models\Project;
@@ -29,6 +30,7 @@ class SaveMeetingMinuteRequest extends FormRequest
             'title' => ['required', 'string', 'max:200'],
             'meeting_at' => ['required', 'date'],
             'summary' => ['nullable', 'string', 'max:20000'],
+            'publication_status' => ['nullable', Rule::enum(MeetingMinutePublicationStatus::class), Rule::notIn([MeetingMinutePublicationStatus::LOCKED->value])],
             'schedule_event_public_id' => ['nullable', 'string', 'size:26'],
             'project_public_id' => ['nullable', 'string', 'size:26'],
             'items' => ['required', 'array', 'min:1', 'max:50'],

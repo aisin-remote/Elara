@@ -68,6 +68,8 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::post('/desk/workspaces/{workspace}/schedule/events/{event}/mom', [DeskMeetingMinuteController::class, 'store'])->name('desk.schedule.mom.store');
     Route::post('/desk/workspaces/{workspace}/schedule/events/{event}/mom/summary', [DeskMeetingMinuteController::class, 'summary'])->middleware('throttle:10,1')->name('desk.schedule.mom.summary');
     Route::get('/desk/workspaces/{workspace}/schedule/mom/{meetingMinute}', [DeskMeetingMinuteController::class, 'show'])->name('desk.schedule.mom.show');
+    Route::get('/desk/workspaces/{workspace}/schedule/mom/{meetingMinute}/edit', [DeskMeetingMinuteController::class, 'edit'])->name('desk.schedule.mom.edit');
+    Route::patch('/desk/workspaces/{workspace}/schedule/mom/{meetingMinute}', [DeskMeetingMinuteController::class, 'update'])->name('desk.schedule.mom.update');
     Route::get('/desk/workspaces/{workspace}/schedule/mom/{meetingMinute}/files/{file}', [DeskMeetingMinuteController::class, 'download'])->name('desk.schedule.mom.files.download');
     Route::get('/desk/workspaces/{workspace}/approvals', [DepartmentApprovalController::class, 'index'])->name('desk.department-approvals.index');
     Route::post('/desk/workspaces/{workspace}/approvals/features/{featureRequest}', [DepartmentApprovalController::class, 'decideFeature'])->name('desk.department-approvals.features.decide');
@@ -95,6 +97,7 @@ Route::middleware(['auth', RequireEmailVerificationWhenEnabled::class, SyncOrgan
     Route::get('/app/workspaces/{workspace}', [DashboardController::class, 'show'])->name('app.workspaces.show');
     Route::get('/app/workspaces/{workspace}/settings', [WorkspaceController::class, 'settings'])->name('app.workspaces.settings');
     Route::get('/app/workspaces/{workspace}/settings/master', [MasterDataController::class, 'index'])->name('app.settings.master');
+    Route::get('/app/workspaces/{workspace}/settings/master/departments', [MasterDataController::class, 'departments'])->name('app.settings.master.departments');
     Route::get('/app/workspaces/{workspace}/settings/master/categories', [MasterDataController::class, 'categories'])->name('app.settings.master.categories');
     Route::get('/app/workspaces/{workspace}/settings/master/status-templates', [MasterDataController::class, 'statusTemplates'])->name('app.settings.master.status-templates');
     Route::get('/app/workspaces/{workspace}/settings/master/capacity', [MasterDataController::class, 'capacity'])->name('app.settings.master.capacity');

@@ -98,6 +98,11 @@ class ProjectRequest extends Model
         return $this->morphMany(TaskBreakdown::class, 'subject');
     }
 
+    public function discussionComments(): MorphMany
+    {
+        return $this->morphMany(DiscussionComment::class, 'subject');
+    }
+
     public function scopeAwaitingDecision(Builder $query): Builder
     {
         return $query->whereIn('status', [

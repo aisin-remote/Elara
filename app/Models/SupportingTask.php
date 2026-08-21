@@ -51,6 +51,11 @@ class SupportingTask extends Model
         return $this->morphMany(ActivityLog::class, 'subject');
     }
 
+    public function discussionComments(): MorphMany
+    {
+        return $this->morphMany(DiscussionComment::class, 'subject');
+    }
+
     public function isOverdue(): bool
     {
         return $this->due_date !== null

@@ -26,7 +26,7 @@ class MasterDataTest extends TestCase
     {
         [$owner, $workspace] = $this->workspace();
 
-        foreach (['app.settings.master', 'app.settings.master.categories', 'app.settings.master.status-templates', 'app.settings.master.articles'] as $routeName) {
+        foreach (['app.settings.master', 'app.settings.master.departments', 'app.settings.master.categories', 'app.settings.master.status-templates', 'app.settings.master.articles'] as $routeName) {
             $this->actingAs($owner)->get(route($routeName, $workspace))->assertOk();
         }
         $this->actingAs($owner)->get(route('app.settings.master.status-templates', $workspace))

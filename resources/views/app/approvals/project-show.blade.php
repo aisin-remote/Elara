@@ -126,4 +126,5 @@
             @include('app.approvals._breakdown')
         </div>
     @endif
+    <x-discussion :subject="$request" />
 @endsection

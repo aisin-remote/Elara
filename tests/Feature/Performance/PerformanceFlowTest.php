@@ -10,7 +10,6 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
-use App\Models\ActivityLog;
 use App\Models\Feature;
 use App\Models\ScheduleEvent;
 use App\Models\Task;
@@ -340,7 +339,7 @@ class PerformanceFlowTest extends TestCase
         return $task->fresh();
     }
 
-    public function test_dashboard_focus_list_flags_stale_tasks_and_activity_links_to_its_subject(): void
+    public function test_dashboard_focus_list_flags_stale_tasks_and_shows_mom_follow_ups(): void
     {
         Carbon::setTestNow('2026-07-29 12:00:00 UTC');
         [$owner, $workspace, $project] = $this->project();
@@ -348,14 +347,12 @@ class PerformanceFlowTest extends TestCase
 
         $stale = $this->task($project, $owner, $todo, ['title' => 'Ship the migration', 'due_at' => '2026-07-24 09:00:00']);
         $stale->assignees()->attach($owner->id, ['assigned_by' => $owner->id, 'assigned_at' => now()]);
-        ActivityLog::record($workspace, $stale, 'task.created', $owner);
-
         $response = $this->actingAs($owner)->get(route('app.workspaces.show', $workspace))->assertOk();
 
         // The list also carries unfinished tasks from earlier days, so the card must say why.
         $response->assertSee('Overdue since Jul 24')->assertSee('1 still overdue');
         $response->assertSee(route('app.tasks.show', $stale));
-        $response->assertSee('task created');
+        $response->assertSee('MOM follow-ups')->assertSee('No MOM follow-ups');
     }
 
     public function test_dashboard_focus_list_is_limited_to_two_tasks(): void
@@ -384,18 +381,13 @@ class PerformanceFlowTest extends TestCase
         $this->assertCount(2, $response->json('data.today_tasks'));
     }
 
-    public function test_dashboard_activity_keeps_only_the_three_newest_entries(): void
+    public function test_dashboard_exposes_mom_follow_up_summary(): void
     {
         [$owner, $workspace, $project] = $this->project();
-        $todo = $project->taskStatuses()->where('category', TaskStatusCategory::TODO->value)->firstOrFail();
-
-        foreach (range(1, 5) as $index) {
-            ActivityLog::record($workspace, $this->task($project, $owner, $todo), 'task.created', $owner);
-        }
-
         $this->actingAs($owner)->getJson(route('internal.dashboard.index', ['workspace' => $workspace]))
             ->assertOk()
-            ->assertJsonCount(3, 'data.recent_activity');
+            ->assertJsonPath('data.mom_action_items.total', 0)
+            ->assertJsonCount(0, 'data.mom_action_items.items');
     }
 
     private function project(string $timezone = 'UTC'): array

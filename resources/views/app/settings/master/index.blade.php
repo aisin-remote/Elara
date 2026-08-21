@@ -11,6 +11,7 @@
     @php
         // Holidays are scheduler-managed. Help articles, capacity, and request rules stay hidden for now.
         $masters = [
+            ['app.settings.master.departments', 'Departments', 'Default IT PIC for each department in the organisation directory.', $counts['departments'], 'team', true],
             ['app.settings.master.systems', 'Systems', 'The catalog feature requests are raised against.', $counts['systems'], 'projects', true],
             ['app.settings.master.categories', 'Task categories', 'Labels tasks are grouped by across every project.', $counts['categories'], 'list', true],
             ['app.settings.master.status-templates', 'Workflow', 'Statuses copied into every new project.', $counts['statuses'], 'board', true],

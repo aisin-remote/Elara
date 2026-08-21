@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\DiscussionComment;
 use App\Models\MeetingMinute;
 use App\Models\ProjectFile;
 use App\Models\User;
@@ -47,6 +48,9 @@ class FilePolicy
         // MOM editors manage their shared documents. Request evidence stays uploader-only
         // and cannot disappear after a decision has been made on it.
         if ($file->attachable) {
+            if ($file->attachable instanceof DiscussionComment) {
+                return $file->uploader_id === $user->id && $user->can('delete', $file->attachable);
+            }
             if ($file->attachable instanceof MeetingMinute) {
                 return $user->can('update', $file->attachable);
             }

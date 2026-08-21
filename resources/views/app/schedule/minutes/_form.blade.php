@@ -9,6 +9,7 @@
     $summaryValue = old('summary', $meetingMinute?->summary ?? '');
     $scheduleEventPublicId = old('schedule_event_public_id', $meetingMinute?->scheduleEvent?->public_id ?? $scheduleEvent?->public_id);
     $projectPublicId = old('project_public_id', $meetingMinute?->project?->public_id ?? $scheduleEvent?->project?->public_id);
+    $publicationStatus = old('publication_status', $meetingMinute?->publication_status?->value ?? App\Enums\MeetingMinutePublicationStatus::DRAFT->value);
     $memberOptions = $picUsers->map(fn ($user) => [
         'value' => $user->public_id,
         'label' => $user->name,
@@ -123,5 +124,14 @@
         <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,520px)] lg:items-center"><div><h3 class="text-lg font-bold">Documents</h3><p class="mt-1 text-sm text-slate-500">Attach meeting notes, presentations, spreadsheets, images, or a zip archive.</p></div><input type="file" name="attachments[]" multiple class="block w-full text-sm text-slate-500 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-100 file:px-4 file:py-2.5 file:font-bold file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-800 dark:file:text-slate-200" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"></div>
     </section>
 
-    <div class="flex flex-wrap justify-end gap-3"><x-link-button href="{{ $cancelUrl }}" variant="secondary">Cancel</x-link-button><x-button>{{ $submitLabel }}</x-button></div>
+    <div class="flex flex-wrap justify-end gap-3">
+        <x-link-button href="{{ $cancelUrl }}" variant="secondary">Cancel</x-link-button>
+        @if ($publicationStatus === App\Enums\MeetingMinutePublicationStatus::DRAFT->value)
+            <x-button type="submit" name="publication_status" value="draft" variant="secondary">Save draft</x-button>
+            <x-button type="submit" name="publication_status" value="published">Publish MOM</x-button>
+        @else
+            <input type="hidden" name="publication_status" value="published">
+            <x-button>{{ $submitLabel }}</x-button>
+        @endif
+    </div>
 </form>

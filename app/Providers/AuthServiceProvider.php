@@ -4,14 +4,17 @@ namespace App\Providers;
 
 use App\Models\AiConversation;
 use App\Models\Conversation;
+use App\Models\DiscussionComment;
 use App\Models\FeatureRequest;
 use App\Models\IntegrationConnection;
 use App\Models\MeetingMinute;
+use App\Models\MeetingMinuteItem;
 use App\Models\Message;
 use App\Models\Project;
 use App\Models\ProjectFile;
 use App\Models\ProjectRequest;
 use App\Models\ScheduleEvent;
+use App\Models\SupportingTask;
 use App\Models\SupportTicket;
 use App\Models\Task;
 use App\Models\TaskBreakdown;
@@ -22,15 +25,18 @@ use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use App\Policies\AiConversationPolicy;
 use App\Policies\ConversationPolicy;
+use App\Policies\DiscussionCommentPolicy;
 use App\Policies\FeatureRequestPolicy;
 use App\Policies\FilePolicy;
 use App\Policies\IntegrationConnectionPolicy;
+use App\Policies\MeetingMinuteItemPolicy;
 use App\Policies\MeetingMinutePolicy;
 use App\Policies\MessagePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\ProjectRequestPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\ScheduleEventPolicy;
+use App\Policies\SupportingTaskPolicy;
 use App\Policies\SupportTicketPolicy;
 use App\Policies\TaskBreakdownPolicy;
 use App\Policies\TaskCommentPolicy;
@@ -64,10 +70,13 @@ class AuthServiceProvider extends ServiceProvider
         ProjectFile::class => FilePolicy::class,
         ScheduleEvent::class => ScheduleEventPolicy::class,
         SupportTicket::class => SupportTicketPolicy::class,
+        SupportingTask::class => SupportingTaskPolicy::class,
         Conversation::class => ConversationPolicy::class,
         IntegrationConnection::class => IntegrationConnectionPolicy::class,
         Message::class => MessagePolicy::class,
         MeetingMinute::class => MeetingMinutePolicy::class,
+        MeetingMinuteItem::class => MeetingMinuteItemPolicy::class,
+        DiscussionComment::class => DiscussionCommentPolicy::class,
     ];
 
     /**

@@ -19,6 +19,8 @@ use App\Models\Task;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class SystemCatalogTest extends TestCase
@@ -165,10 +167,12 @@ class SystemCatalogTest extends TestCase
     {
         [$owner, $workspace] = $this->workspace();
         $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $this->organizationDepartments();
+        $this->setDepartmentPic($owner, $workspace, 7, $pic);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
             'name' => 'Payroll', 'plant' => SystemPlant::BODY->value, 'color' => '#2eb0fb', 'description' => 'Monthly payroll runs.',
-            'pics' => [['pic_public_id' => $pic->public_id]],
+            'departments' => [7],
         ])->assertCreated();
 
         $system = Project::where('name', 'Payroll')->firstOrFail();
@@ -178,14 +182,51 @@ class SystemCatalogTest extends TestCase
         $this->assertSame(4, $system->taskStatuses()->count(), 'A system gets the same starting statuses as a project.');
     }
 
+    public function test_department_master_reads_postgresql_and_supplies_the_system_pic(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $this->organizationDepartments();
+
+        $this->actingAs($owner)->get(route('app.settings.master.departments', $workspace))
+            ->assertOk()
+            ->assertSee('Production Planning')
+            ->assertSee('PPIC')
+            ->assertSee('Choose an IT PIC');
+
+        $this->setDepartmentPic($owner, $workspace, 7, $pic);
+
+        $this->actingAs($owner)->get(route('app.settings.master.systems', $workspace))
+            ->assertOk()
+            ->assertSee('Production Planning (PPIC)')
+            ->assertSee('PIC: '.$pic->name)
+            ->assertSee('name="departments[0]"', false)
+            ->assertDontSee('name="pics[0][pic_public_id]"', false);
+    }
+
+    public function test_a_system_cannot_use_a_department_until_its_default_pic_is_set(): void
+    {
+        [$owner, $workspace] = $this->workspace();
+        $this->organizationDepartments();
+
+        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
+            'name' => 'Payroll', 'plant' => SystemPlant::BODY->value, 'color' => '#2eb0fb',
+            'departments' => [7],
+        ])->assertUnprocessable()->assertJsonValidationErrors('departments.0');
+
+        $this->assertDatabaseMissing('projects', ['name' => 'Payroll']);
+    }
+
     public function test_creating_a_system_requires_a_plant(): void
     {
         [$owner, $workspace] = $this->workspace();
         $pic = $this->member($workspace, WorkspaceRole::MEMBER);
+        $this->organizationDepartments();
+        $this->setDepartmentPic($owner, $workspace, 7, $pic);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
             'name' => 'Payroll', 'color' => '#2eb0fb',
-            'pics' => [['pic_public_id' => $pic->public_id]],
+            'departments' => [7],
         ])->assertUnprocessable()->assertJsonValidationErrors('plant');
     }
 
@@ -217,12 +258,14 @@ class SystemCatalogTest extends TestCase
         [$owner, $workspace] = $this->workspace();
         $pic = $this->member($workspace, WorkspaceRole::MEMBER);
         $this->system($workspace, $owner, 'Bella', $pic)->update(['color' => '#2eb0fb']);
+        $this->organizationDepartments();
+        $this->setDepartmentPic($owner, $workspace, 7, $pic);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
             'name' => 'Cubic-pro',
             'plant' => SystemPlant::UNIT->value,
             'color' => '#2EB0FB',
-            'pics' => [['pic_public_id' => $pic->public_id]],
+            'departments' => [7],
         ])->assertUnprocessable()->assertJsonValidationErrors('color');
     }
 
@@ -231,13 +274,13 @@ class SystemCatalogTest extends TestCase
         [$owner, $workspace] = $this->workspace();
         $ppic = $this->member($workspace, WorkspaceRole::MEMBER);
         $produksi = $this->member($workspace, WorkspaceRole::MEMBER);
+        $this->organizationDepartments();
+        $this->setDepartmentPic($owner, $workspace, 7, $ppic);
+        $this->setDepartmentPic($owner, $workspace, 9, $produksi);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
             'name' => 'Avicenna', 'plant' => SystemPlant::UNIT->value, 'color' => '#2eb0fb',
-            'pics' => [
-                ['organization_department_id' => 7, 'pic_public_id' => $ppic->public_id],
-                ['organization_department_id' => 9, 'pic_public_id' => $produksi->public_id],
-            ],
+            'departments' => [7, 9],
         ])->assertCreated();
 
         // Creating with three departments and adding them one at a time afterwards have to
@@ -251,15 +294,13 @@ class SystemCatalogTest extends TestCase
     {
         [$owner, $workspace] = $this->workspace();
         $first = $this->member($workspace, WorkspaceRole::MEMBER);
-        $second = $this->member($workspace, WorkspaceRole::MEMBER);
+        $this->organizationDepartments();
+        $this->setDepartmentPic($owner, $workspace, 7, $first);
 
         $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
             'name' => 'Avicenna', 'plant' => SystemPlant::ELECTRIC->value, 'color' => '#2eb0fb',
-            'pics' => [
-                ['organization_department_id' => 7, 'pic_public_id' => $first->public_id],
-                ['organization_department_id' => 7, 'pic_public_id' => $second->public_id],
-            ],
-        ])->assertUnprocessable()->assertJsonValidationErrors('pics.0.organization_department_id');
+            'departments' => [7, 7],
+        ])->assertUnprocessable()->assertJsonValidationErrors('departments.1');
 
         $this->assertSame(0, Project::where('name', 'Avicenna')->count());
     }
@@ -268,11 +309,12 @@ class SystemCatalogTest extends TestCase
     {
         [$owner, $workspace] = $this->workspace();
         $requester = $this->member($workspace, WorkspaceRole::REQUESTER);
+        $this->organizationDepartments();
 
-        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
-            'name' => 'Payroll', 'plant' => SystemPlant::BODY->value, 'color' => '#2eb0fb',
-            'pics' => [['pic_public_id' => $requester->public_id]],
-        ])->assertUnprocessable()->assertJsonValidationErrors('pics.0.pic_public_id');
+        $this->actingAs($owner)->postJson(route('internal.master.departments.pic.save', $workspace), [
+            'organization_department_id' => 7,
+            'pic_public_id' => $requester->public_id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('pic_public_id');
     }
 
     public function test_changing_the_pic_of_a_department_demotes_the_previous_holder(): void
@@ -283,10 +325,9 @@ class SystemCatalogTest extends TestCase
         $system = $this->system($workspace, $owner, 'Payroll', $first);
         $system->memberships()->where('user_id', $first->id)
             ->update(['organization_department_id' => 7, 'organization_department_code' => 'PPIC']);
+        $this->organizationDepartments();
 
-        $this->actingAs($owner)->postJson(route('internal.master.systems.pics.assign', $system), [
-            'organization_department_id' => 7, 'pic_public_id' => $second->public_id,
-        ])->assertOk();
+        $this->setDepartmentPic($owner, $workspace, 7, $second);
 
         $this->assertSame($second->id, $system->fresh()->picFor(7)->id);
         $this->assertSame(
@@ -301,13 +342,14 @@ class SystemCatalogTest extends TestCase
         [$owner, $workspace] = $this->workspace();
         $ppic = $this->member($workspace, WorkspaceRole::MEMBER);
         $produksi = $this->member($workspace, WorkspaceRole::MEMBER);
-        $system = $this->system($workspace, $owner, 'Avicenna', $ppic);
-        $system->memberships()->where('user_id', $ppic->id)
-            ->update(['organization_department_id' => 7, 'organization_department_code' => 'PPIC']);
-
-        $this->actingAs($owner)->postJson(route('internal.master.systems.pics.assign', $system), [
-            'organization_department_id' => 9, 'pic_public_id' => $produksi->public_id,
-        ])->assertOk();
+        $this->organizationDepartments();
+        $this->setDepartmentPic($owner, $workspace, 7, $ppic);
+        $this->setDepartmentPic($owner, $workspace, 9, $produksi);
+        $this->actingAs($owner)->postJson(route('internal.master.systems.store', $workspace), [
+            'name' => 'Avicenna', 'plant' => SystemPlant::UNIT->value, 'color' => '#2eb0fb',
+            'departments' => [7, 9],
+        ])->assertCreated();
+        $system = Project::where('name', 'Avicenna')->firstOrFail();
 
         // One system, one board, two people accountable — the arrangement that previously
         // forced a second Avicenna to be registered.
@@ -384,6 +426,34 @@ class SystemCatalogTest extends TestCase
         ]);
 
         return $user;
+    }
+
+    private function organizationDepartments(): void
+    {
+        config(['database.connections.organization' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+        ]]);
+        DB::purge('organization');
+        Schema::connection('organization')->create('departments', function ($table): void {
+            $table->unsignedBigInteger('id')->primary();
+            $table->string('code')->nullable();
+            $table->string('name');
+        });
+        DB::connection('organization')->table('departments')->insert([
+            ['id' => 7, 'code' => 'PPIC', 'name' => 'Production Planning'],
+            ['id' => 9, 'code' => 'PROD', 'name' => 'Production'],
+        ]);
+    }
+
+    private function setDepartmentPic(User $actor, Workspace $workspace, int $departmentId, User $pic): void
+    {
+        $this->actingAs($actor)->postJson(route('internal.master.departments.pic.save', $workspace), [
+            'organization_department_id' => $departmentId,
+            'pic_public_id' => $pic->public_id,
+        ])->assertOk();
     }
 
     private function task(Project $project, User $creator, string $title, ?Feature $feature = null): Task

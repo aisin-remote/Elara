@@ -4,10 +4,15 @@ namespace App\Http\Controllers\InternalApi;
 
 use App\Actions\File\DeleteFile;
 use App\Actions\File\StorePrivateFile;
+use App\Actions\MeetingMinute\RecordMeetingMinuteRevision;
 use App\Actions\MeetingMinute\SaveMeetingMinute;
+use App\Enums\MeetingMinutePublicationStatus;
 use App\Http\Requests\MeetingMinute\SaveMeetingMinuteRequest;
+use App\Http\Requests\MeetingMinute\UpdateMeetingMinuteItemRequest;
+use App\Http\Requests\MeetingMinute\UpdateMeetingMinutePublicationRequest;
 use App\Models\ActivityLog;
 use App\Models\MeetingMinute;
+use App\Models\MeetingMinuteItem;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +58,48 @@ class MeetingMinuteController extends Controller
         ActivityLog::record($workspace, $meetingMinute, 'meeting_minute.deleted', $request->user(), [], $request->ip());
 
         return $this->success($request, null, 'Meeting minutes deleted.', route('app.schedule.minutes.index', $workspace));
+    }
+
+    public function publication(UpdateMeetingMinutePublicationRequest $request, MeetingMinute $meetingMinute, RecordMeetingMinuteRevision $revisions): JsonResponse|RedirectResponse
+    {
+        $target = MeetingMinutePublicationStatus::from($request->validated('publication_status'));
+        $allowed = match ($meetingMinute->publication_status) {
+            MeetingMinutePublicationStatus::DRAFT => [$target === MeetingMinutePublicationStatus::PUBLISHED],
+            MeetingMinutePublicationStatus::PUBLISHED => [$target === MeetingMinutePublicationStatus::LOCKED],
+            MeetingMinutePublicationStatus::LOCKED => [$target === MeetingMinutePublicationStatus::PUBLISHED],
+        };
+        abort_unless($allowed[0], 422, 'This MOM lifecycle change is not allowed.');
+
+        $meetingMinute->publication_status = $target;
+        if ($target === MeetingMinutePublicationStatus::PUBLISHED) {
+            $meetingMinute->published_at ??= now();
+            $meetingMinute->published_by ??= $request->user()->id;
+            $meetingMinute->locked_at = null;
+            $meetingMinute->locked_by = null;
+        } else {
+            $meetingMinute->locked_at = now();
+            $meetingMinute->locked_by = $request->user()->id;
+        }
+        $meetingMinute->save();
+        $revisions->handle($meetingMinute, $request->user());
+        ActivityLog::record($meetingMinute->workspace, $meetingMinute, 'meeting_minute.'.$target->value, $request->user(), [], $request->ip());
+
+        return $this->success($request, null, 'MOM is now '.$target->label().'.', route('app.schedule.minutes.show', [$meetingMinute->workspace, $meetingMinute]));
+    }
+
+    public function updateItem(UpdateMeetingMinuteItemRequest $request, MeetingMinuteItem $meetingMinuteItem): JsonResponse|RedirectResponse
+    {
+        $meetingMinuteItem->update([
+            'status' => $request->validated('status'),
+            'due_reminded_at' => null,
+            'overdue_reminded_at' => null,
+        ]);
+        ActivityLog::record($meetingMinuteItem->meetingMinute->workspace, $meetingMinuteItem->meetingMinute, 'meeting_minute.item_updated', $request->user(), [
+            'item' => $meetingMinuteItem->public_id,
+            'status' => $request->validated('status'),
+        ], $request->ip());
+
+        return $this->success($request, null, 'Action item updated.', url()->previous());
     }
 
     private function storeAttachments(SaveMeetingMinuteRequest $request, MeetingMinute $meetingMinute, StorePrivateFile $storeFile): void

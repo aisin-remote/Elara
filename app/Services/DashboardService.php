@@ -5,13 +5,10 @@ namespace App\Services;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatusCategory;
 use App\Enums\WorkspaceRole;
-use App\Models\ActivityLog;
 use App\Models\Feature;
 use App\Models\Project;
 use App\Models\ScheduleEvent;
-use App\Models\SupportingTask;
 use App\Models\Task;
-use App\Models\TaskProperty;
 use App\Models\TaskStatus;
 use App\Models\User;
 use App\Models\Workspace;
@@ -22,6 +19,8 @@ use Illuminate\Support\Str;
 
 class DashboardService
 {
+    public function __construct(private readonly MeetingMinuteActionItems $meetingMinuteActions) {}
+
     public function forWorkspace(Workspace $workspace, User $user, array $filters = []): array
     {
         return [...$this->summary($workspace, $user, $filters), ...$this->insights($workspace, $user, $filters)];
@@ -40,7 +39,7 @@ class DashboardService
                 'previous' => $previous[$key],
                 'delta' => $value - $previous[$key],
             ])->all(),
-            'recent_activity' => $this->recentActivity($workspace, $user, $filters, $period),
+            'mom_action_items' => $this->meetingMinuteActions->forUser($user, $workspace),
             'meetings' => $this->meetings($workspace, $user, $period['timezone']),
             'members' => $this->members($workspace),
             'distribution' => $this->distribution($workspace, $user, $filters, $period),
@@ -379,68 +378,6 @@ class DashboardService
             'members' => array_values($rows),
             'total_tasks' => $assignments->pluck('id')->unique()->count(),
         ];
-    }
-
-    private function recentActivity(Workspace $workspace, User $user, array $filters, array $period): array
-    {
-        $membership = $workspace->memberships()->where('user_id', $user->id)->first();
-        $isWorkspaceManager = in_array($membership?->role?->value, [WorkspaceRole::OWNER->value, WorkspaceRole::ADMIN->value], true);
-        $projectIds = Project::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
-        $taskIds = $this->taskQuery($workspace, $user, $filters)->select('tasks.id');
-        $propertyIds = TaskProperty::query()->whereIn('project_id', clone $projectIds)->select('id');
-        $statusIds = TaskStatus::query()->whereIn('project_id', clone $projectIds)->select('id');
-        $query = $workspace->activityLogs()->with(['actor:id,public_id,first_name,last_name,avatar_path', 'subject'])
-            ->whereBetween('created_at', [$period['from_utc'], $period['to_utc']])
-            ->where(fn (Builder $visible) => $visible
-                ->whereNotIn('subject_type', [
-                    (new Task)->getMorphClass(),
-                    (new TaskProperty)->getMorphClass(),
-                    (new TaskStatus)->getMorphClass(),
-                ])
-                ->orWhere(fn (Builder $task) => $task
-                    ->where('subject_type', (new Task)->getMorphClass())
-                    ->whereIn('subject_id', $taskIds))
-                ->orWhere(fn (Builder $property) => $property
-                    ->where('subject_type', (new TaskProperty)->getMorphClass())
-                    ->whereIn('subject_id', $propertyIds))
-                ->orWhere(fn (Builder $status) => $status
-                    ->where('subject_type', (new TaskStatus)->getMorphClass())
-                    ->whereIn('subject_id', $statusIds)));
-
-        if (! $isWorkspaceManager) {
-            $supportingTaskIds = SupportingTask::query()->where('workspace_id', $workspace->id)->select('id');
-            $eventIds = ScheduleEvent::query()->visibleTo($user)->where('workspace_id', $workspace->id)->select('id');
-            $query->where(fn (Builder $visible) => $visible
-                ->where(fn (Builder $projects) => $projects->where('subject_type', (new Project)->getMorphClass())->whereIn('subject_id', $projectIds))
-                ->orWhere(fn (Builder $tasks) => $tasks->where('subject_type', (new Task)->getMorphClass())->whereIn('subject_id', $taskIds))
-                ->orWhere(fn (Builder $supporting) => $supporting->where('subject_type', (new SupportingTask)->getMorphClass())->whereIn('subject_id', $supportingTaskIds))
-                ->orWhere(fn (Builder $events) => $events->where('subject_type', (new ScheduleEvent)->getMorphClass())->whereIn('subject_id', $eventIds)));
-        }
-
-        return $query->latest('created_at')->limit(3)->get()->map(fn (ActivityLog $activity) => [
-            'actor' => $activity->actor?->name ?? 'System',
-            'actor_public_id' => $activity->actor?->public_id,
-            'actor_has_avatar' => filled($activity->actor?->avatar_path),
-            // headline() + lcfirst() in the view used to render "task Created".
-            'action' => str($activity->action)->replace(['.', '_'], ' ')->lower()->toString(),
-            'subject' => $this->activitySubject($activity, $workspace),
-            'occurred_at' => CarbonImmutable::instance($activity->created_at)->setTimezone($period['timezone'])->toIso8601String(),
-            'relative' => $activity->created_at->diffForHumans(),
-        ])->all();
-    }
-
-    /** Null when the subject was deleted or has no page of its own. */
-    private function activitySubject(ActivityLog $activity, Workspace $workspace): ?array
-    {
-        $subject = $activity->subject;
-
-        return match (true) {
-            $subject instanceof Task => ['label' => $subject->title, 'url' => route('app.tasks.show', $subject)],
-            $subject instanceof SupportingTask => ['label' => $subject->title, 'url' => route('app.supporting.index', [$workspace, 'search' => $subject->title])],
-            $subject instanceof Project => ['label' => $subject->name, 'url' => route('app.projects.show', $subject)],
-            $subject instanceof ScheduleEvent => ['label' => $subject->title, 'url' => route('app.schedule.index', $workspace)],
-            default => null,
-        };
     }
 
     private function meetings(Workspace $workspace, User $user, string $timezone): array

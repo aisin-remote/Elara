@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\MeetingMinutePublicationStatus;
 use App\Enums\WorkspaceMemberStatus;
 use App\Models\MeetingMinute;
 use App\Models\User;
@@ -12,12 +13,21 @@ class MeetingMinutePolicy
 {
     public function viewAny(User $user, Workspace $workspace): bool
     {
-        return $this->membership($user, $workspace) !== null;
+        return $this->membership($user, $workspace)?->role->canAccessDeliveryDesk() === true;
     }
 
     public function view(User $user, MeetingMinute $meetingMinute): bool
     {
-        return $this->viewAny($user, $meetingMinute->workspace);
+        if ($this->viewAny($user, $meetingMinute->workspace) || $meetingMinute->creator_id === $user->id) {
+            return true;
+        }
+
+        if ($meetingMinute->publication_status === MeetingMinutePublicationStatus::DRAFT) {
+            return false;
+        }
+
+        return $meetingMinute->scheduleEvent?->attendees()->where('users.id', $user->id)->exists()
+            || $meetingMinute->items()->where('pic_user_id', $user->id)->exists();
     }
 
     public function create(User $user, Workspace $workspace): bool
@@ -27,12 +37,19 @@ class MeetingMinutePolicy
 
     public function update(User $user, MeetingMinute $meetingMinute): bool
     {
-        return $this->create($user, $meetingMinute->workspace);
+        return ! $meetingMinute->isLocked()
+            && ($meetingMinute->creator_id === $user->id || $this->create($user, $meetingMinute->workspace));
     }
 
     public function delete(User $user, MeetingMinute $meetingMinute): bool
     {
-        return $this->update($user, $meetingMinute);
+        return $meetingMinute->publication_status === MeetingMinutePublicationStatus::DRAFT
+            && $this->update($user, $meetingMinute);
+    }
+
+    public function managePublication(User $user, MeetingMinute $meetingMinute): bool
+    {
+        return $meetingMinute->creator_id === $user->id || $this->create($user, $meetingMinute->workspace);
     }
 
     private function membership(User $user, Workspace $workspace): ?WorkspaceMember

@@ -16,6 +16,15 @@
         @endcan
     </div>
 
+    <form method="GET" class="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-3 xl:grid-cols-6 dark:border-slate-800 dark:bg-slate-900">
+        <x-input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Search MOM" />
+        <x-select name="lifecycle"><option value="">All lifecycles</option>@foreach(App\Enums\MeetingMinutePublicationStatus::cases() as $status)<option value="{{ $status->value }}" @selected(($filters['lifecycle'] ?? '') === $status->value)>{{ $status->label() }}</option>@endforeach</x-select>
+        <x-select name="project"><option value="">All projects</option>@foreach($projects as $project)<option value="{{ $project->public_id }}" @selected(($filters['project'] ?? '') === $project->public_id)>{{ $project->name }}</option>@endforeach</x-select>
+        <x-select name="pic"><option value="">All PICs</option>@foreach($picUsers as $pic)<option value="{{ $pic->public_id }}" @selected(($filters['pic'] ?? '') === $pic->public_id)>{{ $pic->name }}</option>@endforeach</x-select>
+        <x-select name="action_status"><option value="">All action statuses</option>@foreach(App\Enums\MeetingMinuteStatus::cases() as $status)<option value="{{ $status->value }}" @selected(($filters['action_status'] ?? '') === $status->value)>{{ $status->label() }}</option>@endforeach</x-select>
+        <div class="flex gap-2"><x-button class="flex-1">Filter</x-button>@if($filters)<x-link-button href="{{ route('app.schedule.minutes.index', $workspace) }}" variant="secondary">Clear</x-link-button>@endif</div>
+    </form>
+
     <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div class="overflow-x-auto">
             <table class="w-full min-w-[1080px] text-left text-sm">
@@ -25,6 +34,7 @@
                         <th class="px-4 py-3">Project / system</th>
                         <th class="px-4 py-3">Meeting date</th>
                         <th class="px-4 py-3">Recorded by</th>
+                        <th class="px-4 py-3">Lifecycle</th>
                         <th class="px-4 py-3">Action items</th>
                         <th class="px-4 py-3">Documents</th>
                         <th class="w-12 px-4 py-3"><span class="sr-only">Open</span></th>
@@ -49,6 +59,7 @@
                             </td>
                             <td class="whitespace-nowrap px-4 py-4"><p class="font-semibold">{{ $minute->meeting_at->format('M j, Y') }}</p><p class="mt-1 text-xs text-slate-500">{{ $minute->meeting_at->format('H:i') }}</p></td>
                             <td class="px-4 py-4 font-semibold">{{ $minute->creator->name }}</td>
+                            <td class="px-4 py-4"><x-badge :tone="match($minute->publication_status) { App\Enums\MeetingMinutePublicationStatus::DRAFT => 'warning', App\Enums\MeetingMinutePublicationStatus::LOCKED => 'slate', default => 'success' }">{{ $minute->publication_status->label() }}</x-badge></td>
                             <td class="whitespace-nowrap px-4 py-4">
                                 <strong>{{ $minute->done_items_count }}/{{ $minute->items_count }}</strong> done
                                 @if ($minute->tba_items_count)<p class="mt-1 text-xs text-slate-500">{{ $minute->tba_items_count }} TBA</p>@endif
@@ -57,7 +68,7 @@
                             <td class="px-4 py-4"><a href="{{ route('app.schedule.minutes.show', [$workspace, $minute]) }}" class="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-orbit-700 dark:hover:bg-slate-800 dark:hover:text-orbit-300" aria-label="Open {{ $minute->title }}"><x-icon name="chevron-right" class="size-4" /></a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-6 py-16 text-center"><div class="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800"><x-icon name="calendar" /></div><h3 class="mt-4 font-bold">No meeting minutes yet</h3><p class="mt-1 text-sm text-slate-500">Create one after a meeting to keep decisions and follow-ups traceable.</p></td></tr>
+                        <tr><td colspan="8" class="px-6 py-16 text-center"><div class="mx-auto grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800"><x-icon name="calendar" /></div><h3 class="mt-4 font-bold">No meeting minutes yet</h3><p class="mt-1 text-sm text-slate-500">Create one after a meeting to keep decisions and follow-ups traceable.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

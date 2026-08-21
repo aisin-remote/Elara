@@ -34,6 +34,17 @@
         </div>
     </div>
 
+    <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900" aria-labelledby="requester-mom-title">
+        <div class="flex items-center justify-between gap-3"><div><h3 id="requester-mom-title" class="text-lg font-bold">Outstanding MOM</h3><p class="mt-1 text-xs text-slate-500">Meeting follow-ups assigned to you</p></div><a href="{{ route('desk.schedule.index', $requesterWorkspace) }}" class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Open schedule</a></div>
+        <div class="mt-4 grid gap-3 lg:grid-cols-2">
+            @forelse($momActionItems['items'] as $item)
+                <article class="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><div class="flex items-start justify-between gap-3"><a href="{{ $item['url'] }}" class="min-w-0 flex-1"><span class="block truncate text-sm font-bold hover:text-orbit-700 dark:hover:text-orbit-300">{{ $item['content'] }}</span><span class="mt-1 block truncate text-xs text-slate-500">{{ $item['minute'] }} · {{ $item['project'] }}</span></a><span class="shrink-0 text-xs font-bold {{ $item['overdue'] ? 'text-rose-600' : 'text-slate-500' }}">{{ $item['due'] }}</span></div><form method="POST" action="{{ route('internal.meeting-minute-items.update', $item['public_id']) }}" class="mt-2 flex items-center gap-2">@csrf @method('PATCH')<select name="status" class="min-w-0 flex-1 rounded-lg border-slate-300 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-950">@foreach(App\Enums\MeetingMinuteStatus::cases() as $statusOption)<option value="{{ $statusOption->value }}" @selected($item['status'] === $statusOption)>{{ $statusOption->label() }}</option>@endforeach</select><button class="text-xs font-bold text-orbit-700 dark:text-orbit-300">Save</button></form></article>
+            @empty
+                <p class="text-sm text-slate-500">No published MOM action items are waiting on you.</p>
+            @endforelse
+        </div>
+    </section>
+
     <div class="mt-6 grid gap-4 sm:grid-cols-3">
         @foreach ([
             ['Current '.strtolower($itemLabel).'s', $itemCount, $showingFeatures ? 'sparkles' : 'projects'],

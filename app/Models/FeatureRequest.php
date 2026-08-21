@@ -86,6 +86,11 @@ class FeatureRequest extends Model
         return $this->morphMany(TaskBreakdown::class, 'subject');
     }
 
+    public function discussionComments(): MorphMany
+    {
+        return $this->morphMany(DiscussionComment::class, 'subject');
+    }
+
     public function scopeAwaitingReview(Builder $query): Builder
     {
         return $query->where('status', FeatureRequestStatus::PENDING_REVIEW->value);
